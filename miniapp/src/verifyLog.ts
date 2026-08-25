@@ -37,6 +37,19 @@ export function appendLog(msg: string, now: () => number = Date.now, storage: St
   return next;
 }
 
+/**
+ * 「세션이 꼬여 재시작됐는가」 판정.
+ *
+ * 단순히 「앱 마운트가 2번 이상」으로 세면 **어제 로그에도 걸린다** — 로그가 저장소에 남기 때문이다.
+ * 오탐 하나면 실측 전체를 못 믿게 되므로, **열기 호출 다음에 마운트가 왔는가**로 좁힌다.
+ * 광고는 앱을 떠나지 않으므로 열기 호출로 세지 않는다.
+ */
+export function restartedAfterOpen(log: LogEntry[]): boolean {
+  const opened = log.findIndex((e) => e.msg.includes('openURL') && e.msg.includes('호출 →'));
+  if (opened < 0) return false;
+  return log.slice(opened + 1).some((e) => e.msg.startsWith('앱 마운트'));
+}
+
 export function clearLog(storage: Storage = localStorage): void {
   try {
     storage.removeItem(KEY);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendLog, clearLog, readLog } from './verifyLog';
+import { appendLog, clearLog, readLog, restartedAfterOpen } from './verifyLog';
 
 /** 메모리 Storage — 실패를 주입할 수 있게 옵션을 둔다. */
 function fakeStorage(opts: { throwOnGet?: boolean; throwOnSet?: boolean } = {}): Storage {
@@ -107,3 +107,50 @@ describe('verifyLog', () => {
     expect(readLog(s)).toEqual([]);
   });
 });
+
+/**
+ * 「세션이 꼬여 재시작」 판정.
+ *
+ * 단순히 「앱 마운트가 2번 이상」으로 세면 **어제 로그에도 걸린다** — 로그가 localStorage에 남기 때문이다.
+ * 오탐이 나면 실측 자체가 못 쓰게 되므로, **열기 호출 다음에 마운트가 왔는가**로 좁힌다.
+ */
+describe('restartedAfterOpen', () => {
+  const L = (msg: string, t = 0) => ({ t, msg });
+
+  it('열기 호출 다음에 앱 마운트가 오면 재시작이다', () => {
+    expect(
+      restartedAfterOpen([L('앱 마운트 (mountedAt=1)'), L('Device.openURL 호출 → https://x'), L('앱 마운트 (mountedAt=2)')]),
+    ).toBe(true);
+  });
+
+  it('열기 호출 다음에 정상 복귀가 오면 재시작이 아니다', () => {
+    expect(
+      restartedAfterOpen([L('앱 마운트 (mountedAt=1)'), L('Device.openURL 호출 → https://x'), L('복귀 감지 (숨김 5.0초)')]),
+    ).toBe(false);
+  });
+
+  it('마운트가 여러 번이어도 열기 호출 전이면 재시작이 아니다', () => {
+    // ← 어제 로그가 남아 있는 상황. 예전 판정이라면 여기서 오탐이 났다.
+    expect(
+      restartedAfterOpen([L('앱 마운트 (mountedAt=1)'), L('복귀 감지 (숨김 3.0초)'), L('앱 마운트 (mountedAt=2)')]),
+    ).toBe(false);
+  });
+
+  it('열기 호출이 아예 없으면 재시작이 아니다', () => {
+    expect(restartedAfterOpen([L('앱 마운트 (mountedAt=1)'), L('앱 마운트 (mountedAt=2)')])).toBe(false);
+  });
+
+  it('빈 로그면 재시작이 아니다', () => {
+    expect(restartedAfterOpen([])).toBe(false);
+  });
+
+  it('구 API로 연 경우도 잡는다', () => {
+    expect(restartedAfterOpen([L('openURL(구) 호출 → https://x'), L('앱 마운트 (mountedAt=2)')])).toBe(true);
+  });
+
+  it('광고 시도는 열기 호출로 세지 않는다', () => {
+    // 광고는 앱을 떠나지 않으므로 여기 섞이면 안 된다.
+    expect(restartedAfterOpen([L('광고 #1 load 요청'), L('앱 마운트 (mountedAt=2)')])).toBe(false);
+  });
+});
+
