@@ -1,0 +1,61 @@
+/* 토스 앱 안에서 도는 미니앱이라 토스의 색·간격 감각에 맞춘다. */
+:root {
+  --bg: #ffffff;
+  --bg-sub: #f9fafb;
+  --line: #e5e8eb;
+  --line-strong: #d1d6db;
+  --text: #191f28;
+  --text-sub: #6b7684;
+  --text-weak: #8b95a1;
+  --blue: #3182f6;
+  --blue-dark: #1b64da;
+  --gray: #8b95a1;
+  --red: #f04452;
+
+  --tab-h: 56px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 누르는 느낌이 없으면 앱이 죽은 것처럼 보인다. */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+button:active:not(:disabled) {
+  opacity: 0.6;
+}
+button:disabled {
+  cursor: default;
+}
+
+/* 숫자 입력의 스피너는 모바일에서 자리만 먹는다. */
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input:focus,
+button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}

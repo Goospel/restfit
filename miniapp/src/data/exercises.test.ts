@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EQUIPMENT, EXERCISES, groupOf, type EquipKey } from './exercises';
+import { EQUIPMENT, EXERCISES, GROUP_KEYS, groupOf, type EquipKey } from './exercises';
 import { MISSING_LABELS, MUSCLE_KO } from './labels';
 import { filterByEquipment, unlockGain } from '../logic/equipment';
 
@@ -72,6 +72,26 @@ describe('exercises.json', () => {
   it('데이터에 나오는 모든 근육에 한글 이름이 있다', () => {
     const used = new Set(EXERCISES.flatMap((e) => [...e.primaryMuscles, ...e.secondaryMuscles]));
     expect([...used].filter((m) => !MUSCLE_KO[m])).toEqual([]);
+  });
+
+  it('매달아야 하는 운동이 맨몸으로 분류되지 않았다', () => {
+    // 원본은 "자기 체중을 든다"는 뜻으로 풀업을 body only로 적어 뒀다. 그대로 두면
+    // 기구가 하나도 없는 사용자의 첫 화면에 풀업 3종이 뜬다 — 실제로 그렇게 나왔다.
+    const needsBar = /pull-?up|chin-?up|hanging|muscle up/i;
+    const bad = EXERCISES.filter((e) => e.requires.length === 0 && needsBar.test(e.nameEn));
+    expect(bad.map((e) => e.nameEn)).toEqual([]);
+  });
+
+  it('모든 부위에 근력 운동이 있다', () => {
+    // 어떤 부위가 통째로 비면 루틴 로테이션에서 영영 안 나온다.
+    const byGroup = new Set(STRENGTH.map(groupOf));
+    expect(GROUP_KEYS.filter((g) => !byGroup.has(g))).toEqual([]);
+  });
+
+  it('맨몸만으로도 부위 네 개 이상이 돈다', () => {
+    // 기구를 안 산 사용자도 로테이션이 돌아야 한다. 등은 매달 데가 없으면 불가능해 빠진다 — 의도된 결과다.
+    const groups = new Set(filterByEquipment(STRENGTH, []).map(groupOf));
+    expect(groups.size).toBeGreaterThanOrEqual(4);
   });
 
   it('장비를 둘 요구하는 운동이 실제로 존재한다', () => {
