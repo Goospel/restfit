@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-labelledby="to3 do3">
+  <title id="to3">홈트가어렵나 앱 아이콘</title>
+  <desc id="do3">벤치 모서리에서 봉이 힘없이 꺾여 아래로 쏟아지는 덤벨</desc>
+  <defs>
+    <radialGradient id="bgO3" cx="0.5" cy="0.34" r="0.86">
+      <stop offset="0" stop-color="#54a0ff"/>
+      <stop offset="0.58" stop-color="#3182f6"/>
+      <stop offset="1" stop-color="#1d5cc4"/>
+    </radialGradient>
+    <linearGradient id="padO3" x1="0.1" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#2f5ec0"/>
+      <stop offset="0.45" stop-color="#173c8a"/>
+      <stop offset="1" stop-color="#091d4b"/>
+    </linearGradient>
+    <linearGradient id="frameO3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c4293"/>
+      <stop offset="1" stop-color="#091c48"/>
+    </linearGradient>
+    <linearGradient id="legO3" x1="0" y1="0" x2="1" y2="0.25">
+      <stop offset="0" stop-color="#254da2"/>
+      <stop offset="1" stop-color="#0a1f51"/>
+    </linearGradient>
+    <linearGradient id="plateO3" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.38" stop-color="#f4f8fe"/>
+      <stop offset="1" stop-color="#b4c6e4"/>
+    </linearGradient>
+    <linearGradient id="barO3" x1="0.1" y1="0" x2="0.75" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.42" stop-color="#e9effb"/>
+      <stop offset="1" stop-color="#a5bde2"/>
+    </linearGradient>
+    <radialGradient id="shO3" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#081941" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#081941" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bgO3)"/>
+
+  <ellipse cx="368" cy="794" rx="256" ry="42" fill="url(#shO3)"/>
+  <ellipse cx="824" cy="788" rx="112" ry="24" fill="url(#shO3)"/>
+
+  <g stroke="url(#legO3)" stroke-width="36" stroke-linecap="round" fill="none">
+    <path d="M 246 542 L 178 754"/>
+    <path d="M 246 542 L 314 754"/>
+    <path d="M 486 542 L 418 754"/>
+    <path d="M 486 542 L 554 754"/>
+  </g>
+  <rect x="160" y="512" width="412" height="30" rx="15" fill="url(#frameO3)"/>
+  <rect x="116" y="424" width="504" height="92" rx="34" fill="url(#padO3)"/>
+  <rect x="144" y="438" width="404" height="18" rx="9" fill="#6d97e4" opacity="0.34"/>
+
+  <path d="M 452 330 C 600 336, 736 500, 820 690"
+        fill="none" stroke="url(#barO3)" stroke-width="58" stroke-linecap="round"/>
+  <path d="M 458 311 C 602 317, 728 488, 806 668"
+        fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" opacity="0.45"/>
+
+  <g fill="url(#plateO3)">
+    <g transform="rotate(4 470 333)"><rect x="446" y="265" width="48" height="136" rx="24"/></g>
+    <g transform="rotate(5 528 340)"><rect x="498" y="245" width="60" height="190" rx="30"/></g>
+    <g transform="rotate(61 779 607)"><rect x="749" y="512" width="60" height="190" rx="30"/></g>
+    <g transform="rotate(65 812 672)"><rect x="788" y="604" width="48" height="136" rx="24"/></g>
+  </g>
+  <g fill="#ffffff" opacity="0.5">
+    <g transform="rotate(4 470 333)"><rect x="454" y="280" width="11" height="76" rx="5.5"/></g>
+    <g transform="rotate(5 528 340)"><rect x="507" y="262" width="14" height="112" rx="7"/></g>
+    <g transform="rotate(61 779 607)"><rect x="758" y="529" width="14" height="112" rx="7"/></g>
+    <g transform="rotate(65 812 672)"><rect x="796" y="619" width="11" height="76" rx="5.5"/></g>
+  </g>
+</svg>
