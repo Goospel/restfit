@@ -1,6 +1,25 @@
-# miniapp — Phase 0.5 실측
+# miniapp — 홈트가어렵나
 
-**한 번의 실기기 테스트로 둘을 잰다.** 배경은 [설계 §10](../docs/2026-08-25-design.md).
+앱 본체(홈·기구·운동·기록)와 **Phase 0.5 실측 도구**가 함께 들어 있다. 배경은 [설계](../docs/2026-08-25-design.md).
+
+---
+
+## 실기기에 올리기 (실측 전제)
+
+**광고는 토스 앱 안에서만 뜬다.** 브라우저에서는 SDK가 없어 아무것도 안 나온다 — 그래서 실측 전에 배포가 먼저다.
+
+```bash
+npm run release          # npm run build && ait build → 홈트가어렵나.ait
+npx ait token add        # 콘솔에서 받은 API 키를 default 프로필에 저장 (~/.ait/credentials)
+npx ait deploy           # 업로드. intoss-private scheme이 나온다
+```
+
+1. **앱인토스 콘솔에 앱을 등록**하고 **API 키**를 받는다 ← *이게 없으면 `deploy`에서 막힌다*
+2. `ait deploy`가 뱉는 **`intoss-private://…` scheme**을 폰으로 열면 **심사 없이** 토스 앱 안에서 실행된다
+3. 콘솔에서 **광고 그룹 ID**를 발급받는다
+4. 앱에서 **기록 탭 → `개발자용 · Phase 0.5 실측`** 으로 들어가 아래 ①②를 잰다
+
+> `npm run release`가 두 단계를 묶는 이유: `ait build`는 `dist/`를 **있는 그대로** 싸기 때문에, 빌드를 빼먹으면 옛 번들이 그대로 올라간다(BookTimer T-150이 그 사고였다).
 
 ---
 
@@ -65,7 +84,7 @@
 
 - **로그는 localStorage에 남는다.** 재려는 실패 모드 중 하나가 "세션이 꼬여 재시작"인데, 메모리에만 두면 재시작 순간 「호출 → 재시작」 순서가 통째로 사라져 정작 알고 싶은 증거를 잃는다.
 - **재시작 판정은 「열기 호출 다음에 마운트가 왔는가」로 좁혔다.** 단순히 "마운트 2번 이상"으로 세면 **어제 로그에도 걸린다**(로그가 저장소에 남으니까). 오탐 하나면 실측 전체를 못 믿게 된다.
-- **`StrictMode`를 일부러 쓰지 않는다.** React 18 StrictMode는 개발 모드에서 effect를 두 번 실행해 마운트 로그를 오염시킨다. 관측 도구가 관측을 망치면 안 된다.
+- **`StrictMode`는 Phase 2에서 다시 켰다.** 처음엔 이중 마운트가 실측 로그를 오염시킬까 봐 껐는데, 재시작 판정이 「열기 호출 **다음에** 마운트가 왔는가」라 이중 마운트에 영향받지 않는다. 반대로 타이머·광고 effect의 정리 누락은 StrictMode가 아니면 못 잡는다. **관측을 지키려다 진짜 버그를 놓치는 쪽이 더 비쌌다.**
 - **TDS(`@toss/tds-mobile`)를 아직 넣지 않았다.** 실측에 불필요하다. 다만 React는 **18로 핀**해 뒀다 — TDS 2.5.1의 peer가 19를 받지 않아 나중에 충돌하지 않도록.
 - `awaitAdEvent`는 Phase 3 광고 통합에서 **그대로 재사용**한다. 콜백을 Promise로 감싸는 자리라 정리 함수 누락·중복 종료·타임아웃을 테스트로 못 박아 뒀다.
 
@@ -73,9 +92,11 @@
 
 ```bash
 npm install
-npm test      # 31건 (returnTracker · verifyLog · adProbe)
-npm run dev   # http://localhost:5310
-npm run build # tsc -b && vite build → dist/
+npm test        # 140건
+npm run dev     # http://localhost:5310
+npm run build   # tsc -b && vite build → dist/
+npm run release # build + ait build → .ait 아티팩트
+npm run data    # 운동 데이터 재생성 (원본 정제 → src/data/exercises.json)
 ```
 
 브라우저에서 복귀 감지를 흉내 내려면 콘솔에서:

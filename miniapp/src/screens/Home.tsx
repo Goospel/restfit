@@ -49,6 +49,21 @@ export function Home({
 
   return (
     <main style={ui.page}>
+      {/*
+       * 앱 이름이 던진 질문에 앱이 직접 답한다. **응원이 아니라 동의다** — 어렵다고 인정한 뒤
+       * 제일 어려운 부분(뭘 할지 정하기)을 대신 해놨다고 말한다. 이 앱이 실제로 하는 일이 그거다.
+       *
+       * 기록이 없을 때만 뜬다. 매일 보이면 농담이 아니라 잔소리가 된다.
+       */}
+      {history.length === 0 && (
+        <div style={{ ...ui.card, marginBottom: 20, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 17, fontWeight: 700 }}>네, 어렵습니다.</div>
+          <div style={{ fontSize: 14, color: 'var(--text-sub)', marginTop: 4 }}>
+            제일 어려운 건 뭘 할지 정하는 거고, 그건 정해뒀습니다. 아래대로만 하시면 됩니다.
+          </div>
+        </div>
+      )}
+
       <h1 style={ui.h1}>
         오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.group]}</span>
       </h1>
