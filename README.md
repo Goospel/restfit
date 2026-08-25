@@ -16,14 +16,25 @@
 | [docs/2026-08-25-design.md](docs/2026-08-25-design.md) | 설계 — 아키텍처·데이터 모델·판정 로직 |
 | [docs/ideas.md](docs/ideas.md) | 아이템 선정 경위 + 접은 안들의 **접은 이유와 되살릴 조건** |
 
+**실행 환경은 앱인토스 미니앱 단독**이다. 웹사이트 채널은 없다.
+
 ## 스택
 
-Next.js 16 (서버 모드) · React 19 · TypeScript · Tailwind 4 · SQLite · Vitest
-배포: AWS EC2 t4g.small + Elastic IP · nginx · cron
+| | |
+|---|---|
+| 미니앱 | Vite + React **18** + `@apps-in-toss/web-framework` + `@toss/tds-mobile` · Vitest |
+| 서버 | Spring Boot + PostgreSQL · JUnit · 수집은 `@Scheduled` |
+| 인프라 | AWS EC2 t4g.medium + Elastic IP · nginx(TLS 종단) |
+
+⚠️ 미니앱 React는 **18**로 핀한다 — TDS 2.5.1의 peer가 19를 받지 않는다.
 
 ## 상태
 
-**Phase 1 (판정 로직)** 진행 예정. 쉐어링크 Open API 승인 대기 중이며, **승인 전에도 Phase 1은 목 데이터로 전부 진행 가능**하다.
+**Phase 0.5 — 쉐어링크 복귀 검증** 진행 중.
+
+미니앱에서 쉐어링크를 열면 앱 복귀가 불안정하다는 제보가 있고, **수익 전부가 그 링크에 달려 있다.** 나머지 설계는 이 검증 통과를 전제하므로 가장 먼저 잰다. 자세한 배경은 [설계 §2](docs/2026-08-25-design.md).
+
+이 검증에는 **Open API 승인이 필요 없다** — 토스쇼핑 앱에서 수동 발급한 쉐어링크 하나면 된다.
 
 ## 개발 셋업
 
