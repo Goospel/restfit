@@ -9,7 +9,7 @@
 **광고는 토스 앱 안에서만 뜬다.** 브라우저에서는 SDK가 없어 아무것도 안 나온다 — 그래서 실측 전에 배포가 먼저다.
 
 ```bash
-npm run release          # npm run build && ait build → 홈트가어렵나.ait
+npm run release          # npm run build && ait build → home-workout-hard.ait
 npx ait token add        # 콘솔에서 받은 API 키를 default 프로필에 저장 (~/.ait/credentials)
 npx ait deploy           # 업로드. intoss-private scheme이 나온다
 ```
@@ -20,6 +20,8 @@ npx ait deploy           # 업로드. intoss-private scheme이 나온다
 4. 앱에서 **기록 탭 → `개발자용 · Phase 0.5 실측`** 으로 들어가 아래 ①②를 잰다
 
 > `npm run release`가 두 단계를 묶는 이유: `ait build`는 `dist/`를 **있는 그대로** 싸기 때문에, 빌드를 빼먹으면 옛 번들이 그대로 올라간다(BookTimer T-150이 그 사고였다).
+
+> ⚠️ **`ait deploy`는 `<appName>.ait`를 찾는 게 아니라 「패키지 루트에서 발견되는 첫 `.ait` 파일」을 올린다.** `appName`을 바꾸면 옛 이름의 아티팩트가 그대로 남아서, 그게 먼저 잡히면 **엉뚱한 번들이 배포된다.** 이름을 바꾼 뒤에는 `ls *.ait`로 **한 개만 있는지 확인**하거나 `ait deploy --location home-workout-hard.ait`로 못박는다.
 
 ---
 
