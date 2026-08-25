@@ -1,0 +1,84 @@
+import { ExerciseImage } from '../components/ExerciseImage';
+import { GROUP_KO, MUSCLE_KO } from '../data/labels';
+import { restSecondsFor, SETS_PER_EXERCISE } from '../logic/session';
+import type { Routine } from '../logic/routine';
+import { lastSetOf, type WorkoutRecord } from '../storage';
+import { ui } from '../ui';
+
+/** 세트 하나에 걸리는 대략의 시간(초). 예상 시간 계산에만 쓴다. */
+const WORK_SECONDS = 40;
+
+/**
+ * 오늘의 루틴.
+ *
+ * 루틴은 **날짜로 고정**된다(`pickRoutine`의 seed가 날짜다). 같은 날 앱을 다시 열어도
+ * 목록이 그대로라, 하다 만 운동을 잃지 않는다.
+ */
+export function Home({
+  routine,
+  history,
+  doneToday,
+  onStart,
+  onGoEquipment,
+}: {
+  routine: Routine;
+  history: WorkoutRecord[];
+  doneToday: boolean;
+  onStart: () => void;
+  onGoEquipment: () => void;
+}) {
+  if (!routine.group || routine.exercises.length === 0) {
+    return (
+      <main style={ui.page}>
+        <h1 style={ui.h1}>오늘의 루틴</h1>
+        <div style={ui.empty}>
+          <p>할 수 있는 운동을 찾지 못했습니다.</p>
+          <p style={{ fontSize: 13 }}>보유 기구를 확인해 주세요.</p>
+        </div>
+        <button style={ui.secondary} onClick={onGoEquipment}>
+          보유 기구 설정
+        </button>
+      </main>
+    );
+  }
+
+  const totalSec = routine.exercises.reduce(
+    (sum, e) => sum + SETS_PER_EXERCISE * (WORK_SECONDS + restSecondsFor(e)),
+    0,
+  );
+
+  return (
+    <main style={ui.page}>
+      <h1 style={ui.h1}>
+        오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.group]}</span>
+      </h1>
+      <p style={ui.sub}>
+        {routine.exercises.length}개 운동 · 각 {SETS_PER_EXERCISE}세트 · 약 {Math.round(totalSec / 60)}분
+        {doneToday && ' · 오늘 완료함'}
+      </p>
+
+      <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
+        {routine.exercises.map((e, i) => {
+          const last = lastSetOf(history, e.id);
+          return (
+            <div key={e.id} style={{ ...ui.card, display: 'flex', gap: 12, alignItems: 'center', padding: 12 }}>
+              <ExerciseImage path={e.images[0]} name={e.name} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-weak)' }}>{i + 1}번째</div>
+                <div style={{ ...ui.h2, fontSize: 16 }}>{e.name}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-sub)' }}>
+                  {e.primaryMuscles.map((m) => MUSCLE_KO[m] ?? m).join(' · ')}
+                  {last && ` · 지난번 ${last.weight > 0 ? `${last.weight}kg × ` : ''}${last.reps}회`}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button style={ui.primary} onClick={onStart}>
+        {doneToday ? '한 번 더 하기' : '운동 시작'}
+      </button>
+    </main>
+  );
+}

@@ -13,7 +13,6 @@
 
 /** 이름 통째로 갈아끼우는 예외. 토큰 치환으로는 어순이 깨지는 것들. id 기준. */
 export const NAME_OVERRIDE = {
-  Hyperextensions_With_No_Hyperextension_Bench: '하이퍼익스텐션 (벤치 없이)',
   'Kettlebell_Turkish_Get-Up_Lunge_style': '케틀벨 터키시 겟업 (런지)',
   'Kettlebell_Turkish_Get-Up_Squat_style': '케틀벨 터키시 겟업 (스쿼트)',
   'Rocky_Pull-Ups_Pulldowns': '로키 풀업',

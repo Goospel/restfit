@@ -96,6 +96,49 @@ const OTHER_ALLOW = {
 };
 
 /**
+ * 원본이 **맨몸으로 분류했지만 실제로는 기구가 필요한** 것들.
+ *
+ * free-exercise-db는 "자기 체중을 든다"는 뜻으로 풀업·행잉을 `body only`로 적어 뒀다.
+ * 그대로 두면 **기구가 하나도 없는 사용자에게 풀업 3종을 추천한다**(실제로 첫 화면에서 그렇게 나왔다).
+ * 자기 체중이냐가 아니라 **매달 데가 있느냐**가 기준이다.
+ */
+const REQUIRES_FIX = {
+  // 매달 곳이 필요하다
+  'Chin-Up': ['pullupBar'],
+  Pullups: ['pullupBar'],
+  'Scapular_Pull-Up': ['pullupBar'],
+  'V-Bar_Pullup': ['pullupBar'],
+  'Wide-Grip_Rear_Pull-Up': ['pullupBar'],
+  Gorilla_Chin_Crunch: ['pullupBar'],
+  Hanging_Leg_Raise: ['pullupBar'],
+  Hanging_Pike: ['pullupBar'],
+  Inverted_Row: ['pullupBar'],
+  // 각도가 필요하다 — 의자로는 안 된다
+  'Flat_Bench_Leg_Pull-In': ['bench'],
+  Flat_Bench_Lying_Leg_Raise: ['bench'],
+  'Seated_Flat_Bench_Leg_Pull-In': ['bench'],
+  Decline_Crunch: ['bench'],
+  Decline_Oblique_Crunch: ['bench'],
+  Decline_Reverse_Crunch: ['bench'],
+  // 이름에 기구가 그대로 적혀 있는데 분류만 맨몸이던 것
+  'Crunch_-_Legs_On_Exercise_Ball': ['exerciseBall'],
+  'Close-Grip_Push-Up_off_of_a_Dumbbell': ['dumbbell'],
+};
+
+/** 혼자 집에서는 못 한다 — 파트너가 잡아 주거나 발을 고정할 장치가 필요하다. */
+const DROP_IDS = new Set([
+  'Prone_Manual_Hamstring',
+  'Natural_Glute_Ham_Raise',
+  'Floor_Glute-Ham_Raise',
+  'Hyperextensions_With_No_Hyperextension_Bench',
+  'Wind_Sprints', // 전력 질주. 집 안에서 할 공간이 없다
+  // 목 아이소메트릭 — 홈트 루틴에 아무도 넣지 않는다. 남겨 두면 맨몸 어깨 운동 3개 중
+  // 2개가 목 운동이 되어 루틴이 통째로 쓸모없어진다(실제로 첫 화면에서 그렇게 나왔다).
+  'Isometric_Neck_Exercise_-_Front_And_Back',
+  'Isometric_Neck_Exercise_-_Sides',
+]);
+
+/**
  * 벤치가 추가로 필요한지 이름으로 가린다.
  *
  * 프리웨이트에서만 적용한다 — 덤벨 27 · 바벨 27 · 밴드 1개가 걸리고 전부 실제로 벤치가 필요하다.
@@ -107,6 +150,8 @@ const NEEDS_BENCH = /bench|incline|decline/i;
 const FREE_WEIGHT = new Set(['dumbbell', 'barbell', 'band']);
 
 function requiresOf(e) {
+  if (DROP_IDS.has(e.id)) return null;
+  if (REQUIRES_FIX[e.id]) return REQUIRES_FIX[e.id];
   if (e.equipment === 'other') return OTHER_ALLOW[e.id] ?? null;
   const base = REMAP[e.equipment ?? null];
   if (base === undefined) return null;

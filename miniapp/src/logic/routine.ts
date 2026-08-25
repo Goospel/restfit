@@ -39,6 +39,17 @@ function shuffled<T>(items: T[], r: () => number): T[] {
 
 const LEVEL_ORDER = { beginner: 0, intermediate: 1, expert: 2 } as const;
 
+/** 부위를 고를 최소 운동 수. 이보다 적으면 하루치 루틴이 안 된다. */
+const MIN_POOL = 3;
+
+/**
+ * 한 근육에서 뽑을 최대 운동 수.
+ *
+ * 없으면 부위 안에 근육이 하나뿐일 때(맨몸 팔 = 삼두뿐) 같은 근육만 5종목이 나온다.
+ * 한 근육에 15세트는 과훈련이고, **그런 루틴은 사람을 떠나게 해서 광고 슬롯도 함께 사라진다.**
+ */
+const MAX_PER_MUSCLE = 3;
+
 export type Routine = { group: MuscleGroup | null; exercises: Exercise[] };
 
 /**
@@ -67,9 +78,12 @@ export function pickRoutine(
 
   const r = rng(seed);
 
+  // 운동이 너무 적은 부위는 후보에서 뺀다 — 1개짜리 "루틴"은 루틴이 아니다.
+  // 다만 **금지가 아니라 선호**다. 전부 걸러지면 있는 것 중에서라도 고른다.
+  const rich = [...byGroup.keys()].filter((g) => byGroup.get(g)!.length >= MIN_POOL);
   // 가장 오래 전에 한 부위를 고른다. history에 없으면 무한히 오래된 것으로 친다.
   // 같은 부위가 여러 번 있으면 첫 번째(=가장 최근) 위치로 센다.
-  const candidates = [...byGroup.keys()];
+  const candidates = rich.length > 0 ? rich : [...byGroup.keys()];
   const staleness = (g: MuscleGroup) => {
     const i = history.indexOf(g);
     return i < 0 ? Infinity : i;
@@ -90,7 +104,7 @@ export function pickRoutine(
   const queues = shuffled([...buckets.keys()], r).map((m) => shuffled(buckets.get(m)!, r));
 
   const picked: Exercise[] = [];
-  for (let round = 0; picked.length < count; round++) {
+  for (let round = 0; picked.length < count && round < MAX_PER_MUSCLE; round++) {
     const before = picked.length;
     for (const q of queues) {
       if (picked.length >= count) break;

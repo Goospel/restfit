@@ -18,18 +18,30 @@ const ex = (id: string, muscle: string, o: Partial<Exercise> = {}): Exercise => 
   ...o,
 });
 
+/**
+ * 부위별 근육 구성. **실제 데이터를 닮게 둔다** — 가슴과 코어는 근육이 하나뿐이라
+ * 한 근육 상한(3)에 걸리고, 등·팔·하체는 여러 개라 안 걸린다.
+ */
+const MUSCLES_BY_GROUP: Record<MuscleGroup, string[]> = {
+  chest: ['chest'],
+  back: ['lats', 'middle back'],
+  shoulders: ['shoulders'],
+  arms: ['biceps', 'triceps'],
+  legs: ['quadriceps', 'hamstrings'],
+  core: ['abdominals'],
+};
+
 /** 6개 부위 전부에 운동이 넉넉히 있는 목록. */
-const FULL: Exercise[] = [
-  ...['chest', 'lats', 'shoulders', 'biceps', 'quadriceps', 'abdominals'].flatMap((m) =>
-    [1, 2, 3, 4, 5, 6].map((i) => ex(`${m}${i}`, m)),
-  ),
-];
+const FULL: Exercise[] = Object.values(MUSCLES_BY_GROUP)
+  .flat()
+  .flatMap((m) => [1, 2, 3, 4].map((i) => ex(`${m}${i}`, m)));
 
 const groupsOf = (r: { exercises: Exercise[] }) => r.exercises.map((e) => e.id);
 
 describe('pickRoutine', () => {
   it('요청한 개수만큼 고른다', () => {
-    expect(pickRoutine(FULL, [], [], '2026-08-25', 5).exercises).toHaveLength(5);
+    // 근육이 하나뿐인 부위(가슴·어깨·코어)는 상한 3에 걸리므로, history로 뒤로 밀어 둔다.
+    expect(pickRoutine(FULL, [], ['chest', 'shoulders', 'core'], '2026-08-25', 5).exercises).toHaveLength(5);
   });
 
   it('같은 날이면 같은 루틴이다', () => {
@@ -48,15 +60,7 @@ describe('pickRoutine', () => {
 
   it('고른 운동은 모두 같은 부위다', () => {
     const r = pickRoutine(FULL, [], [], '2026-08-25');
-    const byGroup: Record<MuscleGroup, string[]> = {
-      chest: ['chest'],
-      back: ['lats'],
-      shoulders: ['shoulders'],
-      arms: ['biceps'],
-      legs: ['quadriceps'],
-      core: ['abdominals'],
-    };
-    for (const e of r.exercises) expect(byGroup[r.group!]).toContain(e.primaryMuscles[0]);
+    for (const e of r.exercises) expect(MUSCLES_BY_GROUP[r.group!]).toContain(e.primaryMuscles[0]);
   });
 
   it('같은 운동이 두 번 나오지 않는다', () => {
@@ -84,6 +88,20 @@ describe('pickRoutine', () => {
     // 맨몸인데 가슴 운동이 전부 덤벨을 요구하는 상황.
     const list = [...FULL.filter((e) => e.primaryMuscles[0] !== 'chest'), ex('덤벨가슴', 'chest', { requires: ['dumbbell'] })];
     for (let d = 1; d <= 20; d++) expect(pickRoutine(list, [], [], `2026-09-${d}`).group).not.toBe('chest');
+  });
+
+  it('운동이 너무 적은 부위는 고르지 않는다', () => {
+    // 운동 1개짜리 "루틴"은 루틴이 아니다. 맨몸 사용자의 어깨가 실제로 그랬다 —
+    // 쓸 수 있는 어깨 운동이 핸드스탠드 푸시업 하나뿐이었다.
+    const list = [...FULL.filter((e) => e.primaryMuscles[0] !== 'chest'), ex('가슴1', 'chest'), ex('가슴2', 'chest')];
+    for (let d = 1; d <= 20; d++) expect(pickRoutine(list, [], [], `2026-09-${d}`).group).not.toBe('chest');
+  });
+
+  it('모든 부위가 빈약하면 그래도 가장 나은 것을 준다', () => {
+    // 하한은 선호이지 금지가 아니다. 전부 걸러 버리면 사용자에게 아무것도 못 준다.
+    const r = pickRoutine([ex('가슴1', 'chest'), ex('가슴2', 'chest')], [], [], '2026-08-25');
+    expect(r.group).toBe('chest');
+    expect(r.exercises).toHaveLength(2);
   });
 
   it('보유 장비로 못 하는 운동은 섞이지 않는다', () => {
@@ -119,6 +137,18 @@ describe('pickRoutine', () => {
     const r = pickRoutine(legs, [], [], '2026-08-25', 4);
     expect(r.exercises).toHaveLength(4);
     expect(r.exercises.map((e) => e.primaryMuscles[0]).filter((m) => m === 'hamstrings')).toHaveLength(1);
+  });
+
+  it('한 근육에서 세 개까지만 고른다', () => {
+    // 부위 안에 쓸 수 있는 근육이 하나뿐이면(맨몸 팔 = 삼두뿐) 5개를 채우려다 같은 근육만 5종목이 된다.
+    // 한 근육에 15세트는 과훈련이고, 그런 루틴은 사람을 떠나게 해 **광고 슬롯도 함께 사라진다.**
+    const list = [1, 2, 3, 4, 5, 6].map((i) => ex(`tri${i}`, 'triceps'));
+    expect(pickRoutine(list, [], [], '2026-08-25', 5).exercises).toHaveLength(3);
+  });
+
+  it('근육이 여러 개면 요청한 개수를 채운다', () => {
+    const list = [...[1, 2, 3, 4].map((i) => ex(`quad${i}`, 'quadriceps')), ...[1, 2].map((i) => ex(`ham${i}`, 'hamstrings'))];
+    expect(pickRoutine(list, [], [], '2026-08-25', 5).exercises).toHaveLength(5);
   });
 
   it('복합 운동을 단순 운동보다 앞에 둔다', () => {

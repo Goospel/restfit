@@ -2480,7 +2480,9 @@
   "id": "Chin-Up",
   "name": "친업",
   "nameEn": "Chin-Up",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -2826,7 +2828,9 @@
   "id": "Close-Grip_Push-Up_off_of_a_Dumbbell",
   "name": "클로즈그립 푸시업 오프 덤벨",
   "nameEn": "Close-Grip Push-Up off of a Dumbbell",
-  "requires": [],
+  "requires": [
+   "dumbbell"
+  ],
   "category": "strength",
   "level": "intermediate",
   "force": "push",
@@ -3015,7 +3019,9 @@
   "id": "Crunch_-_Legs_On_Exercise_Ball",
   "name": "크런치 - 레그 엑서사이즈 볼",
   "nameEn": "Crunch - Legs On Exercise Ball",
-  "requires": [],
+  "requires": [
+   "exerciseBall"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -3214,7 +3220,9 @@
   "id": "Decline_Crunch",
   "name": "디클라인 크런치",
   "nameEn": "Decline Crunch",
-  "requires": [],
+  "requires": [
+   "bench"
+  ],
   "category": "strength",
   "level": "intermediate",
   "force": "pull",
@@ -3319,7 +3327,9 @@
   "id": "Decline_Oblique_Crunch",
   "name": "디클라인 오블리크 크런치",
   "nameEn": "Decline Oblique Crunch",
-  "requires": [],
+  "requires": [
+   "bench"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -3358,7 +3368,9 @@
   "id": "Decline_Reverse_Crunch",
   "name": "디클라인 리버스 크런치",
   "nameEn": "Decline Reverse Crunch",
-  "requires": [],
+  "requires": [
+   "bench"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -4599,7 +4611,9 @@
   "id": "Flat_Bench_Leg_Pull-In",
   "name": "플랫 벤치 레그 풀인",
   "nameEn": "Flat Bench Leg Pull-In",
-  "requires": [],
+  "requires": [
+   "bench"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -4617,7 +4631,9 @@
   "id": "Flat_Bench_Lying_Leg_Raise",
   "name": "플랫 벤치 라잉 레그 레이즈",
   "nameEn": "Flat Bench Lying Leg Raise",
-  "requires": [],
+  "requires": [
+   "bench"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -4650,27 +4666,6 @@
   "images": [
    "Flexor_Incline_Dumbbell_Curls/0.jpg",
    "Flexor_Incline_Dumbbell_Curls/1.jpg"
-  ]
- },
- {
-  "id": "Floor_Glute-Ham_Raise",
-  "name": "플로어 글루트햄 레이즈",
-  "nameEn": "Floor Glute-Ham Raise",
-  "requires": [],
-  "category": "strength",
-  "level": "intermediate",
-  "force": "pull",
-  "mechanic": "isolation",
-  "primaryMuscles": [
-   "hamstrings"
-  ],
-  "secondaryMuscles": [
-   "calves",
-   "glutes"
-  ],
-  "images": [
-   "Floor_Glute-Ham_Raise/0.jpg",
-   "Floor_Glute-Ham_Raise/1.jpg"
   ]
  },
  {
@@ -5185,7 +5180,9 @@
   "id": "Gorilla_Chin_Crunch",
   "name": "고릴라 친 크런치",
   "nameEn": "Gorilla Chin/Crunch",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "intermediate",
   "force": "pull",
@@ -5482,7 +5479,9 @@
   "id": "Hanging_Leg_Raise",
   "name": "행잉 레그 레이즈",
   "nameEn": "Hanging Leg Raise",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "expert",
   "force": "pull",
@@ -5500,7 +5499,9 @@
   "id": "Hanging_Pike",
   "name": "행잉 파이크",
   "nameEn": "Hanging Pike",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "expert",
   "force": "pull",
@@ -5667,27 +5668,6 @@
   "images": [
    "Hug_Knees_To_Chest/0.jpg",
    "Hug_Knees_To_Chest/1.jpg"
-  ]
- },
- {
-  "id": "Hyperextensions_With_No_Hyperextension_Bench",
-  "name": "하이퍼익스텐션 (벤치 없이)",
-  "nameEn": "Hyperextensions With No Hyperextension Bench",
-  "requires": [],
-  "category": "strength",
-  "level": "intermediate",
-  "force": "pull",
-  "mechanic": "compound",
-  "primaryMuscles": [
-   "lower back"
-  ],
-  "secondaryMuscles": [
-   "glutes",
-   "hamstrings"
-  ],
-  "images": [
-   "Hyperextensions_With_No_Hyperextension_Bench/0.jpg",
-   "Hyperextensions_With_No_Hyperextension_Bench/1.jpg"
   ]
  },
  {
@@ -6100,7 +6080,9 @@
   "id": "Inverted_Row",
   "name": "인버티드 로우",
   "nameEn": "Inverted Row",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -6180,42 +6162,6 @@
   "images": [
    "Isometric_Chest_Squeezes/0.jpg",
    "Isometric_Chest_Squeezes/1.jpg"
-  ]
- },
- {
-  "id": "Isometric_Neck_Exercise_-_Front_And_Back",
-  "name": "아이소메트릭 목 엑서사이즈 - 프론트 ＆ 백",
-  "nameEn": "Isometric Neck Exercise - Front And Back",
-  "requires": [],
-  "category": "strength",
-  "level": "beginner",
-  "force": "static",
-  "mechanic": "isolation",
-  "primaryMuscles": [
-   "neck"
-  ],
-  "secondaryMuscles": [],
-  "images": [
-   "Isometric_Neck_Exercise_-_Front_And_Back/0.jpg",
-   "Isometric_Neck_Exercise_-_Front_And_Back/1.jpg"
-  ]
- },
- {
-  "id": "Isometric_Neck_Exercise_-_Sides",
-  "name": "아이소메트릭 목 엑서사이즈 - 사이드",
-  "nameEn": "Isometric Neck Exercise - Sides",
-  "requires": [],
-  "category": "strength",
-  "level": "beginner",
-  "force": "static",
-  "mechanic": "isolation",
-  "primaryMuscles": [
-   "neck"
-  ],
-  "secondaryMuscles": [],
-  "images": [
-   "Isometric_Neck_Exercise_-_Sides/0.jpg",
-   "Isometric_Neck_Exercise_-_Sides/1.jpg"
   ]
  },
  {
@@ -7827,28 +7773,6 @@
   ]
  },
  {
-  "id": "Natural_Glute_Ham_Raise",
-  "name": "내추럴 글루트 햄 레이즈",
-  "nameEn": "Natural Glute Ham Raise",
-  "requires": [],
-  "category": "strength",
-  "level": "intermediate",
-  "force": "pull",
-  "mechanic": "compound",
-  "primaryMuscles": [
-   "hamstrings"
-  ],
-  "secondaryMuscles": [
-   "calves",
-   "glutes",
-   "lower back"
-  ],
-  "images": [
-   "Natural_Glute_Ham_Raise/0.jpg",
-   "Natural_Glute_Ham_Raise/1.jpg"
-  ]
- },
- {
   "id": "Neck_Press",
   "name": "목 프레스",
   "nameEn": "Neck Press",
@@ -9453,28 +9377,12 @@
   ]
  },
  {
-  "id": "Prone_Manual_Hamstring",
-  "name": "프론 매뉴얼 햄스트링",
-  "nameEn": "Prone Manual Hamstring",
-  "requires": [],
-  "category": "strength",
-  "level": "beginner",
-  "force": "static",
-  "mechanic": "isolation",
-  "primaryMuscles": [
-   "hamstrings"
-  ],
-  "secondaryMuscles": [],
-  "images": [
-   "Prone_Manual_Hamstring/0.jpg",
-   "Prone_Manual_Hamstring/1.jpg"
-  ]
- },
- {
   "id": "Pullups",
   "name": "풀업",
   "nameEn": "Pullups",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -10374,7 +10282,9 @@
   "id": "Scapular_Pull-Up",
   "name": "스캐퓰러 풀업",
   "nameEn": "Scapular Pull-Up",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -10720,7 +10630,9 @@
   "id": "Seated_Flat_Bench_Leg_Pull-In",
   "name": "시티드 플랫 벤치 레그 풀인",
   "nameEn": "Seated Flat Bench Leg Pull-In",
-  "requires": [],
+  "requires": [
+   "bench"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -13681,7 +13593,9 @@
   "id": "V-Bar_Pullup",
   "name": "브이바 풀업",
   "nameEn": "V-Bar Pullup",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "beginner",
   "force": "pull",
@@ -14051,7 +13965,9 @@
   "id": "Wide-Grip_Rear_Pull-Up",
   "name": "와이드그립 리어 풀업",
   "nameEn": "Wide-Grip Rear Pull-Up",
-  "requires": [],
+  "requires": [
+   "pullupBar"
+  ],
   "category": "strength",
   "level": "intermediate",
   "force": "pull",
@@ -14087,24 +14003,6 @@
   "images": [
    "Wide-Grip_Standing_Barbell_Curl/0.jpg",
    "Wide-Grip_Standing_Barbell_Curl/1.jpg"
-  ]
- },
- {
-  "id": "Wind_Sprints",
-  "name": "윈드 스프린트",
-  "nameEn": "Wind Sprints",
-  "requires": [],
-  "category": "strength",
-  "level": "beginner",
-  "force": "pull",
-  "mechanic": "compound",
-  "primaryMuscles": [
-   "abdominals"
-  ],
-  "secondaryMuscles": [],
-  "images": [
-   "Wind_Sprints/0.jpg",
-   "Wind_Sprints/1.jpg"
   ]
  },
  {
