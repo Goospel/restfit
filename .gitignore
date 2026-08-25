@@ -3,6 +3,10 @@ node_modules/
 out/
 dist/
 coverage/
+*.tsbuildinfo
+
+# 머신마다 다르다 (preview_start용)
+.claude/launch.json
 
 # 환경변수 — 쉐어링크 Access/Secret Key가 들어간다. 절대 커밋 금지
 .env

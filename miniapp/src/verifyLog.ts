@@ -1,0 +1,46 @@
+export type LogEntry = { t: number; msg: string };
+
+const KEY = 'pricelog.verify.log';
+const MAX = 100;
+
+/**
+ * 검증 로그를 localStorage에 남긴다.
+ *
+ * **메모리에만 두면 안 되는 이유**: 우리가 재려는 실패 모드 중 하나가 "세션이 꼬여 미니앱이 재시작되는 것"이다.
+ * 재시작되면 React 상태는 통째로 날아가서, 정작 알고 싶은 "호출 → 재시작" 순서가 화면에서 사라진다.
+ * 그래서 로그만은 저장소에 남겨 재시작을 건너 살아남게 한다.
+ *
+ * 저장소가 막힌 환경(프라이빗 모드 등)에서도 앱이 죽지 않도록 읽기·쓰기를 모두 감싼다.
+ */
+export function readLog(storage: Storage = localStorage): LogEntry[] {
+  try {
+    const raw = storage.getItem(KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (e): e is LogEntry =>
+        typeof e === 'object' && e !== null && typeof (e as LogEntry).t === 'number' && typeof (e as LogEntry).msg === 'string',
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function appendLog(msg: string, now: () => number = Date.now, storage: Storage = localStorage): LogEntry[] {
+  const next = [...readLog(storage), { t: now(), msg }].slice(-MAX);
+  try {
+    storage.setItem(KEY, JSON.stringify(next));
+  } catch {
+    // 저장 실패해도 화면 표시는 되도록 계산된 값을 그대로 돌려준다.
+  }
+  return next;
+}
+
+export function clearLog(storage: Storage = localStorage): void {
+  try {
+    storage.removeItem(KEY);
+  } catch {
+    // 무시
+  }
+}
