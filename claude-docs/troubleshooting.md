@@ -22,6 +22,7 @@
      각 항목의 frontmatter(summary)에서 재생성합니다. 내용을 바꾸려면 그 항목의
      summary를 고치세요(단일 출처). 최신 항목이 위. -->
 
+- [T-215](troubleshooting/T-215.md) · .gitignore의 앵커 없는 `data/`가 `miniapp/src/data/` 전체를 삼켰다 — 로컬 테스트는 통과하고 새 클론에서만 깨지는 조용한 실패
 - [T-214](troubleshooting/T-214.md) · Git Bash의 /c/... 경로를 Node require()에 넘기면 모듈을 못 찾아 조용히 빈 출력으로 끝난다 — "파일이 없다"로 오인하기 쉽다
 
 <!-- INDEX:END -->

@@ -1,6 +1,7 @@
 export type LogEntry = { t: number; msg: string };
 
-const KEY = 'pricelog.verify.log';
+/** 테스트도 이 상수를 쓴다 — 리터럴로 적어 두면 키를 바꿨을 때 테스트가 조용히 무의미해진다. */
+export const KEY = 'restfit.verify.log';
 const MAX = 100;
 
 /**
