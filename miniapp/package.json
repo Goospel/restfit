@@ -1,11 +1,12 @@
 {
-  "name": "pricelog-miniapp",
+  "name": "restfit-miniapp",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "data": "node scripts/build-exercises.mjs"
   },
   "dependencies": {
     "@apps-in-toss/web-framework": "^3.0.4",

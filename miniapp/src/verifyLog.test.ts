@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendLog, clearLog, readLog, restartedAfterOpen } from './verifyLog';
+import { appendLog, clearLog, KEY, readLog, restartedAfterOpen } from './verifyLog';
 
 /** 메모리 Storage — 실패를 주입할 수 있게 옵션을 둔다. */
 function fakeStorage(opts: { throwOnGet?: boolean; throwOnSet?: boolean } = {}): Storage {
@@ -57,14 +57,14 @@ describe('verifyLog', () => {
 
   it('깨진 JSON이 들어 있어도 크래시하지 않고 빈 목록을 준다', () => {
     const s = fakeStorage();
-    s.setItem('pricelog.verify.log', '{그냥 쓰레기');
+    s.setItem(KEY, '{그냥 쓰레기');
 
     expect(readLog(s)).toEqual([]);
   });
 
   it('배열이 아닌 값이 들어 있어도 빈 목록을 준다', () => {
     const s = fakeStorage();
-    s.setItem('pricelog.verify.log', '{"a":1}');
+    s.setItem(KEY, '{"a":1}');
 
     expect(readLog(s)).toEqual([]);
   });
@@ -72,7 +72,7 @@ describe('verifyLog', () => {
   it('형태가 맞지 않는 항목은 걸러낸다', () => {
     const s = fakeStorage();
     s.setItem(
-      'pricelog.verify.log',
+      KEY,
       JSON.stringify([{ t: 1, msg: '정상' }, { t: '숫자아님', msg: 'x' }, { msg: 't없음' }, null, 42]),
     );
 
