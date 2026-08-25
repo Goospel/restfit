@@ -18,7 +18,8 @@
 
 [CmdletBinding()]
 param(
-    [int[]]$Sizes = @(1024, 512, 256, 192, 128, 64),
+    # 600은 앱인토스 콘솔 「앱 로고」가 요구하는 크기다(600 x 600px). 나머지는 범용 여분.
+    [int[]]$Sizes = @(1024, 600, 512, 256, 192, 128, 64),
     [string]$Svg = "assets/icon/icon.svg",
     [string]$OutDir = "assets/icon/png"
 )

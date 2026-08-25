@@ -14,7 +14,7 @@
 - ⬜ 쉐어링크 Open API 신청 *(사용자 진행)* — 기구 링크 50개뿐이라 **급하지 않다**
 - ✅ 미니앱 이름 = **홈트가어렵나** / `appName` = **`home-workout-hard`** (⚠️ "토스" 미포함)
   - 둘은 **다른 값이다** — 표시 이름은 콘솔에서 고칠 수 있고, `appName`은 **케밥-케이스 고유 ID라 수정 불가**다. 한글을 넣으면 `ait build`만 통과하고 deploy에서 깨진다(T-218)
-- ✅ **앱 아이콘** — [`assets/icon/icon.svg`](assets/icon/icon.svg) 단일 출처 + `npm`-무관 렌더 스크립트. 콘솔에는 `png/icon-1024.png`를 올린다
+- ✅ **앱 아이콘** — [`assets/icon/icon.svg`](assets/icon/icon.svg) 단일 출처 + `npm`-무관 렌더 스크립트. 콘솔 「앱 로고」에는 **`png/icon-600.png`**(600×600 요구)를 올린다. 다크모드 로고는 비워 둔다 — 배경이 자체 색이다
   - AI 생성(HiggsField)은 **접었다** — 출력 PNG에 워터마크가 박혀 나오고, 가격 페이지 어디에도 유료 전환 시 제거된다는 말이 없다
 
 ---
