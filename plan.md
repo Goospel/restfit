@@ -30,11 +30,14 @@
 **이게 실패하면 수익 모델이 성립하지 않는다.** 나머지 Phase는 전부 이 검증 통과를 전제한다.
 설계 [§2](docs/2026-08-25-design.md) 참조.
 
-- 🔜 미니앱 스캐폴드 — Vite + React **18** + `@apps-in-toss/web-framework` + `@toss/tds-mobile`
-  - ⚠️ React 19 불가 (TDS 2.5.1 peer 제약)
-- ⬜ 화면 1개 + 버튼 1개 — 쉐어링크를 `openURL()`로 연다
+- ✅ 미니앱 스캐폴드 — Vite + React **18** + `@apps-in-toss/web-framework`
+  - ⚠️ React 19 불가 (TDS 2.5.1 peer 제약). TDS는 검증에 불필요해 아직 안 넣었고 React 18 핀만 걸어 뒀다
+- ✅ 복귀 감지 로직 TDD (`returnTracker` · `verifyLog` — 15건, 돌연변이 4종으로 실효성 확인)
+- ✅ 검증 화면 — URL 입력 + `Device.openURL` / 구 `openURL` 버튼 + 복귀 로그(localStorage 영속)
+- ✅ 브라우저에서 전 경로 실측 — `visibilitychange` → 감지 → 화면 반영 확인
+- ⬜ **미니앱 배포** *(사용자)* — `npm run build` → `npx ait build` → `npx ait deploy`
 - ⬜ **수동 쉐어링크 발급** *(사용자)* — 토스쇼핑 앱에서 상품 공유 → "쉐어링크 공유하기". **Open API 승인 불필요**
-- ⬜ **실기기 검증** *(사용자)* — 앱 복귀·세션 유지 확인
+- ⬜ **실기기 검증** *(사용자)* — 두 버튼 모두. 판정 기준은 [miniapp/README.md](miniapp/README.md)
 - ⬜ 결과를 `changeLog` + (실패 시) `troubleshooting`에 기록
 
 > 이 스캐폴드는 본 프로젝트의 시작점이라 **버리는 코드가 아니다.**
