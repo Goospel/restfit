@@ -1,8 +1,11 @@
-# pricelog
+# restfit
 
-토스쇼핑 상품의 **가격 이력을 매일 쌓아, 지금의 할인이 진짜인지 판정**하는 웹사이트.
+**집에 있는 기구로 할 수 있는 홈트 루틴을 짜주고, 세트 사이 휴식 시간에 광고를 재생하는** 앱인토스 미니앱.
 
-> "할인율 40%라는데, 이 상품 지난 60일 평균가가 오늘 가격보다 쌌습니다."
+> 보통 리워드 광고는 "보상을 받으려면 참으세요"라 사용자에게 손해다.
+> **운동 중 휴식은 어차피 기다려야 하는 시간**이라, 여기서는 광고가 마찰을 만들지 않는다.
+
+수익은 둘로 갈린다 — **전면 광고**(주 수익, 세션당 여러 번)와 **토스 쉐어링크**(보조, 기구 해금).
 
 ---
 
@@ -13,17 +16,30 @@
 | [plan.md](plan.md) | **앞으로 할 일** — 살아있는 실행 계획 |
 | [changeLog.md](changeLog.md) | **완료 기록** — 역순, 왜/무엇을 |
 | [claude-docs/troubleshooting.md](claude-docs/troubleshooting.md) | **함정 + 승격** — 1분+ 디버깅했으면 여기 |
-| [docs/2026-08-25-design.md](docs/2026-08-25-design.md) | 설계 — 아키텍처·데이터 모델·판정 로직 |
-| [docs/ideas.md](docs/ideas.md) | 아이템 선정 경위 + 접은 안들의 **접은 이유와 되살릴 조건** |
+| [docs/2026-08-25-design.md](docs/2026-08-25-design.md) | 설계 — 광고 규율·데이터·로직·화면 |
+| [docs/ideas.md](docs/ideas.md) | 아이템 선정 경위 + **접은 안들의 접은 이유와 되살릴 조건** |
 
 ## 스택
 
-Next.js 16 (서버 모드) · React 19 · TypeScript · Tailwind 4 · SQLite · Vitest
-배포: AWS EC2 t4g.small + Elastic IP · nginx · cron
+Vite + React **18** + `@apps-in-toss/web-framework` + `@toss/tds-mobile` · Vitest
+**서버 0대** — 운동 데이터는 번들에, 보유 기구·기록은 localStorage, 쉐어링크는 미리 발급해 정적 JSON.
+
+⚠️ React는 **18**로 핀한다 — TDS 2.5.1의 peer가 19를 받지 않는다.
+
+## 규율 — 이게 곧 수익 구조다
+
+광고가 휴식보다 길거나 운동 중에 끼어들면 사용자가 이탈하고, 그러면 **세션당 여러 번이라는 노출 밀도 자체가 사라진다.** 돈이 되는 이유가 "어차피 버리는 시간"이라 그 선을 넘으면 근거가 무너진다.
+
+- 휴식 길이는 **운동이 정한다**(고중량 120~180초 / 근비대 60~90초 / 서킷 15~30초). 광고가 정하지 않는다
+- 짧은 휴식(<40초)에는 **광고를 틀지 않는다**
+- 운동 세트 **중**에는 광고도 상품도 띄우지 않는다
 
 ## 상태
 
-**Phase 1 (판정 로직)** 진행 예정. 쉐어링크 Open API 승인 대기 중이며, **승인 전에도 Phase 1은 목 데이터로 전부 진행 가능**하다.
+**Phase 0.5 — 실기기 실측** 진행 중. 한 번의 테스트로 둘을 잰다:
+
+1. **광고를 세션당 몇 번 틀 수 있는가** ★ — 수익 전체가 이 가정 위에 있다
+2. 미니앱에서 **쉐어링크 복귀**가 되는가 — 보조 수익이라 실패해도 치명적이지 않다
 
 ## 개발 셋업
 
@@ -32,3 +48,9 @@ git config core.hooksPath .githooks
 ```
 
 pre-commit 훅이 troubleshooting 목차의 stale·형식 오류를 검사해 커밋을 거부한다.
+
+```bash
+npm --prefix miniapp install
+npm --prefix miniapp test
+npm --prefix miniapp run dev
+```
