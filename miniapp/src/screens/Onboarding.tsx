@@ -34,7 +34,7 @@ export function Onboarding({
   const [goal, setGoal] = useState<Goal | null>(null);
 
   return (
-    <main style={{ ...ui.pageFull, paddingBottom: 'calc(var(--safe-b) + 24px)' }}>
+    <main style={{ ...ui.pageFull, paddingBottom: 0 }}>
       <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
         {[1, 2].map((i) => (
           <div
@@ -52,20 +52,22 @@ export function Onboarding({
           </p>
           <EquipmentPicker owned={owned} spec={spec} onChange={onOwnedChange} onSpecChange={onSpecChange} />
           <div style={ui.spacer} />
-          <button style={{ ...ui.primary, marginTop: 20 }} onClick={() => setStep(2)}>
-            다음
-          </button>
-          <button
-            style={{ ...ui.ghost, width: '100%', marginTop: 4 }}
-            onClick={() => {
-              onOwnedChange([]);
-              // 기구를 비우면서 상세만 남기면 안 가진 기구의 무게가 유령으로 남는다.
-              onSpecChange({});
-              setStep(2);
-            }}
-          >
-            기구가 하나도 없어요
-          </button>
+          <div style={ui.stickyFooter}>
+            <button style={ui.primary} onClick={() => setStep(2)}>
+              다음
+            </button>
+            <button
+              style={{ ...ui.ghost, width: '100%', marginTop: 4 }}
+              onClick={() => {
+                onOwnedChange([]);
+                // 기구를 비우면서 상세만 남기면 안 가진 기구의 무게가 유령으로 남는다.
+                onSpecChange({});
+                setStep(2);
+              }}
+            >
+              기구가 하나도 없어요
+            </button>
+          </div>
         </>
       ) : (
         <>
@@ -75,16 +77,18 @@ export function Onboarding({
           </p>
           <GoalPicker value={goal} onChange={setGoal} />
           <div style={ui.spacer} />
-          <button
-            style={{ ...ui.primary, marginTop: 20, ...(goal ? null : ui.disabled) }}
-            disabled={!goal}
-            onClick={() => goal && onDone(goal)}
-          >
-            오늘의 루틴 보기
-          </button>
-          <button style={{ ...ui.ghost, width: '100%', marginTop: 4 }} onClick={() => setStep(1)}>
-            뒤로
-          </button>
+          <div style={ui.stickyFooter}>
+            <button
+              style={{ ...ui.primary, ...(goal ? null : ui.disabled) }}
+              disabled={!goal}
+              onClick={() => goal && onDone(goal)}
+            >
+              오늘의 루틴 보기
+            </button>
+            <button style={{ ...ui.ghost, width: '100%', marginTop: 4 }} onClick={() => setStep(1)}>
+              뒤로
+            </button>
+          </div>
         </>
       )}
     </main>
