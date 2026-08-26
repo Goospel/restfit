@@ -1,3 +1,4 @@
+import type { IconName } from '../components/Icon';
 import type { Exercise } from '../data/exercises';
 
 /**
@@ -17,7 +18,7 @@ export const GOAL_KEYS: readonly Goal[] = ['fatLoss', 'muscle', 'health'];
 
 export type GoalSpec = {
   label: string;
-  icon: string;
+  icon: IconName;
   /** 목적 선택 화면의 한 줄 설명 */
   desc: string;
   /** 목표 반복 [최소, 최대]. 화면 표시와 입력 기본값에 쓴다. */
@@ -39,7 +40,7 @@ export type GoalSpec = {
 export const GOALS: Record<Goal, GoalSpec> = {
   fatLoss: {
     label: '체지방 감량',
-    icon: '🔥',
+    icon: 'flame',
     desc: '짧게 쉬고 많이 움직입니다',
     reps: [12, 20],
     restIsolation: 45,
@@ -48,7 +49,7 @@ export const GOALS: Record<Goal, GoalSpec> = {
   },
   muscle: {
     label: '근육 키우기',
-    icon: '💪',
+    icon: 'plate',
     desc: '충분히 회복하고 무겁게 듭니다',
     reps: [6, 12],
     restIsolation: 90,
@@ -57,7 +58,7 @@ export const GOALS: Record<Goal, GoalSpec> = {
   },
   health: {
     label: '건강 유지',
-    icon: '🌿',
+    icon: 'sprout',
     desc: '무리 없이 꾸준하게',
     reps: [8, 15],
     restIsolation: 60,

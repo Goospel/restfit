@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import { Icon, type IconName } from './components/Icon';
 import { EXERCISES } from './data/exercises';
 import { effectiveOwned, type EquipSpec } from './logic/equipSpec';
 import { DEFAULT_GOAL, GOALS, type Goal } from './logic/goal';
@@ -29,10 +30,10 @@ import {
 
 type Tab = 'home' | 'shop' | 'history';
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'home', label: '오늘', icon: '🏋️' },
-  { key: 'shop', label: '기구', icon: '🧰' },
-  { key: 'history', label: '기록', icon: '📖' },
+const TABS: { key: Tab; label: string; icon: IconName }[] = [
+  { key: 'home', label: '오늘', icon: 'dumbbell' },
+  { key: 'shop', label: '기구', icon: 'kettlebell' },
+  { key: 'history', label: '기록', icon: 'chart' },
 ];
 
 export function App() {
@@ -172,7 +173,7 @@ export function App() {
             onClick={() => setTab(t.key)}
             aria-current={tab === t.key ? 'page' : undefined}
           >
-            <span style={{ fontSize: 20, lineHeight: 1 }}>{t.icon}</span>
+            <Icon name={t.icon} />
             <span style={{ fontSize: 11, fontWeight: 600 }}>{t.label}</span>
           </button>
         ))}

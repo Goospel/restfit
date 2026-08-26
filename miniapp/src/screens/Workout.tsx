@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { awaitAdEvent } from '../adProbe';
 import { ExerciseImage } from '../components/ExerciseImage';
+import { Icon } from '../components/Icon';
 import type { MuscleGroup } from '../data/exercises';
 import { MUSCLE_KO } from '../data/labels';
 import {
@@ -142,7 +143,9 @@ export function Workout({
       <main style={ui.pageFull}>
         <div style={{ ...ui.spacer, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
           <div>
-            <div style={{ fontSize: 48 }}>💪</div>
+            <div style={{ color: 'var(--blue)', display: 'flex', justifyContent: 'center' }}>
+              <Icon name="plate" size={48} />
+            </div>
             <h1 style={{ ...ui.h1, marginBottom: 4 }}>운동 완료</h1>
             <p style={ui.sub}>
               {s.exercises.length}개 운동 · {total}세트

@@ -1,4 +1,5 @@
 import { ExerciseImage } from '../components/ExerciseImage';
+import { Icon } from '../components/Icon';
 import { GROUP_KO, MUSCLE_KO } from '../data/labels';
 import { GOALS, type Goal } from '../logic/goal';
 import { restSecondsFor, SETS_PER_EXERCISE } from '../logic/session';
@@ -74,8 +75,20 @@ export function Home({
         </h1>
         <span style={ui.spacer} />
         {/* 목적을 계속 띄운다 — 왜 15회·45초인지가 이 칩으로 설명된다. */}
-        <button style={{ ...ui.chip, color: 'var(--blue-dark)', background: '#eff6ff', borderColor: 'var(--blue)' }} onClick={onOpenSettings}>
-          {GOALS[goal].icon} {GOALS[goal].label}
+        <button
+          style={{
+            ...ui.chip,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            color: 'var(--blue-dark)',
+            background: '#eff6ff',
+            borderColor: 'var(--blue)',
+          }}
+          onClick={onOpenSettings}
+        >
+          <Icon name={GOALS[goal].icon} size={14} />
+          {GOALS[goal].label}
         </button>
       </div>
       <p style={ui.sub}>
