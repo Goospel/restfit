@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { EXERCISES } from './data/exercises';
+import { effectiveOwned, type EquipSpec } from './logic/equipSpec';
 import { DEFAULT_GOAL, GOALS, type Goal } from './logic/goal';
 import { pickRoutine } from './logic/routine';
 import { startSession, type Session } from './logic/session';
@@ -13,10 +14,12 @@ import { Workout } from './screens/Workout';
 import {
   appendRecord,
   clearOnboarding,
+  loadEquipSpec,
   loadGoal,
   loadHistory,
   loadOwned,
   recentGroups,
+  saveEquipSpec,
   saveGoal,
   saveOwned,
   todayKey,
@@ -33,6 +36,8 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 
 export function App() {
   const [owned, setOwned] = useState(loadOwned);
+  /** 기구 상세(무게 구간·벤치 등판). 비어 있어도 앱은 그대로 돈다 — 「모름」이 정상 경로다. */
+  const [spec, setSpec] = useState<EquipSpec>(loadEquipSpec);
   const [history, setHistory] = useState(loadHistory);
   const [tab, setTab] = useState<Tab>('home');
   const [session, setSession] = useState<Session | null>(null);
@@ -51,12 +56,24 @@ export function App() {
   const routine = useMemo(() => {
     const prior = history.filter((r) => r.date !== date);
     // 종목 수는 목적이 정한다 — 짧게 쉬는 목적일수록 많이 넣어야 세션 길이가 유지된다.
-    return pickRoutine(EXERCISES, owned, recentGroups(prior), date, GOALS[goal ?? DEFAULT_GOAL].exerciseCount);
-  }, [owned, history, date, goal]);
+    // effectiveOwned: 조절식 벤치를 가졌으면 인클라인까지 열고, 평벤치·모름이면 걸러낸다.
+    return pickRoutine(
+      EXERCISES,
+      effectiveOwned(owned, spec),
+      recentGroups(prior),
+      date,
+      GOALS[goal ?? DEFAULT_GOAL].exerciseCount,
+    );
+  }, [owned, spec, history, date, goal]);
 
   function saveOwnedAnd(next: typeof owned) {
     setOwned(next);
     saveOwned(next);
+  }
+
+  function saveSpecAnd(next: EquipSpec) {
+    setSpec(next);
+    saveEquipSpec(next);
   }
 
   function saveGoalAnd(next: Goal) {
@@ -71,6 +88,7 @@ export function App() {
   function resetOnboarding() {
     clearOnboarding();
     setOwned([]);
+    setSpec({});
     setGoal(null);
     // 온보딩을 마치면 마지막으로 보던 기록 탭이 아니라 오늘 루틴으로 돌아오게 둔다.
     setTab('home');
@@ -84,7 +102,15 @@ export function App() {
 
   // 온보딩이 가장 앞이다. 목적이 비어 있는 채로 앱을 쓰게 두면 그 상태를 화면마다 따로 처리해야 한다.
   if (goal === null) {
-    return <Onboarding owned={owned} onOwnedChange={saveOwnedAnd} onDone={saveGoalAnd} />;
+    return (
+      <Onboarding
+        owned={owned}
+        spec={spec}
+        onOwnedChange={saveOwnedAnd}
+        onSpecChange={saveSpecAnd}
+        onDone={saveGoalAnd}
+      />
+    );
   }
 
   if (probe) return <Probe onBack={() => setProbe(false)} />;
@@ -98,6 +124,7 @@ export function App() {
         onChange={setSession}
         onFinish={finish}
         history={history}
+        spec={spec}
         date={date}
       />
     );
@@ -116,7 +143,14 @@ export function App() {
         />
       )}
       {tab === 'equipment' && (
-        <Equipment owned={owned} onChange={saveOwnedAnd} goal={goal} onGoalChange={saveGoalAnd} />
+        <Equipment
+          owned={owned}
+          spec={spec}
+          onChange={saveOwnedAnd}
+          onSpecChange={saveSpecAnd}
+          goal={goal}
+          onGoalChange={saveGoalAnd}
+        />
       )}
       {tab === 'history' && (
         <History history={history} onProbe={() => setProbe(true)} onResetOnboarding={resetOnboarding} />

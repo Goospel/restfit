@@ -11,7 +11,7 @@ export const MUSCLE_KO: Record<string, string> = {
 
 export const EQUIPMENT_KO: Record<EquipKey, string> = {
   dumbbell: '덤벨', barbell: '바벨', kettlebell: '케틀벨', band: '밴드', pullupBar: '풀업바',
-  bench: '벤치', exerciseBall: '짐볼', foamRoller: '폼롤러', medicineBall: '메디신볼', abRoller: '복근롤러',
+  bench: '벤치', benchAdjustable: '각도 조절 벤치', exerciseBall: '짐볼', foamRoller: '폼롤러', medicineBall: '메디신볼', abRoller: '복근롤러',
 };
 
 export const GROUP_KO: Record<MuscleGroup, string> = {

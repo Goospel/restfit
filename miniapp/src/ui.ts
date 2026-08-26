@@ -115,6 +115,17 @@ export const goalStyle = (on: boolean): CSSProperties => ({
   borderRadius: 14,
 });
 
+/** 기구 상세용 작은 칩. 한 줄에 여러 개가 들어가야 해서 `pickStyle`보다 작다. */
+export const specChipStyle = (on: boolean): CSSProperties => ({
+  padding: '7px 11px',
+  fontSize: 13,
+  fontWeight: 600,
+  color: on ? 'var(--blue-dark)' : 'var(--text-sub)',
+  background: on ? '#eff6ff' : '#fff',
+  border: `1px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
+  borderRadius: 999,
+});
+
 /** 초 → `M:SS`. */
 export function mmss(sec: number): string {
   const m = Math.floor(sec / 60);

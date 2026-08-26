@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { EquipmentPicker } from '../components/EquipmentPicker';
 import { GoalPicker } from '../components/GoalPicker';
 import type { EquipKey } from '../data/exercises';
+import type { EquipSpec } from '../logic/equipSpec';
 import type { Goal } from '../logic/goal';
 import { ui } from '../ui';
 
@@ -18,11 +19,15 @@ import { ui } from '../ui';
  */
 export function Onboarding({
   owned,
+  spec,
   onOwnedChange,
+  onSpecChange,
   onDone,
 }: {
   owned: EquipKey[];
+  spec: EquipSpec;
   onOwnedChange: (next: EquipKey[]) => void;
+  onSpecChange: (next: EquipSpec) => void;
   onDone: (goal: Goal) => void;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -45,7 +50,7 @@ export function Onboarding({
           <p style={{ ...ui.sub, fontSize: 14, marginBottom: 20 }}>
             고른 기구로 할 수 있는 운동만 루틴에 나옵니다. 하나도 없어도 맨몸 운동으로 시작할 수 있어요.
           </p>
-          <EquipmentPicker owned={owned} onChange={onOwnedChange} />
+          <EquipmentPicker owned={owned} spec={spec} onChange={onOwnedChange} onSpecChange={onSpecChange} />
           <div style={ui.spacer} />
           <button style={{ ...ui.primary, marginTop: 20 }} onClick={() => setStep(2)}>
             다음
@@ -54,6 +59,8 @@ export function Onboarding({
             style={{ ...ui.ghost, width: '100%', marginTop: 4 }}
             onClick={() => {
               onOwnedChange([]);
+              // 기구를 비우면서 상세만 남기면 안 가진 기구의 무게가 유령으로 남는다.
+              onSpecChange({});
               setStep(2);
             }}
           >

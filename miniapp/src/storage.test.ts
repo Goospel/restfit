@@ -5,9 +5,11 @@ import {
   clearOnboarding,
   HISTORY_MAX,
   lastSetOf,
+  loadEquipSpec,
   loadGoal,
   loadHistory,
   loadOwned,
+  saveEquipSpec,
   saveGoal,
   recentGroups,
   saveOwned,
@@ -224,6 +226,15 @@ describe('clearOnboarding', () => {
     expect(loadOwned(s)).toEqual([]);
   });
 
+  it('기구 상세도 함께 지운다', () => {
+    // 기구를 지우면서 그 상세(무게·벤치 종류)만 남으면, 온보딩을 다시 해도
+    // 안 가진 기구의 무게가 유령처럼 남아 운동 화면 기본값에 새어 나온다.
+    const s = fakeStorage();
+    saveEquipSpec({ dumbbell: 'heavy', bench: 'adjustable' }, s);
+    clearOnboarding(s);
+    expect(loadEquipSpec(s)).toEqual({});
+  });
+
   it('운동 기록은 건드리지 않는다', () => {
     // 온보딩을 다시 보려고 눌렀다가 그동안 쌓은 기록이 날아가면 안 된다.
     const s = fakeStorage();
@@ -235,5 +246,44 @@ describe('clearOnboarding', () => {
 
   it('저장소가 막혀도 죽지 않는다', () => {
     expect(() => clearOnboarding(fakeStorage({ throwOnRemove: true }))).not.toThrow();
+  });
+});
+
+describe('기구 상세', () => {
+  it('저장한 적 없으면 빈 객체다', () => {
+    expect(loadEquipSpec(fakeStorage())).toEqual({});
+  });
+
+  it('저장하고 읽으면 같다', () => {
+    const s = fakeStorage();
+    saveEquipSpec({ dumbbell: 'medium', bench: 'adjustable', band: 'mixed' }, s);
+    expect(loadEquipSpec(s)).toEqual({ dumbbell: 'medium', bench: 'adjustable', band: 'mixed' });
+  });
+
+  it('어휘에 없는 값은 걸러낸다', () => {
+    // 옛 버전이 남긴 값이 그대로 들어오면 WEIGHT_OPTIONS에서 못 찾아 화면이 조용히 어긋난다.
+    const s = fakeStorage();
+    s.setItem('restfit.equipSpec', JSON.stringify({ dumbbell: '아주무거움', bench: 'adjustable' }));
+    expect(loadEquipSpec(s)).toEqual({ bench: 'adjustable' });
+  });
+
+  it('벤치에 무게 구간이 들어와도 걸러낸다', () => {
+    // 키마다 허용 어휘가 다르다. 한 벌로 검사하면 bench: 'heavy' 같은 값이 통과한다.
+    const s = fakeStorage();
+    s.setItem('restfit.equipSpec', JSON.stringify({ bench: 'heavy', dumbbell: 'heavy' }));
+    expect(loadEquipSpec(s)).toEqual({ dumbbell: 'heavy' });
+  });
+
+  it('객체가 아니거나 깨진 값이면 빈 객체다', () => {
+    const s = fakeStorage();
+    s.setItem('restfit.equipSpec', '{쓰레기');
+    expect(loadEquipSpec(s)).toEqual({});
+    s.setItem('restfit.equipSpec', JSON.stringify(['dumbbell']));
+    expect(loadEquipSpec(s)).toEqual({});
+  });
+
+  it('저장소가 막혀도 죽지 않는다', () => {
+    expect(() => saveEquipSpec({ dumbbell: 'heavy' }, fakeStorage({ throwOnSet: true }))).not.toThrow();
+    expect(loadEquipSpec(fakeStorage({ throwOnGet: true }))).toEqual({});
   });
 });

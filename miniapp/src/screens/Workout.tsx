@@ -12,6 +12,7 @@ import {
   skipExercise,
   type Session,
 } from '../logic/session';
+import { defaultWeightFor, type EquipSpec } from '../logic/equipSpec';
 import { midReps } from '../logic/goal';
 import { lastSetOf, type WorkoutRecord } from '../storage';
 import { mmss, ui } from '../ui';
@@ -31,6 +32,7 @@ export function Workout({
   onChange,
   onFinish,
   history,
+  spec,
   date,
 }: {
   session: Session;
@@ -39,6 +41,8 @@ export function Workout({
   onChange: (s: Session) => void;
   onFinish: (rec: WorkoutRecord | null) => void;
   history: WorkoutRecord[];
+  /** 보유 기구 상세. 처음 하는 운동의 무게를 0 대신 여기서 채운다. */
+  spec: EquipSpec;
   date: string;
 }) {
   const s = session;
@@ -51,10 +55,11 @@ export function Workout({
   useEffect(() => {
     if (!current) return;
     const last = lastSetOf(history, current.id);
-    setWeight(String(last?.weight ?? 0));
+    // 처음 하는 운동이면 보유 무게 구간의 대표값으로 채운다. 모른다고 답했으면 0 — 아는 척하지 않는다.
+    setWeight(String(last?.weight ?? defaultWeightFor(current.requires, spec)));
     // 직전 기록이 없으면 목적의 권장 반복으로 채운다 — 12~20회를 권해 놓고 10이 떠 있으면 모순이다.
     setReps(String(last?.reps ?? midReps(s.goal)));
-  }, [current?.id, history, s.goal]);
+  }, [current?.id, history, s.goal, spec]);
 
   // 휴식 중일 때만 시계를 돌린다.
   const resting = s.restEndsAt !== null;
