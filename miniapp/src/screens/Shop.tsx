@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import { EXERCISES, type EquipKey } from '../data/exercises';
 import { EQUIPMENT_KO } from '../data/labels';
-import { HAS_ANY_LINK, SHARE_LINKS } from '../data/shareLinks';
+import { DISCLOSURE, HAS_ANY_LINK, SHARE_LINKS } from '../data/shareLinks';
 import type { EquipSpec } from '../logic/equipSpec';
 import { recommend } from '../logic/recommend';
 import { ui } from '../ui';
@@ -85,11 +85,12 @@ export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
         </div>
       )}
 
-      {/* 대가성 문구는 링크가 실제로 있을 때만. 받지도 않는 대가를 고지하면 그 자체가 거짓이다. */}
+      {/*
+       * 대가성 문구는 링크가 실제로 있을 때만. 받지도 않는 대가를 고지하면 그 자체가 거짓이다.
+       * ⚠️ 문구는 **토스가 지정한 문장을 글자 그대로** 쓴다 — 뜻이 같아도 내가 지은 문장은 규정 위반이다.
+       */}
       {HAS_ANY_LINK && (
-        <p style={{ ...ui.sub, marginTop: 20, marginBottom: 0, fontSize: 12 }}>
-          이 링크로 구매하면 앱 운영자가 일정액의 수수료를 받습니다.
-        </p>
+        <p style={{ ...ui.sub, marginTop: 20, marginBottom: 0, fontSize: 12 }}>{DISCLOSURE}</p>
       )}
     </main>
   );
