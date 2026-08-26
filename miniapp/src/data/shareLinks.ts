@@ -11,8 +11,18 @@ import type { EquipKey } from './exercises';
  * 반드시 **발급 API의 `shortUrl`**(또는 토스쇼핑 앱의 「쉐어링크 공유하기」로 받은 주소)을 넣는다.
  */
 export const SHARE_LINKS: Partial<Record<EquipKey, string>> = {
-  // dumbbell: 'https://toss.im/_m/...',
+  /** 아이워너 맨즈 육각 아령 5kg 2개입 — 상품이 내려가면 링크가 죽으니 재발급 때 참고. */
+  dumbbell: 'https://toss.im/_m/jnf2rJC3',
 };
 
 /** 링크가 하나도 없으면 대가성 문구를 띄우지 않는다 — 받지도 않는 대가를 고지하면 그게 거짓이다. */
 export const HAS_ANY_LINK = Object.keys(SHARE_LINKS).length > 0;
+
+/**
+ * 대가성 고지. ⚠️ **토스가 지정한 문장을 글자 그대로 쓴다.**
+ *
+ * 쉐어링크를 발급하면 토스가 이 문장을 함께 준다. 뜻이 같아도 내가 지어 쓴 문장은 규정 위반이라,
+ * 여기 상수로 박아 두고 화면은 이것만 참조한다.
+ */
+export const DISCLOSURE =
+  '✱ 이 포스팅은 토스쇼핑 쉐어링크 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
