@@ -10,6 +10,8 @@ import {
   skipExercise,
   startSession,
 } from './session';
+import { MIN_REST_SECONDS } from './adPlan';
+import { DEFAULT_GOAL, GOAL_KEYS, GOALS } from './goal';
 import type { Exercise } from '../data/exercises';
 
 const ex = (id: string, mechanic: Exercise['mechanic'] = 'compound'): Exercise => ({
@@ -183,5 +185,44 @@ describe('progress', () => {
   it('마지막 세트를 마치면 setNo가 총 세트 수를 넘지 않는다', () => {
     const s = run(startSession([ex('a')]), SETS_PER_EXERCISE);
     expect(progress(s).setNo).toBe(SETS_PER_EXERCISE);
+  });
+});
+
+describe('목적(goal)', () => {
+  it('세션이 목적을 담는다', () => {
+    expect(startSession([ex('a')], 'fatLoss').goal).toBe('fatLoss');
+  });
+
+  it('목적을 안 주면 기본 목적이 된다', () => {
+    expect(startSession([ex('a')]).goal).toBe(DEFAULT_GOAL);
+  });
+
+  it('휴식 길이가 세션의 목적을 따른다', () => {
+    const log = { weight: 0, reps: 10 };
+    const fat = completeSet(startSession([ex('a', 'isolation')], 'fatLoss'), log, 0);
+    const mus = completeSet(startSession([ex('a', 'isolation')], 'muscle'), log, 0);
+    expect(fat.restEndsAt).toBe(GOALS.fatLoss.restIsolation * 1000);
+    expect(mus.restEndsAt).toBe(GOALS.muscle.restIsolation * 1000);
+  });
+
+  it('세션을 통과한 실제 휴식이 광고 하한을 넘는다', () => {
+    // goal.test.ts는 표 자체를 검사한다. 여기서는 completeSet이 **그 표를 실제로 쓰는지**를 본다
+    // — 표가 맞아도 세션이 옛 상수를 쓰고 있으면 수익이 사라진다.
+    const log = { weight: 0, reps: 10 };
+    for (const g of GOAL_KEYS) {
+      for (const m of ['compound', 'isolation', null] as const) {
+        const s = completeSet(startSession([ex('a', m)], g), log, 0);
+        expect((s.restEndsAt ?? 0) / 1000, g + '/' + m).toBeGreaterThanOrEqual(MIN_REST_SECONDS);
+      }
+    }
+  });
+
+  it('restSecondsFor가 목적을 받는다', () => {
+    expect(restSecondsFor(ex('a', 'compound'), 'muscle')).toBe(GOALS.muscle.restCompound);
+    expect(restSecondsFor(ex('a', 'isolation'), 'fatLoss')).toBe(GOALS.fatLoss.restIsolation);
+  });
+
+  it('mechanic이 null이면 고립으로 친다', () => {
+    expect(restSecondsFor(ex('a', null), 'muscle')).toBe(GOALS.muscle.restIsolation);
   });
 });

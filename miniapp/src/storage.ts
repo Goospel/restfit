@@ -1,4 +1,5 @@
 import { EQUIPMENT, GROUP_KEYS, type EquipKey, type MuscleGroup } from './data/exercises';
+import { isGoal, type Goal } from './logic/goal';
 import type { SetLog } from './logic/session';
 
 /**
@@ -12,6 +13,7 @@ import type { SetLog } from './logic/session';
 
 const OWNED_KEY = 'restfit.owned';
 const HISTORY_KEY = 'restfit.history';
+const GOAL_KEY = 'restfit.goal';
 
 /** 기록 상한. 무한히 자라면 저장이 실패해 **그날 운동이 통째로 사라진다.** */
 export const HISTORY_MAX = 400;
@@ -53,6 +55,22 @@ export function loadOwned(storage: Storage = localStorage): EquipKey[] {
 
 export function saveOwned(owned: EquipKey[], storage: Storage = localStorage): void {
   write(OWNED_KEY, owned, storage);
+}
+
+/**
+ * 운동 목적. **`null`은 「아직 안 골랐다」는 뜻이고, 그게 온보딩을 띄울 유일한 근거다.**
+ *
+ * 여기서 기본값을 대신 돌려주면 온보딩을 한 사람과 안 한 사람이 구별되지 않는다.
+ * 기본값(`DEFAULT_GOAL`)은 화면이 고르지, 저장소가 고르지 않는다.
+ */
+export function loadGoal(storage: Storage = localStorage): Goal | null {
+  const v = read(GOAL_KEY, storage);
+  // 옛 버전이 남긴 값이 들어오면 GOALS[goal]이 undefined가 되어 화면이 죽는다.
+  return isGoal(v) ? v : null;
+}
+
+export function saveGoal(goal: Goal, storage: Storage = localStorage): void {
+  write(GOAL_KEY, goal, storage);
 }
 
 function isRecord(v: unknown): v is WorkoutRecord {

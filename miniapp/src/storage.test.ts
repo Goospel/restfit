@@ -4,8 +4,10 @@ import {
   appendRecord,
   HISTORY_MAX,
   lastSetOf,
+  loadGoal,
   loadHistory,
   loadOwned,
+  saveGoal,
   recentGroups,
   saveOwned,
   todayKey,
@@ -172,5 +174,30 @@ describe('todayKey', () => {
     const d = new Date('2026-08-24T20:00:00Z');
     expect(todayKey(d, 'Asia/Seoul')).toBe('2026-08-25');
     expect(todayKey(d, 'UTC')).toBe('2026-08-24');
+  });
+});
+
+describe('loadGoal / saveGoal', () => {
+  it('저장한 적 없으면 null — 「온보딩을 안 했다」는 뜻이다', () => {
+    // 기본값을 돌려주면 온보딩을 띄울지 판단할 근거가 사라진다.
+    expect(loadGoal(fakeStorage())).toBeNull();
+  });
+
+  it('저장하고 다시 읽으면 같다', () => {
+    const s = fakeStorage();
+    saveGoal('fatLoss', s);
+    expect(loadGoal(s)).toBe('fatLoss');
+  });
+
+  it('어휘에 없는 값은 null로 친다', () => {
+    // 옛 버전이 남긴 값이 들어오면 GOALS[goal]이 undefined가 되어 화면이 죽는다.
+    const s = fakeStorage();
+    s.setItem('restfit.goal', JSON.stringify('bulking'));
+    expect(loadGoal(s)).toBeNull();
+  });
+
+  it('저장소가 막혀도 죽지 않는다', () => {
+    expect(() => saveGoal('muscle', fakeStorage({ throwOnSet: true }))).not.toThrow();
+    expect(loadGoal(fakeStorage({ throwOnGet: true }))).toBeNull();
   });
 });

@@ -1,14 +1,26 @@
 import { useMemo, useState } from 'react';
 
 import { EXERCISES } from './data/exercises';
+import { DEFAULT_GOAL, GOALS, type Goal } from './logic/goal';
 import { pickRoutine } from './logic/routine';
 import { startSession, type Session } from './logic/session';
 import { Equipment } from './screens/Equipment';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
+import { Onboarding } from './screens/Onboarding';
 import { Probe } from './screens/Probe';
 import { Workout } from './screens/Workout';
-import { appendRecord, loadHistory, loadOwned, recentGroups, saveOwned, todayKey, type WorkoutRecord } from './storage';
+import {
+  appendRecord,
+  loadGoal,
+  loadHistory,
+  loadOwned,
+  recentGroups,
+  saveGoal,
+  saveOwned,
+  todayKey,
+  type WorkoutRecord,
+} from './storage';
 
 type Tab = 'home' | 'equipment' | 'history';
 
@@ -24,6 +36,8 @@ export function App() {
   const [tab, setTab] = useState<Tab>('home');
   const [session, setSession] = useState<Session | null>(null);
   const [probe, setProbe] = useState(false);
+  /** `null`이면 온보딩을 아직 안 끝냈다는 뜻이다. 기본값을 여기서 대신 채우면 그 구분이 사라진다. */
+  const [goal, setGoal] = useState<Goal | null>(loadGoal);
 
   const date = todayKey();
 
@@ -35,18 +49,29 @@ export function App() {
    */
   const routine = useMemo(() => {
     const prior = history.filter((r) => r.date !== date);
-    return pickRoutine(EXERCISES, owned, recentGroups(prior), date);
-  }, [owned, history, date]);
+    // 종목 수는 목적이 정한다 — 짧게 쉬는 목적일수록 많이 넣어야 세션 길이가 유지된다.
+    return pickRoutine(EXERCISES, owned, recentGroups(prior), date, GOALS[goal ?? DEFAULT_GOAL].exerciseCount);
+  }, [owned, history, date, goal]);
 
   function saveOwnedAnd(next: typeof owned) {
     setOwned(next);
     saveOwned(next);
   }
 
+  function saveGoalAnd(next: Goal) {
+    setGoal(next);
+    saveGoal(next);
+  }
+
   function finish(rec: WorkoutRecord | null) {
     if (rec) setHistory(appendRecord(rec));
     setSession(null);
     setTab('home');
+  }
+
+  // 온보딩이 가장 앞이다. 목적이 비어 있는 채로 앱을 쓰게 두면 그 상태를 화면마다 따로 처리해야 한다.
+  if (goal === null) {
+    return <Onboarding owned={owned} onOwnedChange={saveOwnedAnd} onDone={saveGoalAnd} />;
   }
 
   if (probe) return <Probe onBack={() => setProbe(false)} />;
@@ -71,12 +96,15 @@ export function App() {
         <Home
           routine={routine}
           history={history}
+          goal={goal}
           doneToday={history.some((r) => r.date === date)}
-          onStart={() => setSession(startSession(routine.exercises))}
+          onStart={() => setSession(startSession(routine.exercises, goal))}
           onGoEquipment={() => setTab('equipment')}
         />
       )}
-      {tab === 'equipment' && <Equipment owned={owned} onChange={saveOwnedAnd} />}
+      {tab === 'equipment' && (
+        <Equipment owned={owned} onChange={saveOwnedAnd} goal={goal} onGoalChange={saveGoalAnd} />
+      )}
       {tab === 'history' && <History history={history} onProbe={() => setProbe(true)} />}
 
       <nav style={navStyle}>

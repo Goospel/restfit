@@ -102,6 +102,19 @@ export const pickStyle = (on: boolean): CSSProperties => ({
   borderRadius: 12,
 });
 
+/** 선택 상태의 목적 카드. 기구 카드보다 크고 테두리가 두껍다 — 하나만 고르는 자리다. */
+export const goalStyle = (on: boolean): CSSProperties => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  width: '100%',
+  padding: 16,
+  textAlign: 'left',
+  background: on ? '#eff6ff' : 'var(--bg-sub)',
+  border: `${on ? 2 : 1}px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
+  borderRadius: 14,
+});
+
 /** 초 → `M:SS`. */
 export function mmss(sec: number): string {
   const m = Math.floor(sec / 60);

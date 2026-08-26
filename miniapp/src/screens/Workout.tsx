@@ -12,6 +12,7 @@ import {
   skipExercise,
   type Session,
 } from '../logic/session';
+import { midReps } from '../logic/goal';
 import { lastSetOf, type WorkoutRecord } from '../storage';
 import { mmss, ui } from '../ui';
 
@@ -51,8 +52,9 @@ export function Workout({
     if (!current) return;
     const last = lastSetOf(history, current.id);
     setWeight(String(last?.weight ?? 0));
-    setReps(String(last?.reps ?? 10));
-  }, [current?.id, history]);
+    // 직전 기록이 없으면 목적의 권장 반복으로 채운다 — 12~20회를 권해 놓고 10이 떠 있으면 모순이다.
+    setReps(String(last?.reps ?? midReps(s.goal)));
+  }, [current?.id, history, s.goal]);
 
   // 휴식 중일 때만 시계를 돌린다.
   const resting = s.restEndsAt !== null;
