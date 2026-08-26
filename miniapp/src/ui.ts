@@ -86,22 +86,46 @@ export const ui: S = {
     borderRadius: 999,
   },
   empty: { padding: '48px 20px', textAlign: 'center', color: 'var(--text-weak)', fontSize: 14 },
+
+  /**
+   * 화면 밑에 붙어 따라오는 버튼 자리.
+   *
+   * 기구가 10칸이라 세로로 900px쯤 되는데, 「다음」이 그 아래 있으면 **두 화면을 넘겨야
+   * 보인다.** 온보딩에서 다음 버튼을 못 찾는 건 그대로 이탈이고, 이탈은 광고 슬롯이
+   * 통째로 사라진다는 뜻이다.
+   *
+   * ⚠️ 좌우 여백을 음수 마진으로 뚫어 화면 끝까지 덮는다 — 안 그러면 스크롤되는 콘텐츠가
+   * 버튼 **옆으로 비쳐 지나간다.**
+   */
+  stickyFooter: {
+    position: 'sticky',
+    bottom: 0,
+    margin: '16px -20px 0',
+    padding: '12px 20px calc(var(--safe-b) + 12px)',
+    background: 'var(--bg)',
+    borderTop: '1px solid var(--line)',
+  },
 };
 
-/** 선택 상태의 기구 카드. */
-export const pickStyle = (on: boolean): CSSProperties => ({
+/**
+ * 기구 한 칸. **정사각형 2열이라 아이콘을 크게 쓸 수 있다.**
+ *
+ * 고른 칸은 테두리 두께·바탕색·체크 세 가지가 같이 바뀐다 — **색 하나에만 기대면**
+ * 색각 이상인 사람에게는 아무 표시도 없는 것과 같다.
+ */
+export const equipStyle = (on: boolean): CSSProperties => ({
+  position: 'relative',
+  aspectRatio: '1',
   display: 'flex',
+  flexDirection: 'column',
   alignItems: 'center',
-  gap: 10,
-  width: '100%',
-  padding: '14px 16px',
-  fontSize: 15,
-  fontWeight: 600,
-  textAlign: 'left',
+  justifyContent: 'center',
+  gap: 7,
+  padding: 0,
   color: on ? 'var(--blue-dark)' : 'var(--text)',
   background: on ? '#eff6ff' : 'var(--bg-sub)',
-  border: `1px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
-  borderRadius: 12,
+  border: `${on ? 2 : 1}px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
+  borderRadius: 16,
 });
 
 /** 선택 상태의 목적 카드. 기구 카드보다 크고 테두리가 두껍다 — 하나만 고르는 자리다. */

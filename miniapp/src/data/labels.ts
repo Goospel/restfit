@@ -1,3 +1,4 @@
+import type { IconName } from '../components/Icon';
 import { EQUIPMENT, GROUP_KEYS, type EquipKey, type MuscleGroup } from './exercises';
 
 /** 화면에 그대로 뜨는 한글 라벨. 운동명은 데이터에 이미 한글로 들어 있다. */
@@ -12,6 +13,19 @@ export const MUSCLE_KO: Record<string, string> = {
 export const EQUIPMENT_KO: Record<EquipKey, string> = {
   dumbbell: '덤벨', barbell: '바벨', kettlebell: '케틀벨', band: '밴드', pullupBar: '풀업바',
   bench: '벤치', benchAdjustable: '각도 조절 벤치', exerciseBall: '짐볼', foamRoller: '폼롤러', medicineBall: '메디신볼', abRoller: '복근롤러',
+};
+
+/**
+ * 기구 → 아이콘. **라벨 바로 옆에 두는 이유는 같은 일을 하기 때문이다** — 데이터의 키를
+ * 사람이 보는 것으로 바꾼다. 어휘가 늘면 둘 다 여기서 같이 챙긴다.
+ *
+ * 조절식 벤치는 평벤치와 같은 그림을 쓴다 — 고르는 목록(`PICKABLE`)에 없고, 화면에 뜰 때도
+ * 「벤치」로 읽히면 충분하다.
+ */
+export const EQUIPMENT_ICON: Record<EquipKey, IconName> = {
+  dumbbell: 'dumbbell', barbell: 'barbell', kettlebell: 'kettlebell', band: 'band', pullupBar: 'pullupBar',
+  bench: 'bench', benchAdjustable: 'bench', exerciseBall: 'exerciseBall', foamRoller: 'foamRoller',
+  medicineBall: 'medicineBall', abRoller: 'abRoller',
 };
 
 export const GROUP_KO: Record<MuscleGroup, string> = {
