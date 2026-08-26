@@ -99,3 +99,30 @@ describe('exercises.json', () => {
     expect(EXERCISES.filter((e) => e.requires.length >= 2).length).toBeGreaterThan(10);
   });
 });
+
+describe('벤치 각도', () => {
+  const ANGLED = /인클라인|디클라인/;
+  const usesBench = (e: (typeof EXERCISES)[number]) => e.requires.some((r) => r === 'bench' || r === 'benchAdjustable');
+
+  it('각도가 필요한 운동은 조절식 벤치를 요구한다', () => {
+    // 평벤치만 가진 사람에게 인클라인 벤치프레스가 나오는 건 **못 하는 운동을 시키는 것**이다.
+    // 실제로 그렇게 나왔다 — 벤치를 체크하자마자 첫 루틴이 인클라인 덤벨 벤치프레스였다.
+    const angled = EXERCISES.filter((e) => ANGLED.test(e.name) && usesBench(e));
+    expect(angled.length).toBeGreaterThan(20);
+    for (const e of angled) {
+      expect(e.requires, e.name).toContain('benchAdjustable');
+      expect(e.requires, e.name).not.toContain('bench');
+    }
+  });
+
+  it('각도어가 없는 벤치 운동은 평벤치로 남는다', () => {
+    // 반대 방향도 막는다 — 전부 조절식으로 몰면 평벤치 사용자가 벤치 운동을 통째로 잃는다.
+    const flat = EXERCISES.filter((e) => e.requires.includes('bench'));
+    expect(flat.length).toBeGreaterThan(20);
+    for (const e of flat) expect(e.name, e.name).not.toMatch(ANGLED);
+  });
+
+  it('조절식 벤치가 어휘에 있다', () => {
+    expect(EQUIPMENT).toContain('benchAdjustable' as EquipKey);
+  });
+});

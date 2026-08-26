@@ -1,4 +1,5 @@
 import { EQUIPMENT, GROUP_KEYS, type EquipKey, type MuscleGroup } from './data/exercises';
+import { BAND_OPTIONS, BENCH_OPTIONS, WEIGHED, WEIGHT_OPTIONS, type EquipSpec } from './logic/equipSpec';
 import { isGoal, type Goal } from './logic/goal';
 import type { SetLog } from './logic/session';
 
@@ -14,6 +15,7 @@ import type { SetLog } from './logic/session';
 const OWNED_KEY = 'restfit.owned';
 const HISTORY_KEY = 'restfit.history';
 const GOAL_KEY = 'restfit.goal';
+const SPEC_KEY = 'restfit.equipSpec';
 
 /** 기록 상한. 무한히 자라면 저장이 실패해 **그날 운동이 통째로 사라진다.** */
 export const HISTORY_MAX = 400;
@@ -91,6 +93,34 @@ export function saveGoal(goal: Goal, storage: Storage = localStorage): void {
 export function clearOnboarding(storage: Storage = localStorage): void {
   remove(GOAL_KEY, storage);
   remove(OWNED_KEY, storage);
+  // 기구를 지우면서 상세만 남기면 안 가진 기구의 무게가 기본값으로 새어 나온다.
+  remove(SPEC_KEY, storage);
+}
+
+/**
+ * 기구 상세(무게 구간 · 벤치 등판 · 밴드 강도).
+ *
+ * ⚠️ **키마다 허용 어휘가 다르다.** 한 벌로 검사하면 `bench: 'heavy'` 같은 값이 통과해
+ * 화면이 조용히 어긋난다 — 무게 구간과 벤치 종류는 서로 다른 어휘다.
+ */
+const SPEC_VOCAB: Record<string, readonly string[]> = {
+  ...Object.fromEntries(WEIGHED.map((k) => [k, WEIGHT_OPTIONS[k].map((o) => o.key)])),
+  bench: BENCH_OPTIONS.map((o) => o.key),
+  band: BAND_OPTIONS.map((o) => o.key),
+};
+
+export function loadEquipSpec(storage: Storage = localStorage): EquipSpec {
+  const v = read(SPEC_KEY, storage);
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v)) {
+    if (typeof val === 'string' && SPEC_VOCAB[k]?.includes(val)) out[k] = val;
+  }
+  return out as EquipSpec;
+}
+
+export function saveEquipSpec(spec: EquipSpec, storage: Storage = localStorage): void {
+  write(SPEC_KEY, spec, storage);
 }
 
 function isRecord(v: unknown): v is WorkoutRecord {

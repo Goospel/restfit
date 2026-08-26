@@ -204,7 +204,7 @@
   "name": "얼터네이트 인클라인 덤벨 컬",
   "nameEn": "Alternate Incline Dumbbell Curl",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -830,7 +830,7 @@
   "nameEn": "Barbell Curls Lying Against An Incline",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -999,7 +999,7 @@
   "nameEn": "Barbell Incline Bench Press - Medium Grip",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -1023,7 +1023,7 @@
   "nameEn": "Barbell Incline Shoulder Raise",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -3174,7 +3174,7 @@
   "nameEn": "Decline Barbell Bench Press",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -3198,7 +3198,7 @@
   "nameEn": "Decline Close-Grip Bench To Skull Crusher",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "intermediate",
@@ -3221,7 +3221,7 @@
   "name": "디클라인 크런치",
   "nameEn": "Decline Crunch",
   "requires": [
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "intermediate",
@@ -3241,7 +3241,7 @@
   "name": "디클라인 덤벨 벤치프레스",
   "nameEn": "Decline Dumbbell Bench Press",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -3265,7 +3265,7 @@
   "name": "디클라인 덤벨 플라이",
   "nameEn": "Decline Dumbbell Flyes",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -3286,7 +3286,7 @@
   "name": "디클라인 덤벨 트라이셉스 익스텐션",
   "nameEn": "Decline Dumbbell Triceps Extension",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -3308,7 +3308,7 @@
   "nameEn": "Decline EZ Bar Triceps Extension",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -3328,7 +3328,7 @@
   "name": "디클라인 오블리크 크런치",
   "nameEn": "Decline Oblique Crunch",
   "requires": [
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -3369,7 +3369,7 @@
   "name": "디클라인 리버스 크런치",
   "nameEn": "Decline Reverse Crunch",
   "requires": [
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -3794,7 +3794,7 @@
   "name": "덤벨 인클라인 로우",
   "nameEn": "Dumbbell Incline Row",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -3820,7 +3820,7 @@
   "name": "덤벨 인클라인 숄더 레이즈",
   "nameEn": "Dumbbell Incline Shoulder Raise",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -4014,7 +4014,7 @@
   "name": "덤벨 프론 인클라인 컬",
   "nameEn": "Dumbbell Prone Incline Curl",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -4652,7 +4652,7 @@
   "name": "플렉서 인클라인 덤벨 컬",
   "nameEn": "Flexor Incline Dumbbell Curls",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -4915,7 +4915,7 @@
   "name": "프론트 인클라인 덤벨 레이즈",
   "nameEn": "Front Incline Dumbbell Raise",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5260,7 +5260,7 @@
   "name": "해머 그립 인클라인 덤벨 벤치프레스",
   "nameEn": "Hammer Grip Incline DB Bench Press",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5714,7 +5714,7 @@
   "nameEn": "Incline Barbell Triceps Extension",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "intermediate",
@@ -5737,7 +5737,7 @@
   "nameEn": "Incline Bench Pull",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -5760,7 +5760,7 @@
   "name": "인클라인 덤벨 벤치 ＋ 팜 페이싱 인",
   "nameEn": "Incline Dumbbell Bench With Palms Facing In",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5784,7 +5784,7 @@
   "name": "인클라인 덤벨 컬",
   "nameEn": "Incline Dumbbell Curl",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5805,7 +5805,7 @@
   "name": "인클라인 덤벨 플라이",
   "nameEn": "Incline Dumbbell Flyes",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5828,7 +5828,7 @@
   "name": "인클라인 덤벨 플라이 - ＋ 트위스트",
   "nameEn": "Incline Dumbbell Flyes - With A Twist",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5851,7 +5851,7 @@
   "name": "인클라인 덤벨 프레스",
   "nameEn": "Incline Dumbbell Press",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5875,7 +5875,7 @@
   "name": "인클라인 해머 컬",
   "nameEn": "Incline Hammer Curls",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -5896,7 +5896,7 @@
   "name": "인클라인 이너 바이셉스 컬",
   "nameEn": "Incline Inner Biceps Curl",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -8199,7 +8199,7 @@
   "name": "원암 인클라인 래터럴 레이즈",
   "nameEn": "One-Arm Incline Lateral Raise",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -11403,7 +11403,7 @@
   "nameEn": "Smith Incline Shoulder Raise",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -12536,7 +12536,7 @@
   "name": "스탠딩 원암 덤벨 컬 오버 인클라인 벤치",
   "nameEn": "Standing One-Arm Dumbbell Curl Over Incline Bench",
   "requires": [
-   "bench",
+   "benchAdjustable",
    "dumbbell"
   ],
   "category": "strength",
@@ -12921,7 +12921,7 @@
   "nameEn": "Straight Raises on Incline Bench",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "beginner",
@@ -13919,7 +13919,7 @@
   "nameEn": "Wide-Grip Decline Barbell Bench Press",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "intermediate",
@@ -13943,7 +13943,7 @@
   "nameEn": "Wide-Grip Decline Barbell Pullover",
   "requires": [
    "barbell",
-   "bench"
+   "benchAdjustable"
   ],
   "category": "strength",
   "level": "intermediate",

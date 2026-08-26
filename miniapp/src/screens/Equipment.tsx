@@ -4,6 +4,7 @@ import { EquipmentPicker } from '../components/EquipmentPicker';
 import { GoalPicker } from '../components/GoalPicker';
 import { EXERCISES, type EquipKey } from '../data/exercises';
 import { filterByEquipment } from '../logic/equipment';
+import { effectiveOwned, type EquipSpec } from '../logic/equipSpec';
 import type { Goal } from '../logic/goal';
 import { ui } from '../ui';
 
@@ -21,16 +22,21 @@ const STRENGTH = EXERCISES.filter((e) => e.category === 'strength');
  */
 export function Equipment({
   owned,
+  spec,
   onChange,
+  onSpecChange,
   goal,
   onGoalChange,
 }: {
   owned: EquipKey[];
+  spec: EquipSpec;
   onChange: (next: EquipKey[]) => void;
+  onSpecChange: (next: EquipSpec) => void;
   goal: Goal;
   onGoalChange: (goal: Goal) => void;
 }) {
-  const available = useMemo(() => filterByEquipment(STRENGTH, owned).length, [owned]);
+  // 조절식 벤치를 고르면 인클라인 34개가 함께 열린다 — 숫자가 그 자리에서 늘어야 설득이 된다.
+  const available = useMemo(() => filterByEquipment(STRENGTH, effectiveOwned(owned, spec)).length, [owned, spec]);
 
   return (
     <main style={ui.page}>
@@ -45,7 +51,7 @@ export function Equipment({
         </div>
       </div>
 
-      <EquipmentPicker owned={owned} onChange={onChange} />
+      <EquipmentPicker owned={owned} spec={spec} onChange={onChange} onSpecChange={onSpecChange} />
 
       <p style={{ ...ui.sub, marginTop: 16, marginBottom: 0 }}>
         맨몸 운동은 기구 없이도 나옵니다. 아무것도 안 골라도 오늘 운동은 할 수 있어요.

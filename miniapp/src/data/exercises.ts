@@ -1,7 +1,7 @@
 import raw from './exercises.json';
 
 /** 홈트 장비 어휘. `scripts/build-exercises.mjs`의 EQUIPMENT와 같아야 한다(데이터 테스트가 대조한다). */
-export const EQUIPMENT = ['dumbbell', 'barbell', 'kettlebell', 'band', 'pullupBar', 'bench', 'exerciseBall', 'foamRoller', 'medicineBall', 'abRoller'] as const;
+export const EQUIPMENT = ['dumbbell', 'barbell', 'kettlebell', 'band', 'pullupBar', 'bench', 'benchAdjustable', 'exerciseBall', 'foamRoller', 'medicineBall', 'abRoller'] as const;
 export type EquipKey = (typeof EQUIPMENT)[number];
 
 export type Category = 'strength' | 'stretching' | 'plyometrics' | 'cardio' | 'powerlifting' | 'olympic weightlifting' | 'strongman';

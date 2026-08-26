@@ -21,7 +21,7 @@ const SRC = process.env.EX_SRC ?? 'https://raw.githubusercontent.com/yuhonas/fre
 const OUT = new URL('../src/data/exercises.json', import.meta.url);
 
 /** 홈트 장비 어휘. 이 목록에 없는 장비를 요구하는 운동은 실리지 않는다. */
-export const EQUIPMENT = ['dumbbell', 'barbell', 'kettlebell', 'band', 'pullupBar', 'bench', 'exerciseBall', 'foamRoller', 'medicineBall', 'abRoller'];
+export const EQUIPMENT = ['dumbbell', 'barbell', 'kettlebell', 'band', 'pullupBar', 'bench', 'benchAdjustable', 'exerciseBall', 'foamRoller', 'medicineBall', 'abRoller'];
 
 /** 원본 equipment → 홈트 어휘. 값이 `null`이면 맨몸(요구 장비 없음), 없으면 제외. */
 const REMAP = {
@@ -147,9 +147,16 @@ const DROP_IDS = new Set([
  * ponytail: 이름 기반 휴리스틱이다. 오분류가 보이면 개별 예외를 여기 적는다.
  */
 const NEEDS_BENCH = /bench|incline|decline/i;
+/**
+ * 등판을 눕히거나 세워야 하는 것 — **평벤치로는 못 한다.**
+ *
+ * 이걸 가르지 않으면 평벤치만 가진 사용자에게 인클라인 벤치프레스가 나온다(실제로 나왔다).
+ * 조절식을 가진 사람은 평벤치 운동도 되므로, 보유 쪽에서 두 키를 함께 세운다(`storage.saveEquipSpec`).
+ */
+const NEEDS_ADJUSTABLE = /incline|decline/i;
 const FREE_WEIGHT = new Set(['dumbbell', 'barbell', 'band']);
 
-function requiresOf(e) {
+function baseRequiresOf(e) {
   if (DROP_IDS.has(e.id)) return null;
   if (REQUIRES_FIX[e.id]) return REQUIRES_FIX[e.id];
   if (e.equipment === 'other') return OTHER_ALLOW[e.id] ?? null;
@@ -157,6 +164,15 @@ function requiresOf(e) {
   if (base === undefined) return null;
   if (base.some((k) => FREE_WEIGHT.has(k)) && NEEDS_BENCH.test(e.name)) return [...base, 'bench'];
   return base;
+}
+
+function requiresOf(e) {
+  const r = baseRequiresOf(e);
+  // 수동 예외(REQUIRES_FIX의 Decline_Crunch 등)까지 한자리에서 승격시키려고 마지막에 건다.
+  if (r?.includes('bench') && NEEDS_ADJUSTABLE.test(e.name)) {
+    return r.map((k) => (k === 'bench' ? 'benchAdjustable' : k));
+  }
+  return r;
 }
 
 /** 이미 한글로 바뀐 조각인지. 구절 치환 결과를 다시 토큰으로 씹지 않기 위해. */
