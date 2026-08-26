@@ -10,8 +10,12 @@
 
 ## ⚠️ 전제
 
-- 🔜 **앱인토스 콘솔에 앱 등록 → API 키 발급** *(사용자 진행)* — **등록 신청 완료(2026-08-25), 심사 대기.** 여기가 지금 유일한 병목이다. 광고를 보려면 앱이 기기에 올라가 있어야 하고, 올리려면 키가 있어야 한다
-- ⬜ **앱인토스 콘솔에서 광고 그룹 발급** *(사용자 진행)* — 위 등록 다음
+- ✅ **앱인토스 콘솔에 앱 등록** — 워크스페이스 `69821`(Booktimer) / 미니앱 `68739`(홈트가어렵나), 상태 `PREPARE`. `releaseDecision`·`reviewRequestDecision` 둘 다 `ALLOWED`
+- ✅ **배포 경로 확보 — 콘솔 MCP**(`mcp.toss.im`, user scope). **API 키가 아예 불필요해졌다** — 번들 업로드·빌드 폴링·테스트 발송을 Claude가 직접 한다
+  - CLI로 갈 거면 API 키는 **워크스페이스 왼쪽 「키」 메뉴**에 있다(앱 안 개발 섹션이 아니다)
+- 🔜 **광고 그룹 생성** — 조회하니 **빈 목록**이었다. 약관 미동의가 아니라 **아직 안 만든 것**이라 `iaa_placement_group_create`로 바로 만들 수 있다
+  - ⚠️ 생성 후 **약 2시간은 `REGISTERING`**(구글 반영 대기)이라 `groupId`가 `null`로 오고, 그 ID를 코드에 넣어도 광고가 안 나온다
+  - ⚠️ **23일 연속 노출이 없으면 삭제 예정**으로 넘어간다 — 만드는 순간 그 시계가 돈다
 - ⬜ 쉐어링크 Open API 신청 *(사용자 진행)* — 기구 링크 50개뿐이라 **급하지 않다**
 - ✅ 미니앱 이름 = **홈트가어렵나** / `appName` = **`home-workout-hard`** (⚠️ "토스" 미포함)
   - 둘은 **다른 값이다** — 표시 이름은 콘솔에서 고칠 수 있고, `appName`은 **케밥-케이스 고유 ID라 수정 불가**다. 한글을 넣으면 `ait build`만 통과하고 deploy에서 깨진다(T-218)
@@ -76,6 +80,7 @@
 - ✅ 한글 이름 화면 확인 — 데이터 오분류 3건을 여기서 잡았다(아래)
 - ✅ **온보딩 2단계** — 첫 진입 시 기구 → 목적. 목적이 없으면(`loadGoal() === null`) 온보딩이 뜬다
 - ✅ **운동 목적** — 체지방 감량 / 근육 키우기 / 건강 유지. 반복·휴식·종목 수를 함께 정하고 기구 탭에서 바꾼다
+- ✅ **온보딩 다시 보기**(기록 탭 개발자용 줄) — 폰에서는 localStorage를 손댈 수 없어, **이게 없으면 온보딩을 고쳐도 실기기에서 두 번 볼 수 없다.** 목적·기구를 지우고 기록은 남긴다
 - ✅ `StrictMode` 재검토 → **켰다**. 실측 판정은 `restartedAfterOpen`이라 이중 마운트에 영향받지 않고, 타이머·광고 effect의 정리 누락을 잡아야 한다
 
 **화면에서 드러난 데이터 결함** — 로직 테스트로는 절대 안 잡혔다
@@ -103,9 +108,11 @@
 ## Phase 5 — 배포·심사
 
 - ✅ **`npm run release`** = `npm run build && ait build` — T-150(수동 3단계가 스테일 번들을 심사에 올린 사고) 대응. 두 단계를 묶어 **dist를 안 만들고 아티팩트만 다시 싸는 경로를 없앴다**
-- 🔜 `npx ait deploy` — **API 키만 있으면 된다.** `ait token add`로 프로필에 저장 → `ait deploy`
-  - `--scheme-only`로 `intoss-private` scheme을 받아 **심사 없이 실기기에서 연다.** Phase 0.5 실측은 이 경로로 한다
-- ⬜ 앱인토스 심사 제출 — 실측·광고 통합이 끝난 뒤
+- ✅ **콘솔 MCP 배포** — `bundle_upload`(deploymentId는 `ait build`가 번들 헤더에 심은 값을 그대로) → 발급된 S3 URL에 `curl -X PUT -H 'Content-Type: application/zip'` → `bundle_upload_complete` → `bundle_build_status` 폴링 → `bundle_test_push`
+  - `bundle_test_push`가 **테스트 푸시를 보내고 `privateLink`(`intoss-private://`)를 준다.** 심사 없이 실기기에서 열린다 — Phase 0.5 실측은 이 경로다
+  - ⚠️ 폴링 종료 조건은 **내 `deploymentId`가 `builds`에서 빠지는 것**이다. `builds`가 전부 비기를 기다리면 안 된다(`upload_complete`를 안 한 번들이 `PREPARE`로 영영 남는다)
+  - ⚠️ **라이브 전환(출시하기)은 MCP로 불가** — 검수 승인 후 콘솔 웹에서 눌러야 한다
+- ⬜ 앱인토스 심사 제출(`bundle_submit_review`) — 실측·광고 통합이 끝난 뒤
 
 ---
 

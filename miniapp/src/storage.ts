@@ -46,6 +46,14 @@ function write(key: string, value: unknown, storage: Storage): void {
   }
 }
 
+function remove(key: string, storage: Storage): void {
+  try {
+    storage.removeItem(key);
+  } catch {
+    // 읽기·쓰기와 같은 이유로 삼킨다.
+  }
+}
+
 export function loadOwned(storage: Storage = localStorage): EquipKey[] {
   const v = read(OWNED_KEY, storage);
   if (!Array.isArray(v)) return [];
@@ -71,6 +79,18 @@ export function loadGoal(storage: Storage = localStorage): Goal | null {
 
 export function saveGoal(goal: Goal, storage: Storage = localStorage): void {
   write(GOAL_KEY, goal, storage);
+}
+
+/**
+ * 온보딩을 안 한 상태로 되돌린다 — **목적과 기구를 함께 지운다.**
+ *
+ * 목적만 지우면 온보딩 1단계에 이미 고른 기구가 남아 첫 진입 경험이 재현되지 않는다.
+ * 온보딩 화면을 고친 뒤 실기기에서 확인할 유일한 방법이라(폰에서는 localStorage를 손댈 수 없다)
+ * 재현이 곧 이 함수의 목적이다. **운동 기록은 건드리지 않는다.**
+ */
+export function clearOnboarding(storage: Storage = localStorage): void {
+  remove(GOAL_KEY, storage);
+  remove(OWNED_KEY, storage);
 }
 
 function isRecord(v: unknown): v is WorkoutRecord {

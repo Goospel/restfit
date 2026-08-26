@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   appendRecord,
+  clearOnboarding,
   HISTORY_MAX,
   lastSetOf,
   loadGoal,
@@ -14,7 +15,7 @@ import {
   type WorkoutRecord,
 } from './storage';
 
-function fakeStorage(opts: { throwOnGet?: boolean; throwOnSet?: boolean } = {}): Storage {
+function fakeStorage(opts: { throwOnGet?: boolean; throwOnSet?: boolean; throwOnRemove?: boolean } = {}): Storage {
   const map = new Map<string, string>();
   return {
     getItem(k) {
@@ -25,7 +26,10 @@ function fakeStorage(opts: { throwOnGet?: boolean; throwOnSet?: boolean } = {}):
       if (opts.throwOnSet) throw new Error('boom');
       map.set(k, v);
     },
-    removeItem: (k) => void map.delete(k),
+    removeItem(k) {
+      if (opts.throwOnRemove) throw new Error('boom');
+      map.delete(k);
+    },
     clear: () => map.clear(),
     key: () => null,
     get length() {
@@ -199,5 +203,37 @@ describe('loadGoal / saveGoal', () => {
   it('저장소가 막혀도 죽지 않는다', () => {
     expect(() => saveGoal('muscle', fakeStorage({ throwOnSet: true }))).not.toThrow();
     expect(loadGoal(fakeStorage({ throwOnGet: true }))).toBeNull();
+  });
+});
+
+describe('clearOnboarding', () => {
+  it('목적을 지워 온보딩이 다시 뜨게 만든다', () => {
+    // 목적이 `null`이어야 App이 온보딩을 띄운다. 그게 이 함수의 존재 이유다.
+    const s = fakeStorage();
+    saveGoal('muscle', s);
+    clearOnboarding(s);
+    expect(loadGoal(s)).toBeNull();
+  });
+
+  it('기구도 함께 지운다', () => {
+    // 목적만 지우면 온보딩 1단계에 고른 기구가 남아 **첫 진입 경험이 재현되지 않는다.**
+    // 온보딩을 고치고 실기기에서 확인하려고 만든 버튼이라 그 재현이 곧 목적이다.
+    const s = fakeStorage();
+    saveOwned(['dumbbell', 'bench'], s);
+    clearOnboarding(s);
+    expect(loadOwned(s)).toEqual([]);
+  });
+
+  it('운동 기록은 건드리지 않는다', () => {
+    // 온보딩을 다시 보려고 눌렀다가 그동안 쌓은 기록이 날아가면 안 된다.
+    const s = fakeStorage();
+    appendRecord(rec('2026-08-26', 'chest'), s);
+    saveGoal('muscle', s);
+    clearOnboarding(s);
+    expect(loadHistory(s)).toHaveLength(1);
+  });
+
+  it('저장소가 막혀도 죽지 않는다', () => {
+    expect(() => clearOnboarding(fakeStorage({ throwOnRemove: true }))).not.toThrow();
   });
 });

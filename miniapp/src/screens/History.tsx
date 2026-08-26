@@ -8,7 +8,15 @@ import { ui } from '../ui';
  * ⚠️ localStorage에만 있다 — **기기를 바꾸면 날아간다.** 클라우드 동기화는 의도적 보류(설계 §5)라
  * 사용자에게 그 사실을 숨기지 않고 화면 아래에 적어 둔다.
  */
-export function History({ history, onProbe }: { history: WorkoutRecord[]; onProbe: () => void }) {
+export function History({
+  history,
+  onProbe,
+  onResetOnboarding,
+}: {
+  history: WorkoutRecord[];
+  onProbe: () => void;
+  onResetOnboarding: () => void;
+}) {
   // 저장은 오래된 것이 앞이고, 화면은 최근 것이 앞이다.
   const recent = [...history].reverse();
 
@@ -52,10 +60,19 @@ export function History({ history, onProbe }: { history: WorkoutRecord[]; onProb
       <p style={{ ...ui.sub, marginTop: 24, marginBottom: 8 }}>
         기록은 이 기기에만 저장됩니다. 앱을 지우거나 기기를 바꾸면 사라집니다.
       </p>
-      {/* Phase 0.5 실측 도구로 가는 임시 입구. 실측이 끝나면 이 줄과 Probe 화면을 함께 걷는다. */}
-      <button style={ui.ghost} onClick={onProbe}>
-        개발자용 · Phase 0.5 실측
-      </button>
+      {/*
+        개발자용 입구. 실측이 끝나면 Probe 화면과 함께 걷는다.
+        「온보딩 다시 보기」는 **폰에서 localStorage를 손댈 수 없어서** 있다 —
+        온보딩을 고쳐도 이 버튼이 없으면 실기기에서 두 번 볼 방법이 없다.
+      */}
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <button style={ui.ghost} onClick={onProbe}>
+          개발자용 · Phase 0.5 실측
+        </button>
+        <button style={ui.ghost} onClick={onResetOnboarding}>
+          온보딩 다시 보기
+        </button>
+      </div>
     </main>
   );
 }

@@ -12,6 +12,7 @@ import { Probe } from './screens/Probe';
 import { Workout } from './screens/Workout';
 import {
   appendRecord,
+  clearOnboarding,
   loadGoal,
   loadHistory,
   loadOwned,
@@ -63,6 +64,18 @@ export function App() {
     saveGoal(next);
   }
 
+  /**
+   * 온보딩을 다시 띄운다. **폰에서는 localStorage를 손댈 방법이 없어**
+   * 온보딩 화면을 고쳐도 실기기에서 확인할 길이 없다 — 그 유일한 입구다.
+   */
+  function resetOnboarding() {
+    clearOnboarding();
+    setOwned([]);
+    setGoal(null);
+    // 온보딩을 마치면 마지막으로 보던 기록 탭이 아니라 오늘 루틴으로 돌아오게 둔다.
+    setTab('home');
+  }
+
   function finish(rec: WorkoutRecord | null) {
     if (rec) setHistory(appendRecord(rec));
     setSession(null);
@@ -105,7 +118,9 @@ export function App() {
       {tab === 'equipment' && (
         <Equipment owned={owned} onChange={saveOwnedAnd} goal={goal} onGoalChange={saveGoalAnd} />
       )}
-      {tab === 'history' && <History history={history} onProbe={() => setProbe(true)} />}
+      {tab === 'history' && (
+        <History history={history} onProbe={() => setProbe(true)} onResetOnboarding={resetOnboarding} />
+      )}
 
       <nav style={navStyle}>
         {TABS.map((t) => (
