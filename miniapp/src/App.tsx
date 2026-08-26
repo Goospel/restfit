@@ -181,16 +181,25 @@ export function App() {
   );
 }
 
+/**
+ * **떠 있는 캡슐이어야 한다** — 토스 브랜딩 가이드가 지정한 형태이고,
+ * 밑변에 꽉 붙은 형태로 냈다가 검수에서 반려됐다(2026-08-26).
+ *
+ * 밑변에 붙고 윗선이 있으면 토스 앱 자체의 하단 탭과 형태가 겹쳐, 사용자가
+ * 지금 토스에 있는지 미니앱에 있는지 헷갈린다. 그래서 좌우를 띄우고(`left`/`right`)
+ * 밑에서도 띄우고(`--tab-gap`) 완전한 pill(`borderRadius: 999`)로 만든다.
+ */
 const navStyle: React.CSSProperties = {
   position: 'fixed',
-  left: 0,
-  right: 0,
-  bottom: 0,
+  left: 20,
+  right: 20,
+  bottom: 'calc(var(--safe-b) + var(--tab-gap))',
   display: 'flex',
-  height: 'calc(var(--tab-h) + var(--safe-b))',
-  paddingBottom: 'var(--safe-b)',
+  height: 'var(--tab-h)',
   background: 'var(--bg)',
-  borderTop: '1px solid var(--line)',
+  borderRadius: 999,
+  // 좌우가 트여 컨텐츠가 옆으로 지나가므로, 그림자가 없으면 떠 있는 것으로 안 보인다.
+  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06)',
 };
 
 const tabStyle: React.CSSProperties = {

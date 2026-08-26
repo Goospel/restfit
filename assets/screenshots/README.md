@@ -23,6 +23,16 @@ store/  콘솔에 올리는 결과물                      ← 스크립트가 �
 dev 서버(`npm run dev`, `localhost:5310`)를 띄우고 **390x844 dPR2**로 캡처한다.
 localStorage에 상태를 심어야 화면이 비지 않는다 — 기구·목적·기록이 없으면 초라하게 나온다.
 
+손으로 찍을 필요는 없다. `chrome-devtools` MCP로 자동화된다 — `emulate`(`390x844x2,mobile,touch`)를
+**`navigate_page` 앞에** 걸고, `evaluate_script`로 `restfit.owned`·`restfit.goal`·`restfit.history`를
+심은 뒤 `location.reload()`, 탭 전환은 `document.querySelectorAll('nav button')[i].click()`,
+저장은 `take_screenshot`의 `filePath`로 바로 `raw/`에 떨군다.
+
+⚠️ **`03`은 스크롤을 끝까지 내린 뒤 찍는다.** 이 화면은 뷰포트보다 약간 길어서, 스크롤 0에서 찍으면
+맨 아래 **대가성 문구가 탭바에 반쯤 가린다** — 스토어 이미지로는 고지를 숨긴 것처럼 보인다.
+끝까지 내리면 문구가 온전히 보이고 탭바까지 24px 여유가 생긴다(상단 제목이 51px 잘리는데,
+어차피 캔버스 문구가 위에 얹히므로 손해가 아니다).
+
 | 파일 | 화면 | 심을 상태 |
 |---|---|---|
 | `01-home.png` | 오늘의 루틴 | 덤벨 보유 + 기록 3건 |

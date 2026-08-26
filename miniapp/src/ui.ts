@@ -19,7 +19,7 @@ type S = Record<string, CSSProperties>;
 
 export const ui: S = {
   // ── 레이아웃
-  page: { padding: '16px 20px calc(var(--tab-h) + var(--safe-b) + 24px)', minHeight: '100vh' },
+  page: { padding: '16px 20px calc(var(--tab-h) + var(--tab-gap) + var(--safe-b) + 24px)', minHeight: '100vh' },
   pageFull: { padding: '16px 20px calc(var(--safe-b) + 24px)', minHeight: '100vh', display: 'flex', flexDirection: 'column' },
   h1: { fontSize: 22, fontWeight: 700, margin: '4px 0 20px' },
   h2: { fontSize: 17, fontWeight: 700, margin: '0 0 4px' },

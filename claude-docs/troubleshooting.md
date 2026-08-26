@@ -22,6 +22,7 @@
      각 항목의 frontmatter(summary)에서 재생성합니다. 내용을 바꾸려면 그 항목의
      summary를 고치세요(단일 출처). 최신 항목이 위. -->
 
+- [T-222](troubleshooting/T-222.md) · 첫 심사가 탭바 하나로 반려됐다 — 밑변에 붙은 「보통의 하단 탭」은 토스 자체 탭과 형태가 겹쳐 금지고, 좌우·아래를 띄운 pill이어야 한다
 - [T-221](troubleshooting/T-221.md) · 미니앱 사용 연령(minAge)은 토스가 정하고 파트너는 콘솔에서 바꿀 수 없다 — 다른 앱이 14세인 것을 근거로 「설정 가능한 값」이라고 추론한 것이 틀렸다
 - [T-220](troubleshooting/T-220.md) · 콘솔에 올린 스크린샷은 앱정보 검토가 승인돼야 miniapp_get의 images에 나타난다 — 조회가 빈 배열이라고 업로드 실패로 보면 중복 업로드하게 된다
 - [T-219](troubleshooting/T-219.md) · Figma의 listAvailableFontsAsync에 있고 loadFontAsync도 성공을 반환하는 폰트가 실재하지 않을 수 있다 — 텍스트가 폭 0으로 아무것도 안 그려진다
