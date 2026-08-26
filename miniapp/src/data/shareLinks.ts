@@ -1,0 +1,18 @@
+import type { EquipKey } from './exercises';
+
+/**
+ * 기구별 토스 쉐어링크. **아직 비어 있다.**
+ *
+ * 링크가 없는 기구는 화면에 「어디서 사는지」 버튼이 안 뜬다 — 추천 자체는 그대로 보인다.
+ * 어떤 기구가 얼마나 도움이 되는지는 링크와 무관하게 알 값이 있고, 링크가 생기면
+ * **이 파일만 채우면 버튼이 살아난다.**
+ *
+ * ⚠️ 조회 API의 `productUrl`을 넣으면 안 된다 — 추적이 안 되어 수익이 0으로 잡힌다.
+ * 반드시 **발급 API의 `shortUrl`**(또는 토스쇼핑 앱의 「쉐어링크 공유하기」로 받은 주소)을 넣는다.
+ */
+export const SHARE_LINKS: Partial<Record<EquipKey, string>> = {
+  // dumbbell: 'https://toss.im/_m/...',
+};
+
+/** 링크가 하나도 없으면 대가성 문구를 띄우지 않는다 — 받지도 않는 대가를 고지하면 그게 거짓이다. */
+export const HAS_ANY_LINK = Object.keys(SHARE_LINKS).length > 0;
