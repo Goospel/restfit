@@ -1,5 +1,6 @@
 import { GOAL_KEYS, GOALS, type Goal } from '../logic/goal';
 import { goalStyle } from '../ui';
+import { Icon } from './Icon';
 
 /**
  * 운동 목적 선택.
@@ -15,7 +16,9 @@ export function GoalPicker({ value, onChange }: { value: Goal | null; onChange: 
         const on = value === k;
         return (
           <button key={k} style={goalStyle(on)} onClick={() => onChange(k)} aria-pressed={on}>
-            <span style={{ fontSize: 28, lineHeight: 1 }}>{g.icon}</span>
+            <span style={{ color: on ? 'var(--blue)' : 'var(--text-sub)', display: 'flex' }}>
+              <Icon name={g.icon} size={28} />
+            </span>
             <span style={{ display: 'grid', gap: 2, textAlign: 'left', minWidth: 0 }}>
               <span style={{ fontSize: 16, fontWeight: 700, color: on ? 'var(--blue-dark)' : 'var(--text)' }}>
                 {g.label}

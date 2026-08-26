@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ICONS } from '../components/Icon';
 import { MIN_REST_SECONDS } from './adPlan';
 import { DEFAULT_GOAL, GOAL_KEYS, GOALS, midReps, restSecondsForGoal } from './goal';
 
@@ -52,10 +53,11 @@ describe('GOALS', () => {
     expect(GOALS.fatLoss.exerciseCount).toBeGreaterThan(GOALS.muscle.exerciseCount);
   });
 
-  it('라벨과 아이콘이 비어 있지 않다', () => {
+  it('라벨이 비어 있지 않고, 아이콘이 실제로 그려지는 이름이다', () => {
+    // 아이콘 이름을 오타 내거나 세트에서 지우면 화면에 빈 사각형이 뜬다. 그걸 여기서 막는다.
     for (const key of GOAL_KEYS) {
       expect(GOALS[key].label.length, key).toBeGreaterThan(0);
-      expect(GOALS[key].icon.length, key).toBeGreaterThan(0);
+      expect(ICONS[GOALS[key].icon]?.length, key).toBeGreaterThan(0);
     }
   });
 });
