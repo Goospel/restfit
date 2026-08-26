@@ -12,21 +12,22 @@ import { ui } from '../ui';
 const STRENGTH = EXERCISES.filter((e) => e.category === 'strength');
 
 /**
- * 보유 기구 등록 + 운동 목적 변경.
+ * 내 조건 — 보유 기구 + 운동 목적.
  *
- * 체크 하나하나가 곧 **할 수 있는 운동 수**로 보이게 했다. Phase 4에서 여기에 쉐어링크가 붙는데,
- * 그때 설득력은 "이거 사세요"가 아니라 **"+95개"라는 숫자**에서 나온다.
+ * 체크 하나하나가 곧 **할 수 있는 운동 수**로 보이게 했다. 그 숫자가 기구 탭의 추천에도
+ * 그대로 쓰인다 — 여기서 체크를 하나 켜면 저기 추천 목록이 바뀐다.
  *
- * 목적을 여기 둔 이유: 온보딩 뒤에 바꿀 자리가 필요한데, **기구와 목적은 둘 다 「내 조건」**이라
- * 성격이 같다. 별도 설정 탭을 만들면 탭 하나를 위해 화면 하나가 더 생긴다.
+ * 목적을 여기 함께 둔 이유: **기구와 목적은 둘 다 「내 조건」**이라 성격이 같다.
+ * 탭이 아니라 홈의 목적 칩에서 열리는 전체화면이다 — 자주 여는 화면이 아니라 탭을 쓰기엔 아깝다.
  */
-export function Equipment({
+export function Settings({
   owned,
   spec,
   onChange,
   onSpecChange,
   goal,
   onGoalChange,
+  onBack,
 }: {
   owned: EquipKey[];
   spec: EquipSpec;
@@ -34,13 +35,20 @@ export function Equipment({
   onSpecChange: (next: EquipSpec) => void;
   goal: Goal;
   onGoalChange: (goal: Goal) => void;
+  onBack: () => void;
 }) {
   // 조절식 벤치를 고르면 인클라인 34개가 함께 열린다 — 숫자가 그 자리에서 늘어야 설득이 된다.
   const available = useMemo(() => filterByEquipment(STRENGTH, effectiveOwned(owned, spec)).length, [owned, spec]);
 
   return (
     <main style={ui.page}>
-      <h1 style={ui.h1}>보유 기구</h1>
+      <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0 20px' }}>
+        <h1 style={{ ...ui.h1, margin: 0 }}>보유 기구</h1>
+        <span style={ui.spacer} />
+        <button style={ui.ghost} onClick={onBack}>
+          닫기
+        </button>
+      </div>
       <p style={ui.sub}>집에 있는 것만 고르세요. 고른 기구로 할 수 있는 운동만 루틴에 나옵니다.</p>
 
       <div style={{ ...ui.card, marginBottom: 20, textAlign: 'center' }}>

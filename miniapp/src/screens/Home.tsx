@@ -21,7 +21,7 @@ export function Home({
   goal,
   doneToday,
   onStart,
-  onGoEquipment,
+  onOpenSettings,
 }: {
   routine: Routine;
   history: WorkoutRecord[];
@@ -29,7 +29,7 @@ export function Home({
   goal: Goal;
   doneToday: boolean;
   onStart: () => void;
-  onGoEquipment: () => void;
+  onOpenSettings: () => void;
 }) {
   if (!routine.group || routine.exercises.length === 0) {
     return (
@@ -39,7 +39,7 @@ export function Home({
           <p>할 수 있는 운동을 찾지 못했습니다.</p>
           <p style={{ fontSize: 13 }}>보유 기구를 확인해 주세요.</p>
         </div>
-        <button style={ui.secondary} onClick={onGoEquipment}>
+        <button style={ui.secondary} onClick={onOpenSettings}>
           보유 기구 설정
         </button>
       </main>
@@ -74,7 +74,7 @@ export function Home({
         </h1>
         <span style={ui.spacer} />
         {/* 목적을 계속 띄운다 — 왜 15회·45초인지가 이 칩으로 설명된다. */}
-        <button style={{ ...ui.chip, color: 'var(--blue-dark)', background: '#eff6ff', borderColor: 'var(--blue)' }} onClick={onGoEquipment}>
+        <button style={{ ...ui.chip, color: 'var(--blue-dark)', background: '#eff6ff', borderColor: 'var(--blue)' }} onClick={onOpenSettings}>
           {GOALS[goal].icon} {GOALS[goal].label}
         </button>
       </div>
