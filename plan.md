@@ -2,6 +2,7 @@
 
 앞으로 할 일. 완료 기록은 [changeLog.md](changeLog.md), 함정은 [claude-docs/troubleshooting.md](claude-docs/troubleshooting.md).
 설계는 [docs/2026-08-25-design.md](docs/2026-08-25-design.md), 아이템 선정 경위는 [docs/ideas.md](docs/ideas.md).
+화면 시안은 [assets/mockups/](assets/mockups/README.md) — 단일 출처는 Figma 파일이고 PNG는 산출물이다.
 
 **범례** ✅완료 / 🔜다음 / ⬜예정 / ⏸의도적 보류 / ⚠️리스크·전제
 

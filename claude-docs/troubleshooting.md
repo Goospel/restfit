@@ -22,6 +22,7 @@
      각 항목의 frontmatter(summary)에서 재생성합니다. 내용을 바꾸려면 그 항목의
      summary를 고치세요(단일 출처). 최신 항목이 위. -->
 
+- [T-219](troubleshooting/T-219.md) · Figma의 listAvailableFontsAsync에 있고 loadFontAsync도 성공을 반환하는 폰트가 실재하지 않을 수 있다 — 텍스트가 폭 0으로 아무것도 안 그려진다
 - [T-218](troubleshooting/T-218.md) · ait build의 appName 검증은 「문자열인가 && 빈칸 아닌가」뿐이라 한글이 통과한다 — 빌드 통과를 값의 유효성 증거로 삼으면 deploy에서 깨진다
 - [T-217](troubleshooting/T-217.md) · core.autocrlf=true 레포에서는 git diff --numstat이 EOL 뒤집힘을 원리적으로 못 본다 — 훅이 지시한 검증 수단이 장님이다
 - [T-216](troubleshooting/T-216.md) · 개발 기계의 시간대가 코드가 가정한 시간대와 같으면 시간대 테스트가 공허해진다 — 돌연변이가 살아남아야만 드러난다
