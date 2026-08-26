@@ -1,22 +1,36 @@
 import type { EquipKey } from './exercises';
 
 /**
- * 기구별 토스 쉐어링크. **아직 비어 있다.**
+ * 기구별 토스쇼핑 상품. **기구 하나에 여러 개를 둔다.**
  *
- * 링크가 없는 기구는 화면에 「어디서 사는지」 버튼이 안 뜬다 — 추천 자체는 그대로 보인다.
- * 어떤 기구가 얼마나 도움이 되는지는 링크와 무관하게 알 값이 있고, 링크가 생기면
- * **이 파일만 채우면 버튼이 살아난다.**
+ * 화면은 2단이다 — 기구 카드가 「몇 개가 열리는지」를 말하고, 펼치면 살 상품이 나온다.
+ * 상품을 곧바로 늘어놓으면 해금 수치가 상품 사이에 묻혀서, 사야 하는 **이유**를 잃는다.
+ *
+ * ⚠️ **가격은 넣지 않는다.** 정적 파일이라 바뀌어도 따라가지 못하고, 틀린 가격은 없는 것만 못하다.
+ * 값은 링크를 눌러 토스쇼핑에서 본다.
  *
  * ⚠️ 조회 API의 `productUrl`을 넣으면 안 된다 — 추적이 안 되어 수익이 0으로 잡힌다.
- * 반드시 **발급 API의 `shortUrl`**(또는 토스쇼핑 앱의 「쉐어링크 공유하기」로 받은 주소)을 넣는다.
+ * 반드시 **발급 API의 `shortUrl`**(또는 토스쇼핑 앱의 「쉐어링크 공유하기」로 받은 `https://toss.im/_m/…`)을 넣는다.
  */
-export const SHARE_LINKS: Partial<Record<EquipKey, string>> = {
-  /** 아이워너 맨즈 육각 아령 5kg 2개입 — 상품이 내려가면 링크가 죽으니 재발급 때 참고. */
-  dumbbell: 'https://toss.im/_m/jnf2rJC3',
+export type Product = {
+  /** 화면에 그대로 뜬다. 상품 페이지의 이름을 줄여서 쓴다 — 전체 이름은 대개 너무 길다. */
+  name: string;
+  url: string;
+  /** 고르는 기준 한 줄. 앱이 아는 무게 구간과 같은 어휘를 쓰면 사용자가 바로 대응시킨다. */
+  note?: string;
 };
 
-/** 링크가 하나도 없으면 대가성 문구를 띄우지 않는다 — 받지도 않는 대가를 고지하면 그게 거짓이다. */
-export const HAS_ANY_LINK = Object.keys(SHARE_LINKS).length > 0;
+export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
+  dumbbell: [{ name: '아이워너 육각 아령 5kg 2개입', url: 'https://toss.im/_m/jnf2rJC3', note: '가벼움 · 입문용' }],
+};
+
+/**
+ * 링크가 하나도 없으면 대가성 문구를 띄우지 않는다 — 받지도 않는 대가를 고지하면 그게 거짓이다.
+ *
+ * ⚠️ **키가 아니라 상품 수를 센다.** `{ dumbbell: [] }`처럼 키만 있고 비어 있는 경우가
+ * 생기는데, 키로 세면 상품이 하나도 없는 화면에 문구만 뜬다.
+ */
+export const HAS_ANY_LINK = Object.values(SHARE_LINKS).some((list) => (list?.length ?? 0) > 0);
 
 /**
  * 대가성 고지. ⚠️ **토스가 지정한 문장을 글자 그대로 쓴다.**
