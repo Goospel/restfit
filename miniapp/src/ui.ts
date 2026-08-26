@@ -19,7 +19,9 @@ type S = Record<string, CSSProperties>;
 
 export const ui: S = {
   // ── 레이아웃
-  page: { padding: '16px 20px calc(var(--tab-h) + var(--tab-gap) + var(--safe-b) + 24px)', minHeight: '100vh' },
+  // 하단 패딩은 탭바가 실제로 차지하는 높이(캡슐 + 띄운 거리)를 그대로 따라간다 — 한쪽만 고치면
+  // 콘텐츠 끝이 탭바에 조용히 가린다. 그래서 `--tab-lift`를 양쪽이 같은 출처로 본다.
+  page: { padding: '16px 20px calc(var(--tab-h) + var(--tab-lift) + 24px)', minHeight: '100vh' },
   pageFull: { padding: '16px 20px calc(var(--safe-b) + 24px)', minHeight: '100vh', display: 'flex', flexDirection: 'column' },
   h1: { fontSize: 22, fontWeight: 700, margin: '4px 0 20px' },
   h2: { fontSize: 17, fontWeight: 700, margin: '0 0 4px' },
