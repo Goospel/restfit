@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { awaitAdEvent } from '../adProbe';
 import { ExerciseImage } from '../components/ExerciseImage';
 import type { MuscleGroup } from '../data/exercises';
 import { MUSCLE_KO } from '../data/labels';
@@ -12,6 +13,7 @@ import {
   skipExercise,
   type Session,
 } from '../logic/session';
+import { adPlan, AD_GROUP_ID, nextAdState, type AdState } from '../logic/adPlan';
 import { defaultWeightFor, type EquipSpec } from '../logic/equipSpec';
 import { midReps } from '../logic/goal';
 import { lastSetOf, type WorkoutRecord } from '../storage';
@@ -50,6 +52,9 @@ export function Workout({
   const [weight, setWeight] = useState('0');
   const [reps, setReps] = useState('10');
   const [now, setNow] = useState(() => Date.now());
+  // 광고 상태는 **세션 안에서만** 산다. 앱을 껐다 켜면 새 세션이니 백오프도 처음부터가 맞다.
+  // 화면에 그릴 값이 아니므로 ref다 — state로 두면 광고 판단이 리렌더를 부른다.
+  const adState = useRef<AdState>({ noFillStreak: 0, slotsSinceLastTry: 0 });
 
   // 운동이 바뀌면 지난번 기록으로 채워 둔다 — 매번 처음부터 입력하게 두면 기록을 안 남긴다.
   useEffect(() => {
@@ -70,6 +75,48 @@ export function Workout({
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(t);
+  }, [resting]);
+
+  /**
+   * 휴식이 시작되면 광고를 튼다. **이 앱이 돈을 버는 유일한 지점이다.**
+   *
+   * 규율 셋을 지킨다:
+   * - **타이머를 건드리지 않는다.** `restEndsAt`이 절대 시각이라 광고를 보는 동안에도 휴식은
+   *   그대로 흐른다. 광고가 시간을 늘리면 그건 사용자에게서 훔치는 것이다.
+   * - **실패는 조용히 넘어간다.** 광고는 수익이지 기능이 아니다 — 에러를 사용자에게 보이지 않는다.
+   * - **판단은 `adPlan`에만 맡긴다.** 여기서 조건을 덧붙이면 규칙이 두 곳으로 갈라진다.
+   */
+  useEffect(() => {
+    if (!resting) return;
+    const decision = adPlan(restRemaining(s, Date.now()), adState.current);
+    if (!decision.show) {
+      adState.current = nextAdState(adState.current, 'skipped');
+      return;
+    }
+    // ref만 갱신하므로 언마운트 뒤에 끝나도 안전하다. 취소 플래그를 두면 노출 성공이
+    // 상태에 안 남아 다음 슬롯의 백오프 판단이 틀어진다.
+    void (async () => {
+      try {
+        // SDK는 토스 앱 안에서만 있다. 브라우저 개발 중에는 여기서 실패하고 앱은 그대로 돈다.
+        const m = await import('@apps-in-toss/web-framework');
+        const opts = { options: { adGroupId: AD_GROUP_ID } };
+        const loaded = await awaitAdEvent((h) => m.loadFullScreenAd({ ...opts, ...h }), {
+          resolveOn: ['loaded'],
+          timeoutMs: 15000,
+        });
+        if (!loaded.ok) {
+          adState.current = nextAdState(adState.current, 'noFill');
+          return;
+        }
+        const shown = await awaitAdEvent((h) => m.showFullScreenAd({ ...opts, ...h }), {
+          resolveOn: ['impression', 'dismissed'],
+          timeoutMs: 90000,
+        });
+        adState.current = nextAdState(adState.current, shown.ok ? 'shown' : 'noFill');
+      } catch {
+        adState.current = nextAdState(adState.current, 'noFill');
+      }
+    })();
   }, [resting]);
 
   const left = restRemaining(s, now);

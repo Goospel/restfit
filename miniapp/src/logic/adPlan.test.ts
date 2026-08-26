@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { adPlan, MIN_REST_SECONDS } from './adPlan';
+import { adPlan, MIN_REST_SECONDS, nextAdState } from './adPlan';
 
 /** 정상 상태 — 미충전 이력 없음. */
 const fresh = { noFillStreak: 0, slotsSinceLastTry: 0 };
@@ -53,5 +53,54 @@ describe('adPlan', () => {
     const state = { noFillStreak: 1, slotsSinceLastTry: 0 };
     adPlan(90, state);
     expect(state).toEqual({ noFillStreak: 1, slotsSinceLastTry: 0 });
+  });
+});
+
+describe('nextAdState', () => {
+  it('노출에 성공하면 미충전 이력을 지운다', () => {
+    expect(nextAdState({ noFillStreak: 2, slotsSinceLastTry: 5 }, 'shown')).toEqual({
+      noFillStreak: 0,
+      slotsSinceLastTry: 0,
+    });
+  });
+
+  it('미충전이면 연속 횟수가 오르고 대기 카운트는 0으로 돌아간다', () => {
+    // 시도했으니 0이다. 여기서 안 되돌리면 백오프가 즉시 풀려 다음 슬롯에 또 두드린다.
+    expect(nextAdState({ noFillStreak: 1, slotsSinceLastTry: 3 }, 'noFill')).toEqual({
+      noFillStreak: 2,
+      slotsSinceLastTry: 0,
+    });
+  });
+
+  it('건너뛴 슬롯은 미충전 이력을 건드리지 않고 대기만 올린다', () => {
+    expect(nextAdState({ noFillStreak: 2, slotsSinceLastTry: 0 }, 'skipped')).toEqual({
+      noFillStreak: 2,
+      slotsSinceLastTry: 1,
+    });
+  });
+
+  it('입력을 바꾸지 않는다', () => {
+    const state = { noFillStreak: 1, slotsSinceLastTry: 1 };
+    nextAdState(state, 'noFill');
+    expect(state).toEqual({ noFillStreak: 1, slotsSinceLastTry: 1 });
+  });
+
+  it('adPlan과 맞물려 백오프가 실제로 풀린다', () => {
+    // 전이 하나하나는 맞는데 합이 틀리는 걸 막는다 — 미충전 1회 → 한 슬롯 쉬고 → 다시 시도.
+    let s = { noFillStreak: 0, slotsSinceLastTry: 0 };
+    expect(adPlan(90, s).show).toBe(true);
+    s = nextAdState(s, 'noFill');
+    expect(adPlan(90, s).reason).toBe('backoff');
+    s = nextAdState(s, 'skipped');
+    expect(adPlan(90, s).show).toBe(true);
+  });
+
+  it('미충전이 3회 쌓이면 세션을 포기한 상태가 된다', () => {
+    let s = { noFillStreak: 0, slotsSinceLastTry: 0 };
+    for (let i = 0; i < 3; i++) {
+      s = nextAdState(s, 'noFill');
+      s = nextAdState(s, 'skipped');
+    }
+    expect(adPlan(90, s).reason).toBe('givenUp');
   });
 });
