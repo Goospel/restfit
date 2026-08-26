@@ -188,13 +188,17 @@ export function App() {
  *
  * 밑변에 붙고 윗선이 있으면 토스 앱 자체의 하단 탭과 형태가 겹쳐, 사용자가
  * 지금 토스에 있는지 미니앱에 있는지 헷갈린다. 그래서 좌우를 띄우고(`left`/`right`)
- * 밑에서도 띄우고(`--tab-gap`) 완전한 pill(`borderRadius: 999`)로 만든다.
+ * 밑에서도 띄우고(`--tab-lift`) 완전한 pill(`borderRadius: 999`)로 만든다.
+ *
+ * ⚠️ **1차 수정으로는 부족했다.** 좌우 20px·아래 `safe-area + 12px`로 고쳤는데 2차 심사에서도
+ * 같은 사유로 반려됐다 — safe-area가 0으로 오는 환경에서는 12px밖에 안 떠서 여전히 「붙은 바」로
+ * 읽힌다. 수치는 가이드 그림(`Mobile_Tabbar`)에서 읽어 낸 비율을 따른다(T-224).
  */
 const navStyle: React.CSSProperties = {
   position: 'fixed',
-  left: 20,
-  right: 20,
-  bottom: 'calc(var(--safe-b) + var(--tab-gap))',
+  left: 'var(--tab-side)',
+  right: 'var(--tab-side)',
+  bottom: 'var(--tab-lift)',
   display: 'flex',
   height: 'var(--tab-h)',
   background: 'var(--bg)',
