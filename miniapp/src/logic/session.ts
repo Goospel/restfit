@@ -1,4 +1,5 @@
 import type { Exercise } from '../data/exercises';
+import { DEFAULT_GOAL, restSecondsForGoal, type Goal } from './goal';
 
 /**
  * 운동 세션 상태 기계. 순수 함수 — 시각은 항상 인자로 받는다.
@@ -20,25 +21,29 @@ export type Session = {
   /** 휴식 종료 **시각**(ms). null이면 휴식 중이 아니다. */
   restEndsAt: number | null;
   finished: boolean;
+  /** 이 세션의 운동 목적. **시작할 때 확정된다** — 도중에 바뀌면 남은 휴식 길이가 튄다. */
+  goal: Goal;
 };
 
 /**
  * 방금 마친 운동의 휴식 길이(초).
  *
- * 복합 운동은 여러 관절을 쓰니 회복이 더 걸린다. **둘 다 40초를 넘겨야 한다** —
- * 그보다 짧으면 `adPlan`이 광고를 거르고 수익 슬롯이 통째로 사라진다(테스트로 못 박음).
+ * 값은 **목적**이 정한다([`goal.ts`](./goal.ts)). 복합 운동은 여러 관절을 쓰니 어느 목적에서든
+ * 더 오래 쉰다. **모든 조합이 40초를 넘겨야 한다** — 그보다 짧으면 `adPlan`이 광고를 거르고
+ * 수익 슬롯이 통째로 사라진다(goal.test와 session.test 양쪽에서 못 박음).
  */
-export function restSecondsFor(e: Exercise): number {
-  return e.mechanic === 'compound' ? 90 : 60;
+export function restSecondsFor(e: Exercise, goal: Goal = DEFAULT_GOAL): number {
+  return restSecondsForGoal(e.mechanic, goal);
 }
 
-export function startSession(exercises: Exercise[]): Session {
+export function startSession(exercises: Exercise[], goal: Goal = DEFAULT_GOAL): Session {
   return {
     exercises,
     done: exercises.map(() => []),
     index: 0,
     restEndsAt: null,
     finished: exercises.length === 0,
+    goal,
   };
 }
 
@@ -54,7 +59,7 @@ export function completeSet(s: Session, log: SetLog, now: number): Session {
   // 세션이 끝났는데 휴식을 세워 두면 사용자는 앱 앞에서 이유 없이 기다린다.
   if (lastSet && lastExercise) return { ...s, done, restEndsAt: null, finished: true };
 
-  return { ...s, done, restEndsAt: now + restSecondsFor(s.exercises[s.index]) * 1000 };
+  return { ...s, done, restEndsAt: now + restSecondsFor(s.exercises[s.index], s.goal) * 1000 };
 }
 
 /** 휴식을 끝낸다. 세트를 다 채웠으면 다음 운동으로 넘어간다. */

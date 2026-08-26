@@ -1,5 +1,6 @@
 import { ExerciseImage } from '../components/ExerciseImage';
 import { GROUP_KO, MUSCLE_KO } from '../data/labels';
+import { GOALS, type Goal } from '../logic/goal';
 import { restSecondsFor, SETS_PER_EXERCISE } from '../logic/session';
 import type { Routine } from '../logic/routine';
 import { lastSetOf, type WorkoutRecord } from '../storage';
@@ -17,12 +18,15 @@ const WORK_SECONDS = 40;
 export function Home({
   routine,
   history,
+  goal,
   doneToday,
   onStart,
   onGoEquipment,
 }: {
   routine: Routine;
   history: WorkoutRecord[];
+  /** 반복·휴식·종목 수를 정한 목적. 화면에 계속 띄워야 왜 이 숫자인지가 설명된다. */
+  goal: Goal;
   doneToday: boolean;
   onStart: () => void;
   onGoEquipment: () => void;
@@ -43,7 +47,7 @@ export function Home({
   }
 
   const totalSec = routine.exercises.reduce(
-    (sum, e) => sum + SETS_PER_EXERCISE * (WORK_SECONDS + restSecondsFor(e)),
+    (sum, e) => sum + SETS_PER_EXERCISE * (WORK_SECONDS + restSecondsFor(e, goal)),
     0,
   );
 
@@ -64,9 +68,16 @@ export function Home({
         </div>
       )}
 
-      <h1 style={ui.h1}>
-        오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.group]}</span>
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 20px' }}>
+        <h1 style={{ ...ui.h1, margin: 0 }}>
+          오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.group]}</span>
+        </h1>
+        <span style={ui.spacer} />
+        {/* 목적을 계속 띄운다 — 왜 15회·45초인지가 이 칩으로 설명된다. */}
+        <button style={{ ...ui.chip, color: 'var(--blue-dark)', background: '#eff6ff', borderColor: 'var(--blue)' }} onClick={onGoEquipment}>
+          {GOALS[goal].icon} {GOALS[goal].label}
+        </button>
+      </div>
       <p style={ui.sub}>
         {routine.exercises.length}개 운동 · 각 {SETS_PER_EXERCISE}세트 · 약 {Math.round(totalSec / 60)}분
         {doneToday && ' · 오늘 완료함'}
@@ -83,8 +94,14 @@ export function Home({
                 <div style={{ ...ui.h2, fontSize: 16 }}>{e.name}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-sub)' }}>
                   {e.primaryMuscles.map((m) => MUSCLE_KO[m] ?? m).join(' · ')}
-                  {last && ` · 지난번 ${last.weight > 0 ? `${last.weight}kg × ` : ''}${last.reps}회`}
+                  {` · ${GOALS[goal].reps[0]}~${GOALS[goal].reps[1]}회 · 휴식 ${restSecondsFor(e, goal)}초`}
                 </div>
+                {last && (
+                  <div style={{ fontSize: 12, color: 'var(--text-weak)' }}>
+                    지난번 {last.weight > 0 ? `${last.weight}kg × ` : ''}
+                    {last.reps}회
+                  </div>
+                )}
               </div>
             </div>
           );
