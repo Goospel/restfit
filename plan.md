@@ -142,11 +142,14 @@
   - `bundle_test_push`가 **테스트 푸시를 보내고 `privateLink`(`intoss-private://`)를 준다.** 심사 없이 실기기에서 열린다 — Phase 0.5 실측은 이 경로다
   - ⚠️ 폴링 종료 조건은 **내 `deploymentId`가 `builds`에서 빠지는 것**이다. `builds`가 전부 비기를 기다리면 안 된다(`upload_complete`를 안 한 번들이 `PREPARE`로 영영 남는다)
   - ⚠️ **라이브 전환(출시하기)은 MCP로 불가** — 검수 승인 후 콘솔 웹에서 눌러야 한다
-- 🔜 **앱인토스 심사 제출(`bundle_submit_review`)** — **전제가 다 풀렸다**(실측 8/8 · 광고 통합 · 실기기 확인). 콘솔도 준비돼 있다: `reviewState APPROVED` · `releaseDecision ALLOWED` · `reviewRequestDecision ALLOWED`
-  - ⚠️ **`minAge`가 19다.** 홈트 앱을 성인 전용으로 두면 사용자층이 통째로 잘린다 — 제출 전에 확인해야 한다(`miniapp_update_age_rating`)
-  - ⚠️ **`images`가 빈 배열이다.** 앱정보 검토는 통과했지만 스토어 노출용 스크린샷이 없다(`miniapp_update_screenshots`)
-  - `requiresFeatureRegistration`이 true지만 **주요기능은 비필수**다 — 넣고 싶을 때만 `bundle_submit_review`의 `featureList`(최대 3개)에 담는다
-  - ⚠️ **라이브 전환(출시하기)은 MCP로 불가** — 검수 승인 후 콘솔 웹에서 눌러야 한다
+- ✅ **콘솔 이미지 등록** (2026-08-26) — 세로 스크린샷 4장(636×1048) + 가로 썸네일 1장(1932×828). 재생성은 [`scripts/render-screenshots.ps1`](scripts/render-screenshots.ps1), 경위는 [`assets/screenshots/README.md`](assets/screenshots/README.md)
+  - 상세 설명도 함께 고쳤다 — 기구 탭이 추천 화면이 되면서 옛 설명("기구 탭에서 체크해요")이 실제와 어긋나 있었다
+  - ⚠️ **올린 이미지는 검토 승인 뒤에야 조회에 보인다**([T-220](claude-docs/troubleshooting/T-220.md)) — 빈 배열을 보고 실패로 판단하면 중복 업로드하게 된다
+- ✅ **앱인토스 심사 제출 (2026-08-26)** — `20260826-7` · `reviewStatus REVIEWING`
+  - `requiresFeatureRegistration`이 true지만 **주요기능은 비필수**다. `featureList`를 비우면 기존 등록분이 그대로 실려 콘솔 웹과 같은 결과가 된다
+  - ⚠️ **`review_cancel`로 한 번 취소하면 영구히 재요청 불가** — 번들을 새로 빌드해 올려야 한다
+- 🔜 **라이브 전환(출시하기)** *(사용자)* — ⚠️ **MCP로 불가.** 검수 승인 후 콘솔 웹 「앱 출시」 화면에서 눌러야 한다. 승인돼도 자동 출시되지 않는다
+- ⏸ **`minAge` 19는 우리가 못 바꾼다**([T-221](claude-docs/troubleshooting/T-221.md)) — 연령은 토스가 정하고 파트너는 콘솔에서도 설정할 수 없다. 14세 노출을 원하면 콘솔 채널톡 문의가 유일한 경로다. **출시를 막지는 않는다**(북타이머도 19인 채로 `OPEN`)
 
 ---
 

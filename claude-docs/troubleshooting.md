@@ -22,6 +22,8 @@
      각 항목의 frontmatter(summary)에서 재생성합니다. 내용을 바꾸려면 그 항목의
      summary를 고치세요(단일 출처). 최신 항목이 위. -->
 
+- [T-221](troubleshooting/T-221.md) · 미니앱 사용 연령(minAge)은 토스가 정하고 파트너는 콘솔에서 바꿀 수 없다 — 다른 앱이 14세인 것을 근거로 「설정 가능한 값」이라고 추론한 것이 틀렸다
+- [T-220](troubleshooting/T-220.md) · 콘솔에 올린 스크린샷은 앱정보 검토가 승인돼야 miniapp_get의 images에 나타난다 — 조회가 빈 배열이라고 업로드 실패로 보면 중복 업로드하게 된다
 - [T-219](troubleshooting/T-219.md) · Figma의 listAvailableFontsAsync에 있고 loadFontAsync도 성공을 반환하는 폰트가 실재하지 않을 수 있다 — 텍스트가 폭 0으로 아무것도 안 그려진다
 - [T-218](troubleshooting/T-218.md) · ait build의 appName 검증은 「문자열인가 && 빈칸 아닌가」뿐이라 한글이 통과한다 — 빌드 통과를 값의 유효성 증거로 삼으면 deploy에서 깨진다
 - [T-217](troubleshooting/T-217.md) · core.autocrlf=true 레포에서는 git diff --numstat이 EOL 뒤집힘을 원리적으로 못 본다 — 훅이 지시한 검증 수단이 장님이다
