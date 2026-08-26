@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { EXERCISES, type EquipKey } from '../data/exercises';
 import { EQUIPMENT_KO } from '../data/labels';
@@ -10,20 +10,23 @@ import { ui } from '../ui';
 /**
  * 기구 추천. **쉐어링크가 붙는 유일한 자리다.**
  *
- * 설득은 "이거 사세요"가 아니라 **「+96개」라는 숫자**에서 나온다. 그래서 이 화면은
- * 상품을 파는 것처럼 보이지 않아야 한다 — 지금 못 하는 운동이 몇 개 열리는지만 말한다.
+ * **2단이다.** 1단은 「몇 개가 열리는지」, 2단은 「무엇을 사면 되는지」.
+ * 상품을 곧바로 늘어놓으면 「+96개」가 상품 사이에 묻혀 **사야 하는 이유를 잃는다** —
+ * 숫자로 이유를 먼저 말하고, 그다음에 살 것을 보여준다.
  *
  * ⚠️ **운동 중에는 이 화면이 뜨지 않는다.** 세션이 시작되면 탭이 통째로 감춰지기 때문이다
  * (`App.tsx`). 휴식은 쉬라고 있는 시간이지 쇼핑하라고 있는 시간이 아니다.
+ *
+ * ⚠️ 링크는 **외부 브라우저로 열린다.** 미니앱 안에 토스쇼핑을 띄우는 SDK·딥링크가
+ * 플랫폼에 없다(앱인토스 개발자 커뮤니티 공식 답변). 우리 구현의 한계가 아니다.
  */
-/** 이보다 낮은 배수는 안 띄운다. 맨몸 사용자의 덤벨(2.7배)처럼 셀 만한 것만 남긴다. */
-const MIN_RATIO_TO_SHOW = 1.5;
-
 export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
   const picks = useMemo(() => recommend(EXERCISES, owned, spec), [owned, spec]);
+  /** 펼쳐진 기구. 하나만 열어 둔다 — 다 열면 다시 「쫘라락」이 되어 2단으로 나눈 뜻이 없다. */
+  const [expanded, setExpanded] = useState<EquipKey | null>(null);
 
   /** 미니앱 안에서는 `<a href>`가 아니라 SDK를 거쳐야 외부가 열린다. */
-  async function open(url: string) {
+  async function openUrl(url: string) {
     try {
       const m = await import('@apps-in-toss/web-framework');
       await m.Device.openURL(url);
@@ -47,7 +50,8 @@ export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
           {picks.map((p) => {
-            const link = SHARE_LINKS[p.key];
+            const products = SHARE_LINKS[p.key] ?? [];
+            const isOpen = expanded === p.key;
             return (
               <div key={p.key} style={ui.card}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -74,10 +78,32 @@ export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
                   지금 {p.before}개 → <b style={{ color: 'var(--text-sub)' }}>{p.after}개</b>
                 </div>
 
-                {link && (
-                  <button style={{ ...ui.secondary, marginTop: 12 }} onClick={() => open(link)}>
-                    토스쇼핑에서 보기
-                  </button>
+                {products.length > 0 && (
+                  <>
+                    <button
+                      style={{ ...ui.secondary, marginTop: 12 }}
+                      onClick={() => setExpanded(isOpen ? null : p.key)}
+                      aria-expanded={isOpen}
+                    >
+                      상품 {products.length}개 {isOpen ? '▴' : '▾'}
+                    </button>
+
+                    {isOpen && (
+                      <ul style={S.list}>
+                        {products.map((prod) => (
+                          <li key={prod.url}>
+                            <button style={S.item} onClick={() => openUrl(prod.url)}>
+                              <span style={{ minWidth: 0 }}>
+                                <span style={S.name}>{prod.name}</span>
+                                {prod.note && <span style={S.note}>{prod.note}</span>}
+                              </span>
+                              <span style={S.arrow}>›</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
                 )}
               </div>
             );
@@ -89,9 +115,28 @@ export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
        * 대가성 문구는 링크가 실제로 있을 때만. 받지도 않는 대가를 고지하면 그 자체가 거짓이다.
        * ⚠️ 문구는 **토스가 지정한 문장을 글자 그대로** 쓴다 — 뜻이 같아도 내가 지은 문장은 규정 위반이다.
        */}
-      {HAS_ANY_LINK && (
-        <p style={{ ...ui.sub, marginTop: 20, marginBottom: 0, fontSize: 12 }}>{DISCLOSURE}</p>
-      )}
+      {HAS_ANY_LINK && <p style={{ ...ui.sub, marginTop: 20, marginBottom: 0, fontSize: 12 }}>{DISCLOSURE}</p>}
     </main>
   );
 }
+
+/** 이보다 낮은 배수는 안 띄운다. 맨몸 사용자의 덤벨(2.7배)처럼 셀 만한 것만 남긴다. */
+const MIN_RATIO_TO_SHOW = 1.5;
+
+const S: Record<string, React.CSSProperties> = {
+  list: { listStyle: 'none', margin: '4px 0 0', padding: 0 },
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    padding: '12px 2px',
+    textAlign: 'left',
+    background: 'none',
+    border: 0,
+    borderTop: '1px solid var(--line)',
+  },
+  name: { display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text)' },
+  note: { display: 'block', fontSize: 12, color: 'var(--text-weak)', marginTop: 2 },
+  arrow: { marginLeft: 'auto', fontSize: 20, color: 'var(--text-weak)', lineHeight: 1 },
+};
