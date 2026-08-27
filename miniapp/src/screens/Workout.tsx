@@ -16,9 +16,9 @@ import {
 } from '../logic/session';
 import { adPlan, AD_GROUP_ID, nextAdState, type AdState } from '../logic/adPlan';
 import { defaultWeightFor, type EquipSpec } from '../logic/equipSpec';
-import { midReps } from '../logic/goal';
+import { BODYWEIGHT_LADDER_REPS, suggestNext } from '../logic/goal';
 import { EXPERIENCE_KEYS, FEEL_KEYS, FEEL_LABEL, nextExperience, type Feel, type Profile } from '../logic/profile';
-import { lastSetOf, recentFeels, type WorkoutRecord } from '../storage';
+import { lastSetOf, lastSetsOf, recentFeels, type WorkoutRecord } from '../storage';
 import { mmss, specChipStyle, ui } from '../ui';
 
 /** 승급 안내. 이미 반영된 사실을 알릴 뿐이다 — 「올려 드릴까요?」로 물으면 탭이 하나 더 는다. */
@@ -76,14 +76,24 @@ export function Workout({
   // 화면에 그릴 값이 아니므로 ref다 — state로 두면 광고 판단이 리렌더를 부른다.
   const adState = useRef<AdState>({ noFillStreak: 0, slotsSinceLastTry: 0 });
 
-  // 운동이 바뀌면 지난번 기록으로 채워 둔다 — 매번 처음부터 입력하게 두면 기록을 안 남긴다.
+  /**
+   * 운동이 바뀌면 다음 값으로 채워 둔다 — 매번 처음부터 입력하게 두면 기록을 안 남긴다.
+   *
+   * 「지난번 그대로」가 아니라 **`suggestNext`가 정한 다음 값**이다(설계 §3.7). 상단에 닿고도
+   * 지난 값이 그대로 뜨면 **정체가 기본값**이 되어, 점진적 과부하가 사용자 의지에만 맡겨진다.
+   *
+   * 처음 하는 운동이면 보유 무게 구간의 대표값을 넘긴다. 모른다고 답했으면 0 — 아는 척하지 않는다.
+   */
   useEffect(() => {
     if (!current) return;
-    const last = lastSetOf(history, current.id);
-    // 처음 하는 운동이면 보유 무게 구간의 대표값으로 채운다. 모른다고 답했으면 0 — 아는 척하지 않는다.
-    setWeight(String(last?.weight ?? defaultWeightFor(current.requires, spec)));
-    // 직전 기록이 없으면 목적의 권장 반복으로 채운다 — 12~20회를 권해 놓고 10이 떠 있으면 모순이다.
-    setReps(String(last?.reps ?? midReps(s.goal)));
+    const next = suggestNext(
+      lastSetsOf(history, current.id),
+      s.goal,
+      current.requires.length === 0,
+      defaultWeightFor(current.requires, spec),
+    );
+    setWeight(String(next.weight));
+    setReps(String(next.reps));
   }, [current?.id, history, s.goal, spec]);
 
   // 휴식 중일 때만 시계를 돌린다.
@@ -301,6 +311,10 @@ export function Workout({
               지난번 {last.weight > 0 ? `${last.weight}kg × ` : ''}
               {last.reps}회
             </div>
+          )}
+          {/* 맨몸에만 뜬다 — 기구는 무게를 얹으면 되니 동작을 바꿀 이유가 없다(설계 §3.7). */}
+          {bodyweight && last && last.reps >= BODYWEIGHT_LADDER_REPS && (
+            <div style={{ fontSize: 13, color: 'var(--blue-dark)', marginTop: 4 }}>더 어려운 동작에 도전할 때예요</div>
           )}
         </div>
 

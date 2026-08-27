@@ -5,6 +5,7 @@ import {
   clearOnboarding,
   HISTORY_MAX,
   lastSetOf,
+  lastSetsOf,
   loadEquipSpec,
   loadGoal,
   loadHistory,
@@ -192,6 +193,48 @@ describe('lastSetOf', () => {
 
   it('빈 기록이면 null이다', () => {
     expect(lastSetOf([], 'push_up')).toBeNull();
+  });
+});
+
+describe('lastSetsOf', () => {
+  const history = [
+    rec('2026-08-20', 'chest', [{ id: 'push_up', name: '푸시업', sets: [{ weight: 0, reps: 8 }] }]),
+    rec('2026-08-23', 'chest', [
+      {
+        id: 'push_up',
+        name: '푸시업',
+        sets: [{ weight: 0, reps: 10 }, { weight: 0, reps: 11 }, { weight: 0, reps: 12 }],
+      },
+      { id: 'curl', name: '컬', sets: [{ weight: 20, reps: 10 }] },
+    ]),
+  ];
+
+  it('마지막 등장 기록의 세트를 전부 준다', () => {
+    // ★ 졸업 판정(§3.7)은 「**모든** 세트가 상단」이라 마지막 세트만으로는 못 판단한다.
+    expect(lastSetsOf(history, 'push_up')).toEqual([
+      { weight: 0, reps: 10 },
+      { weight: 0, reps: 11 },
+      { weight: 0, reps: 12 },
+    ]);
+  });
+
+  it('여러 레코드에 있으면 가장 최근 것만 본다 — 옛 세트를 섞으면 판정이 오염된다', () => {
+    // 옛 기록(8회)이 섞여 들어오면 전 세트 상단 판정이 영영 안 선다.
+    expect(lastSetsOf(history, 'push_up')).toHaveLength(3);
+  });
+
+  it('오래된 기록에만 있는 운동도 찾는다', () => {
+    expect(lastSetsOf(history, 'curl')).toEqual([{ weight: 20, reps: 10 }]);
+  });
+
+  it('한 번도 안 한 운동은 빈 배열이다 — null이 아니다', () => {
+    // 호출부가 `every`로 바로 훑는다. null을 주면 그 자리에서 터진다.
+    expect(lastSetsOf(history, '없는운동')).toEqual([]);
+  });
+
+  it('세트가 비어 있는 기록은 건너뛴다', () => {
+    const h = [...history, rec('2026-08-25', 'chest', [{ id: 'push_up', name: '푸시업', sets: [] }])];
+    expect(lastSetsOf(h, 'push_up')).toHaveLength(3);
   });
 });
 

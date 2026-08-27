@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { suggestNext } from './goal';
 import type { Profile } from './profile';
 import { pickRoutine } from './routine';
+import { startSession } from './session';
 import { EXERCISES, type EquipKey, type Exercise, type MuscleGroup, type Unit } from '../data/exercises';
+import { lastSetsOf, recentUnits, type WorkoutRecord } from '../storage';
 
 const ex = (id: string, muscle: string, o: Partial<Exercise> = {}): Exercise => ({
   id,
@@ -515,5 +518,39 @@ describe('pickRoutine — 개인화(profile)', () => {
       const r = pickRoutine(list, [], [], '2026-08-25', 4, { experience: 'beginner', avoid: [] });
       expect(r.exercises).toHaveLength(4);
     });
+  });
+});
+
+describe('졸업 프리필은 루틴 결정성에 영향이 없다 (§3.7)', () => {
+  /**
+   * ★ 프리필은 **입력칸 기본값**일 뿐이다. 지난 세트가 승급감이든 정체든 오늘 뽑히는 종목은
+   *   같아야 한다 — 프리필이 선발로 새면 「같은 날 같은 입력이면 같은 루틴」이 깨진다.
+   */
+  const hist = (reps: number): WorkoutRecord[] => [
+    {
+      date: '2026-08-26',
+      group: 'lower',
+      entries: [{ id: 'chest1', name: 'chest1', sets: [{ weight: 20, reps }, { weight: 20, reps }] }],
+    },
+  ];
+  const graduating = hist(12); // muscle 상단 도달 → 승급
+  const stalling = hist(11); // 한 회 모자람 → 정체
+
+  it('프리필이 실제로 갈리는 두 기록이다 — 계측기부터 세운다', () => {
+    // 이 단언이 없으면 아래 테스트는 「둘 다 같으니 당연히 같다」로 공허해진다.
+    expect(suggestNext(lastSetsOf(graduating, 'chest1'), 'muscle', false, 0)).not.toEqual(
+      suggestNext(lastSetsOf(stalling, 'chest1'), 'muscle', false, 0),
+    );
+  });
+
+  it('세트 기록이 달라도 오늘의 루틴은 한 글자도 안 바뀐다', () => {
+    const pick = (h: WorkoutRecord[]) => pickRoutine(FULL, [], recentUnits(h), '2026-08-27', 4, null);
+    expect(idsOf(pick(graduating))).toEqual(idsOf(pick(stalling)));
+    expect(pick(graduating).unit).toBe(pick(stalling).unit);
+  });
+
+  it('시작한 세션도 같다 — 세트·휴식 상태 기계는 프리필을 모른다', () => {
+    const s = (h: WorkoutRecord[]) => startSession(pickRoutine(FULL, [], recentUnits(h), '2026-08-27', 4, null).exercises, 'muscle');
+    expect(s(graduating)).toEqual(s(stalling));
   });
 });
