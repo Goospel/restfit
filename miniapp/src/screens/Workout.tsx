@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { awaitAdEvent } from '../adProbe';
 import { ExerciseImage } from '../components/ExerciseImage';
 import { Icon } from '../components/Icon';
-import type { MuscleGroup } from '../data/exercises';
+import type { Unit } from '../data/exercises';
 import { MUSCLE_KO } from '../data/labels';
 import {
   completeSet,
@@ -39,8 +39,8 @@ export function Workout({
   date,
 }: {
   session: Session;
-  /** 이 세션의 부위. 루틴이 한 부위로 뽑히므로 세션 전체에 하나다. 기록에 그대로 남는다. */
-  group: MuscleGroup;
+  /** 이 세션의 유닛(상체/하체). 루틴이 한 유닛으로 뽑히므로 세션 전체에 하나다. 기록에 그대로 남는다. */
+  group: Unit;
   onChange: (s: Session) => void;
   onFinish: (rec: WorkoutRecord | null) => void;
   history: WorkoutRecord[];

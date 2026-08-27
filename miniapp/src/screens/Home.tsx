@@ -32,7 +32,7 @@ export function Home({
   onStart: () => void;
   onOpenSettings: () => void;
 }) {
-  if (!routine.group || routine.exercises.length === 0) {
+  if (!routine.unit || routine.exercises.length === 0) {
     return (
       <main style={ui.page}>
         <h1 style={ui.h1}>오늘의 루틴</h1>
@@ -71,7 +71,7 @@ export function Home({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 20px' }}>
         <h1 style={{ ...ui.h1, margin: 0 }}>
-          오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.group]}</span>
+          오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.unit]}</span>
         </h1>
         <span style={ui.spacer} />
         {/* 목적을 계속 띄운다 — 왜 15회·45초인지가 이 칩으로 설명된다. */}

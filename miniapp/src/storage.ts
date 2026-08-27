@@ -1,4 +1,4 @@
-import { EQUIPMENT, GROUP_KEYS, type EquipKey, type MuscleGroup } from './data/exercises';
+import { EQUIPMENT, GROUP_KEYS, UNIT_KEYS, unitOf, type EquipKey, type MuscleGroup, type Unit } from './data/exercises';
 import { BAND_OPTIONS, BENCH_OPTIONS, WEIGHED, WEIGHT_OPTIONS, type EquipSpec } from './logic/equipSpec';
 import { isGoal, type Goal } from './logic/goal';
 import { isAvoidArea, isExperience, type Profile } from './logic/profile';
@@ -24,7 +24,15 @@ export const HISTORY_MAX = 400;
 
 export type WorkoutRecord = {
   date: string;
-  group: MuscleGroup;
+  /**
+   * 그날 한 것 — **어휘가 부위와 유닛에 걸쳐 있다.**
+   *
+   * 2분할 이전 기록에는 부위(`'chest'`)가, 이후 기록에는 유닛(`'upper'`)이 들어 있다.
+   * 새 필드를 파지 않고 기존 필드를 넓힌 것은 그게 가장 작은 diff이기도 하지만, 무엇보다
+   * **구 레코드가 계속 통과해야 지난 기록이 안 사라지기 때문이다.** 로테이션이 소비할 때는
+   * `unitOf`가 한 줄로 흡수하고, 기록 화면은 저장된 이름을 그대로 보여 준다.
+   */
+  group: MuscleGroup | Unit;
   entries: {
     id: string;
     /** 이름을 함께 저장한다 — 데이터에서 운동이 빠져도 지난 기록은 읽을 수 있어야 한다. */
@@ -152,10 +160,18 @@ export function saveEquipSpec(spec: EquipSpec, storage: Storage = localStorage):
   write(SPEC_KEY, spec, storage);
 }
 
+/**
+ * 기록의 `group`에 허용되는 값 — **구 부위 ∪ 신 유닛**.
+ *
+ * 유닛만 받으면 2분할 배포 당일에 지난 기록이 통째로 걸러진다. **기록은 광고보다 귀하다.**
+ * 그렇다고 검사를 없애면 옛 버전이 남긴 아무 문자열이 통과해 화면에 영어 키가 뜬다.
+ */
+const RECORD_GROUPS: readonly string[] = [...GROUP_KEYS, ...UNIT_KEYS];
+
 function isRecord(v: unknown): v is WorkoutRecord {
   if (typeof v !== 'object' || v === null) return false;
   const r = v as WorkoutRecord;
-  return typeof r.date === 'string' && GROUP_KEYS.includes(r.group) && Array.isArray(r.entries);
+  return typeof r.date === 'string' && RECORD_GROUPS.includes(r.group) && Array.isArray(r.entries);
 }
 
 export function loadHistory(storage: Storage = localStorage): WorkoutRecord[] {
@@ -179,11 +195,17 @@ export function lastSetOf(history: WorkoutRecord[], exerciseId: string): SetLog 
   return null;
 }
 
-/** `pickRoutine`이 받는 형태 — **최근 것이 앞**, 중복 제거. */
-export function recentGroups(history: WorkoutRecord[]): MuscleGroup[] {
-  const out: MuscleGroup[] = [];
+/**
+ * `pickRoutine`이 받는 형태 — **최근 것이 앞**, 중복 제거.
+ *
+ * ⚠️ **유닛으로 사상한 뒤에 중복을 제거한다.** 순서를 바꾸면 `'chest'`와 `'upper'`가 서로 다른
+ * 값으로 남아, 어제 가슴을 한 사람에게 오늘 상체가 다시 나간다.
+ */
+export function recentUnits(history: WorkoutRecord[]): Unit[] {
+  const out: Unit[] = [];
   for (let i = history.length - 1; i >= 0; i--) {
-    if (!out.includes(history[i].group)) out.push(history[i].group);
+    const u = unitOf(history[i].group);
+    if (!out.includes(u)) out.push(u);
   }
   return out;
 }

@@ -13,7 +13,7 @@ import {
   saveEquipSpec,
   saveGoal,
   saveProfile,
-  recentGroups,
+  recentUnits,
   saveOwned,
   todayKey,
   type WorkoutRecord,
@@ -113,6 +113,21 @@ describe('운동 기록', () => {
     expect(loadHistory(s)).toHaveLength(1);
   });
 
+  it('구 부위 기록과 새 유닛 기록이 나란히 살아남는다', () => {
+    // ★ **기록은 광고보다 귀하다.** 2분할 개편으로 group 어휘가 넓어졌는데 한쪽만
+    //   허용하면 배포 당일에 사용자의 지난 기록이 통째로 사라진다.
+    const s = fakeStorage();
+    s.setItem('restfit.history', JSON.stringify([rec('2026-08-25', 'chest'), rec('2026-08-26', 'upper')]));
+    expect(loadHistory(s).map((r) => r.group)).toEqual(['chest', 'upper']);
+  });
+
+  it('어휘 밖 group은 여전히 기각한다', () => {
+    // 어휘를 넓히면서 검사를 통째로 없애면 아무 문자열이나 통과해 화면에 영어 키가 뜬다.
+    const s = fakeStorage();
+    s.setItem('restfit.history', JSON.stringify([rec('2026-08-25', 'wrist' as never), rec('2026-08-26', 'lower')]));
+    expect(loadHistory(s).map((r) => r.group)).toEqual(['lower']);
+  });
+
   it('저장이 실패해도 계산된 목록은 돌려준다', () => {
     const s = fakeStorage({ throwOnSet: true });
     expect(appendRecord(rec('2026-08-25', 'chest'), s)).toHaveLength(1);
@@ -151,20 +166,34 @@ describe('lastSetOf', () => {
   });
 });
 
-describe('recentGroups', () => {
+describe('recentUnits', () => {
   it('최근 것이 앞으로 오게 뒤집는다', () => {
-    // pickRoutine이 「최근 것이 앞」인 목록을 받는다. 순서가 뒤집히면 방금 한 부위를 또 준다.
-    const h = [rec('2026-08-23', 'chest'), rec('2026-08-24', 'legs'), rec('2026-08-25', 'back')];
-    expect(recentGroups(h)).toEqual(['back', 'legs', 'chest']);
+    // pickRoutine이 「최근 것이 앞」인 목록을 받는다. 순서가 뒤집히면 방금 한 유닛을 또 준다.
+    const h = [rec('2026-08-24', 'lower'), rec('2026-08-25', 'upper')];
+    expect(recentUnits(h)).toEqual(['upper', 'lower']);
   });
 
-  it('같은 부위가 여러 번이면 가장 최근 것만 남긴다', () => {
-    const h = [rec('2026-08-23', 'chest'), rec('2026-08-24', 'legs'), rec('2026-08-25', 'chest')];
-    expect(recentGroups(h)).toEqual(['chest', 'legs']);
+  it('같은 유닛이 여러 번이면 가장 최근 것만 남긴다', () => {
+    const h = [rec('2026-08-23', 'upper'), rec('2026-08-24', 'lower'), rec('2026-08-25', 'upper')];
+    expect(recentUnits(h)).toEqual(['upper', 'lower']);
+  });
+
+  it('구 부위 기록을 유닛으로 사상한다 — 「어제 가슴 → 오늘 하체」', () => {
+    // ★ 배포 당일의 연속성이 여기 걸린다. 구 기록을 그대로 흘리면 어제 가슴을 한 사람에게
+    //   오늘 상체(=가슴 포함)가 다시 나온다 — 24h 하드 컷을 배포일에 스스로 깬다.
+    expect(recentUnits([rec('2026-08-26', 'chest')])).toEqual(['upper']);
+    expect(recentUnits([rec('2026-08-26', 'legs')])).toEqual(['lower']);
+  });
+
+  it('구·신 기록이 섞여도 유닛 어휘 하나로 합쳐진다', () => {
+    // 'chest'와 'upper'는 같은 유닛이다. 사상 전에 중복 제거를 하면 둘이 따로 남아
+    // staleness 계산이 어긋난다.
+    const h = [rec('2026-08-23', 'legs'), rec('2026-08-24', 'chest'), rec('2026-08-25', 'upper')];
+    expect(recentUnits(h)).toEqual(['upper', 'lower']);
   });
 
   it('빈 기록이면 빈 목록이다', () => {
-    expect(recentGroups([])).toEqual([]);
+    expect(recentUnits([])).toEqual([]);
   });
 });
 

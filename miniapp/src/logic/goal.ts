@@ -9,8 +9,8 @@ import type { Exercise } from '../data/exercises';
  * 사라진다. 그렇다고 광고 때문에 늘리는 것도 금지다(「휴식 길이는 운동이 정한다」).
  * 그래서 **권장 구간 안에서 40초를 넘는 45초**를 골랐다. 이 불변식은 테스트로 못 박았다.
  *
- * 짧게 쉬는 목적은 종목을 늘려 세션 길이를 지킨다 — 그 결과 휴식 **횟수**는 체지방
- * 감량이 더 많다(4종목 11회 vs 3종목 8회).
+ * 종목 수는 2분할 개편으로 **셋 다 4로 통일**됐다(설계 §3.8.4 — 상체 4부위 커버리지).
+ * 세션 길이는 짧게 쉬는 목적이 여전히 짧다 — 휴식 길이가 다르기 때문이다.
  */
 export type Goal = 'fatLoss' | 'muscle' | 'health';
 
@@ -30,9 +30,14 @@ export type GoalSpec = {
   /**
    * 루틴에 넣을 종목 수 **상한**.
    *
-   * ⚠️ 실제 개수는 이보다 적을 수 있다 — `pickRoutine`이 부위 안의 근육 수와
-   * `MAX_PER_MUSCLE`(근육당 3개)로 한 번 더 조인다. 가슴처럼 근육이 하나인 부위는
-   * 4를 넘겨도 3종목이 최대다. 그래서 화면 문구도 「최대 N종목」으로 쓴다.
+   * ⚠️ 실제 개수는 이보다 적을 수 있다 — `pickRoutine`이 유닛 안의 근육 수와
+   * `MAX_PER_MUSCLE`(근육당 3개)로 한 번 더 조인다. 그래서 화면 문구도 「최대 N종목」으로 쓴다.
+   *
+   * ★ **세 목적 모두 4인 근거는 광고가 아니라 부위 커버리지다**(설계 §3.8.4). 상체 유닛은
+   * 부위가 넷(가슴·등·어깨·팔)이라, 2단 라운드로빈의 첫 라운드에서 부위마다 하나씩 나가려면
+   * 종목이 넷이어야 한다. 3종목이면 매 상체 세션마다 한 부위가 결번이라 그 부위의 주간
+   * 세트가 최소선(주 4세트)을 밑돈다. 슬롯이 8→11로 는 것은 그 결정의 **부수 효과**이지
+   * 이유가 아니다 — 「휴식 길이·횟수는 운동이 정한다」는 규율은 그대로다.
    */
   exerciseCount: number;
 };
@@ -54,7 +59,7 @@ export const GOALS: Record<Goal, GoalSpec> = {
     reps: [6, 12],
     restIsolation: 90,
     restCompound: 150,
-    exerciseCount: 3,
+    exerciseCount: 4,
   },
   health: {
     label: '건강 유지',
@@ -63,7 +68,7 @@ export const GOALS: Record<Goal, GoalSpec> = {
     reps: [8, 15],
     restIsolation: 60,
     restCompound: 90,
-    exerciseCount: 3,
+    exerciseCount: 4,
   },
 };
 

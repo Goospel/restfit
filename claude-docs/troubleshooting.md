@@ -22,6 +22,7 @@
      각 항목의 frontmatter(summary)에서 재생성합니다. 내용을 바꾸려면 그 항목의
      summary를 고치세요(단일 출처). 최신 항목이 위. -->
 
+- [T-230](troubleshooting/T-230.md) · 돌연변이 테스트를 되돌리려고 git checkout -- <file>을 썼더니 그 파일의 미커밋 구현이 통째로 날아갔다 — 파일 단위 checkout은 「내 편집분」이 아니라 HEAD로 되돌린다
 - [T-229](troubleshooting/T-229.md) · 화면 테스트를 넣으려고 vitest environment를 jsdom으로 전역 전환했더니 무관한 shareLinks 문서 대조 테스트가 통째로 죽었다 — jsdom에서는 import.meta.url이 file: URL이 아니다
 - [T-228](troubleshooting/T-228.md) · 미니앱에서 연 토스쇼핑 쉐어링크는 뒤로 가기로 못 돌아온다 — 플랫폼에 방법이 없고 토스가 개선 중인 알려진 문제라, 고치려 들지 말고 안내로 덮는다
 - [T-227](troubleshooting/T-227.md) · iCloud 메모 본문은 canvas로 그려져 DOM에 텍스트가 없다 — 편집기의 복사 기능으로 시스템 클립보드에 담고 `Get-Clipboard`로 읽는다

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EQUIPMENT, EXERCISES, GROUP_KEYS, groupOf, type EquipKey } from './exercises';
+import { EQUIPMENT, EXERCISES, GROUP_KEYS, groupOf, UNIT_KEYS, UNIT_OF, unitOf, type EquipKey } from './exercises';
 import { MISSING_LABELS, MUSCLE_KO } from './labels';
 import { filterByEquipment, unlockGain } from '../logic/equipment';
 
@@ -97,6 +97,38 @@ describe('exercises.json', () => {
   it('장비를 둘 요구하는 운동이 실제로 존재한다', () => {
     // 덤벨 벤치프레스류. 이게 0이면 requires를 집합으로 둔 의미가 없다.
     expect(EXERCISES.filter((e) => e.requires.length >= 2).length).toBeGreaterThan(10);
+  });
+});
+
+describe('로테이션 유닛', () => {
+  it('여섯 부위가 상체 넷 · 하체 둘로 갈린다', () => {
+    // 로테이션 단위가 부위에서 유닛으로 바뀐 근거(설계 §3.8.2) — 이 매핑이 어긋나면
+    // 「오늘은 상체」라고 써 놓고 스쿼트를 준다.
+    expect(unitOf('chest')).toBe('upper');
+    expect(unitOf('back')).toBe('upper');
+    expect(unitOf('shoulders')).toBe('upper');
+    expect(unitOf('arms')).toBe('upper');
+    expect(unitOf('legs')).toBe('lower');
+    expect(unitOf('core')).toBe('lower');
+  });
+
+  it('유닛 값을 넣으면 그대로 나온다 — 구 기록 흡수용', () => {
+    // 기록의 group 어휘가 부위(구)와 유닛(신)이 섞인다. 한쪽만 받으면 구 기록이
+    // 로테이션에서 통째로 무시돼 어제 한 부위를 오늘 또 준다.
+    expect(unitOf('upper')).toBe('upper');
+    expect(unitOf('lower')).toBe('lower');
+  });
+
+  it('모든 부위가 유닛에 배정돼 있다', () => {
+    // 부위가 늘었는데 매핑을 빠뜨리면 그 부위 운동이 어느 유닛에도 안 들어가 영영 안 나온다.
+    expect(GROUP_KEYS.filter((g) => !UNIT_KEYS.includes(UNIT_OF[g]))).toEqual([]);
+  });
+
+  it('두 유닛 다 근력 운동이 넉넉하다', () => {
+    // 한쪽이 비면 로테이션이 교대하지 못하고 매일 같은 유닛이 나온다(퇴화 케이스).
+    for (const u of UNIT_KEYS) {
+      expect(STRENGTH.filter((e) => { const g = groupOf(e); return g && unitOf(g) === u; }).length, u).toBeGreaterThan(50);
+    }
   });
 });
 
