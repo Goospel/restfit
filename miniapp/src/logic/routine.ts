@@ -43,6 +43,14 @@ const LEVEL_ORDER = { beginner: 0, intermediate: 1, expert: 2 } as const;
 const MIN_POOL = 3;
 
 /**
+ * 부위가 **확정 슬롯**을 받을 최소 운동 수.
+ *
+ * 2단 라운드로빈의 첫 라운드는 부위마다 한 자리를 보장한다 — 그러니 종목이 하나뿐인 부위는
+ * 그 한 종목이 매 세션 고정 배급된다. 하한을 2로 두면 최소한 번갈아 나오기라도 한다.
+ */
+const MIN_PER_GROUP = 2;
+
+/**
  * 한 근육에서 뽑을 최대 운동 수.
  *
  * 없으면 부위 안에 근육이 하나뿐일 때(맨몸 팔 = 삼두뿐) 같은 근육만 5종목이 나온다.
@@ -144,8 +152,19 @@ export function pickRoutine(
    * 평평하게 섞으면 어느 날은 등 계열만 넷 뽑히는 "사실상 등 데이"가 난다 — 부위당 빈도
    * 보장이 기대값으로만 성립하고 확정이 아니게 된다. 바깥 라운드 0에서 부위마다 하나씩
    * 나가게 두면 4종목 상체 세션이 4부위를 **전부** 커버한다(설계 §3.8.4).
+   *
+   * ⚠️ **종목이 `MIN_PER_GROUP` 미만인 부위는 바깥 큐에서 뺀다.** 첫 라운드가 부위마다 주는
+   * 것은 「기회」가 아니라 **확정 슬롯**이라, 종목이 하나뿐인 부위가 큐에 끼면 그 한 종목이
+   * 이틀에 한 번 **반드시** 배급된다. 맨몸 사용자의 어깨가 정확히 그 경우다 — 쓸 수 있는
+   * 어깨 운동이 **상급 핸드스탠드 푸시업 1종뿐**이라, 초보에게 불가능한 동작이 상체 세션마다
+   * 고정으로 나갔다(리뷰 실측 60/60). 구 코드의 부위 하한이 막던 자리가 2단 개편으로
+   * 비었던 것이다. 다만 **금지가 아니라 선호**라, 전부 걸러지면 있는 것 중에서라도 고른다.
    */
-  const queues = shuffled(byUnit.get(unit)!, r).map((g) => muscleRoundRobin(byGroup.get(g)!, r));
+  const groups = byUnit.get(unit)!;
+  const richGroups = groups.filter((g) => byGroup.get(g)!.length >= MIN_PER_GROUP);
+  const queues = shuffled(richGroups.length > 0 ? richGroups : groups, r).map((g) =>
+    muscleRoundRobin(byGroup.get(g)!, r),
+  );
 
   const picked: Exercise[] = [];
   for (let round = 0; picked.length < count; round++) {

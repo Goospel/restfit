@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { pickRoutine } from './routine';
-import type { Exercise, MuscleGroup, Unit } from '../data/exercises';
+import { EXERCISES, type Exercise, type MuscleGroup, type Unit } from '../data/exercises';
 
 const ex = (id: string, muscle: string, o: Partial<Exercise> = {}): Exercise => ({
   id,
@@ -185,6 +185,42 @@ describe('pickRoutine', () => {
       expect(r.unit).toBe('lower');
       expect(groupsOf(r).filter((g) => g === 'core')).toHaveLength(2);
       expect(groupsOf(r).filter((g) => g === 'legs')).toHaveLength(2);
+    }
+  });
+
+  it('종목이 하나뿐인 부위는 확정 슬롯을 받지 못한다', () => {
+    // ★ 2단 라운드로빈의 첫 라운드는 부위마다 **확정 슬롯**을 준다. 그래서 종목이 하나뿐인
+    //   부위가 큐에 끼면 그 한 종목이 이틀에 한 번 **반드시** 배급된다 — 구 코드의 부위
+    //   하한(MIN_POOL)이 막던 것이 2단 개편으로 사라졌다.
+    const list = [
+      ...[1, 2, 3, 4].map((i) => ex(`가슴${i}`, 'chest')),
+      ...[1, 2, 3, 4].map((i) => ex(`삼두${i}`, 'triceps')),
+      ex('어깨단독', 'shoulders'),
+    ];
+    for (let d = 1; d <= 20; d++) {
+      const r = pickRoutine(list, [], [], `2026-09-${d}`, 4);
+      expect(idsOf(r)).not.toContain('어깨단독');
+      // 빈약 부위를 걸러도 남은 부위로 요청한 개수를 채운다.
+      expect(r.exercises).toHaveLength(4);
+    }
+  });
+
+  it('모든 부위가 빈약하면 그래도 있는 것 중에서 고른다', () => {
+    // 하한은 **금지가 아니라 선호**다(구 MIN_POOL과 같은 철학). 전부 걸러 버리면
+    // 사용자에게 아무것도 못 준다 — 불가능한 동작 하나라도 없는 것보다는 낫다.
+    const list = [ex('가슴단독', 'chest'), ex('어깨단독', 'shoulders')];
+    const r = pickRoutine(list, [], [], '2026-08-25', 4);
+    expect(r.unit).toBe('upper');
+    expect(idsOf(r).sort()).toEqual(['가슴단독', '어깨단독']);
+  });
+
+  it('맨몸 상체 세션에 핸드스탠드 푸시업이 나오지 않는다', () => {
+    // ★ **실데이터 회귀 가드.** 맨몸 근력의 어깨는 이 상급 1종이 전부다(등은 0종).
+    //   부위 하한이 없으면 초보 맨몸 사용자의 상체 세션마다 이 동작이 확정 배급된다 —
+    //   실제로 60/60 배급되던 것을 리뷰가 잡았다.
+    for (let d = 1; d <= 30; d++) {
+      const ids = idsOf(pickRoutine(EXERCISES, [], ['lower'], `2026-09-${d}`, 4));
+      expect(ids, `2026-09-${d}`).not.toContain('Handstand_Push-Ups');
     }
   });
 

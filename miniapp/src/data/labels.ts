@@ -33,9 +33,13 @@ export const EQUIPMENT_ICON: Record<EquipKey, IconName> = {
  *
  * 2분할 이전 기록은 「가슴」, 이후 기록은 「상체」로 섞여 보인다. 사실 그대로라 허용한다 —
  * 구 기록을 유닛 이름으로 고쳐 쓰면 하지도 않은 운동을 했다고 적는 셈이다.
+ *
+ * ⚠️ **`legs`는 「다리」이지 「하체」가 아니다.** 유닛 `lower`가 「하체」를 가져갔으므로 둘 다
+ * 「하체」로 두면 기록 화면에서 **구 부위 기록과 새 유닛 기록이 구별되지 않는다** — 구 기록의
+ * 그것은 다리만 한 날이고 새 기록의 「하체」는 다리+코어라, 같은 말로 적으면 거짓이 된다.
  */
 export const GROUP_KO: Record<MuscleGroup | Unit, string> = {
-  chest: '가슴', back: '등', shoulders: '어깨', arms: '팔', legs: '하체', core: '코어',
+  chest: '가슴', back: '등', shoulders: '어깨', arms: '팔', legs: '다리', core: '코어',
   upper: '상체', lower: '하체',
 };
 

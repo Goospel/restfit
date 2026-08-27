@@ -65,7 +65,8 @@ export function App() {
    */
   const routine = useMemo(() => {
     const prior = history.filter((r) => r.date !== date);
-    // 종목 수는 목적이 정한다 — 짧게 쉬는 목적일수록 많이 넣어야 세션 길이가 유지된다.
+    // 종목 수는 목적이 정한다 — 지금은 셋 다 4다(상체 4부위를 매 세션 커버하려면 4여야 한다).
+    // 목적별로 갈릴 자리를 남겨 둔 것이지, 값이 같다고 goal을 안 읽으면 안 된다.
     // effectiveOwned: 조절식 벤치를 가졌으면 인클라인까지 열고, 평벤치·모름이면 걸러낸다.
     return pickRoutine(
       EXERCISES,

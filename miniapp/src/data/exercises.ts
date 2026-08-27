@@ -85,7 +85,10 @@ export const UNIT_OF: Record<MuscleGroup, Unit> = {
  * ⚠️ **유닛 값을 그대로 통과시키는 것이 이 함수의 절반이다.** 기록의 `group`에는 2분할
  * 이전에 저장된 부위(`'chest'`)와 이후의 유닛(`'upper'`)이 섞여 있다. 한쪽만 받으면
  * 배포 당일에 어제 기록이 로테이션에서 무시돼 **같은 근육을 이틀 연속** 준다.
+ *
+ * ⚠️ 조회는 `in`이 아니라 **인덱싱 + `??`**로 한다 — `in`은 프로토타입 체인까지 보므로
+ * `'constructor'` 같은 키가 「부위」로 통과해 `undefined`를 유닛인 양 돌려준다.
  */
 export function unitOf(v: MuscleGroup | Unit): Unit {
-  return v in UNIT_OF ? UNIT_OF[v as MuscleGroup] : (v as Unit);
+  return UNIT_OF[v as MuscleGroup] ?? (v as Unit);
 }
