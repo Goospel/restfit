@@ -48,9 +48,19 @@ describe('GOALS', () => {
     expect(GOALS.fatLoss.reps[0]).toBeGreaterThan(GOALS.muscle.reps[0]);
   });
 
-  it('체지방 감량이 운동 수가 더 많다', () => {
-    // 휴식이 짧은 만큼 종목을 늘려 세션 길이와 광고 슬롯 수를 지킨다.
-    expect(GOALS.fatLoss.exerciseCount).toBeGreaterThan(GOALS.muscle.exerciseCount);
+  it('체지방 감량이 운동 수가 적지는 않다', () => {
+    // 원래는 「더 많다」였다. 상·하체 2분할로 바뀌면서 **상체 4부위를 매 세션 하나씩 커버**하려면
+    // 종목이 4개여야 해서(설계 §3.8.4) 셋 다 4로 통일됐다 — 3종목이면 매번 한 부위가 결번이라
+    // 상체 부위당 주간 세트가 최소선(주 4세트)을 밑돈다. 그래서 부등호를 ≥로 완화한다.
+    // 뒤집히는 것(체지방 감량이 더 적어지는 것)은 여전히 금지다 — 짧게 쉬는 목적이 종목까지
+    // 적으면 세션이 너무 짧아진다.
+    expect(GOALS.fatLoss.exerciseCount).toBeGreaterThanOrEqual(GOALS.muscle.exerciseCount);
+  });
+
+  it('모든 목적이 4종목이다 — 상체 4부위 커버리지', () => {
+    // ★ 이 숫자가 곧 「부위당 빈도 = 확정값」의 근거다(설계 §3.8.4). 하나라도 3으로 되돌아가면
+    //   그 목적의 상체 세션에서 부위 하나가 매번 빠진다.
+    for (const key of GOAL_KEYS) expect(GOALS[key].exerciseCount, key).toBe(4);
   });
 
   it('라벨이 비어 있지 않고, 아이콘이 실제로 그려지는 이름이다', () => {

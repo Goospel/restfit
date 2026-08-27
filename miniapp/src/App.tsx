@@ -21,7 +21,7 @@ import {
   loadHistory,
   loadOwned,
   loadProfile,
-  recentGroups,
+  recentUnits,
   saveEquipSpec,
   saveGoal,
   saveOwned,
@@ -60,7 +60,7 @@ export function App() {
   /**
    * 오늘의 루틴은 **오늘 이전의 기록**으로만 정한다.
    *
-   * 오늘 기록까지 넣으면 운동을 마치는 순간 부위 로테이션이 돌아 화면의 루틴이 바뀐다 —
+   * 오늘 기록까지 넣으면 운동을 마치는 순간 유닛 로테이션이 돌아 화면의 루틴이 바뀐다 —
    * "오늘 완료함"이라 써 있는데 목록은 딴것이 되는 꼴이다. "한 번 더 하기"도 같은 루틴이어야 한다.
    */
   const routine = useMemo(() => {
@@ -70,7 +70,7 @@ export function App() {
     return pickRoutine(
       EXERCISES,
       effectiveOwned(owned, spec),
-      recentGroups(prior),
+      recentUnits(prior),
       date,
       GOALS[goal ?? DEFAULT_GOAL].exerciseCount,
     );
@@ -150,11 +150,11 @@ export function App() {
   }
 
   // 운동 중에는 탭을 감춘다. 세트와 휴식 사이에 딴 화면으로 샐 이유가 없다.
-  if (session && routine.group) {
+  if (session && routine.unit) {
     return (
       <Workout
         session={session}
-        group={routine.group}
+        group={routine.unit}
         onChange={setSession}
         onFinish={finish}
         history={history}
