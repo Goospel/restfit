@@ -2,7 +2,16 @@ import { useMemo, useState } from 'react';
 
 import { EXERCISES, type EquipKey } from '../data/exercises';
 import { EQUIPMENT_KO } from '../data/labels';
-import { DISCLOSURE, HAS_ANY_LINK, SHARE_LINKS } from '../data/shareLinks';
+import {
+  BAND_KO,
+  DISCLOSURE,
+  filterByBand,
+  HAS_ANY_LINK,
+  productBands,
+  SHARE_LINKS,
+  type Product,
+  type ProductBand,
+} from '../data/shareLinks';
 import type { EquipSpec } from '../logic/equipSpec';
 import { recommend } from '../logic/recommend';
 import { ui } from '../ui';
@@ -88,21 +97,11 @@ export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
                       상품 {products.length}개 {isOpen ? '▴' : '▾'}
                     </button>
 
-                    {isOpen && (
-                      <ul style={S.list}>
-                        {products.map((prod) => (
-                          <li key={prod.url}>
-                            <button style={S.item} onClick={() => openUrl(prod.url)}>
-                              <span style={{ minWidth: 0 }}>
-                                <span style={S.name}>{prod.name}</span>
-                                {prod.note && <span style={S.note}>{prod.note}</span>}
-                              </span>
-                              <span style={S.arrow}>›</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    {/*
+                      `key`가 기구다 — 다른 기구를 펼치면 컴포넌트가 새로 마운트되어
+                      **필터가 저절로 초기화된다.** 리셋을 손으로 부르는 코드가 필요 없다.
+                    */}
+                    {isOpen && <ProductList key={p.key} products={products} onOpen={openUrl} />}
                   </>
                 )}
               </div>
@@ -120,10 +119,105 @@ export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
   );
 }
 
+/**
+ * 펼쳐진 상품 목록. **무게 구간 칩으로 좁힌다.**
+ *
+ * 목록을 짧게 유지하려고 우리가 미리 3~5개만 골라 두면, 고르는 일을 대신해 버리는 꼴이라
+ * 「내 무게에 맞는 게 없는」 사람이 생긴다. 많이 담고 **거를 수단을 주는 쪽**이 낫다.
+ *
+ * 칩은 **구간이 둘 이상일 때만** 뜬다 — 하나뿐이면 「전체」와 결과가 같아서 누를 이유가 없다.
+ */
+function ProductList({
+  products,
+  onOpen,
+}: {
+  products: readonly Product[];
+  onOpen: (url: string) => void;
+}) {
+  const [band, setBand] = useState<ProductBand | null>(null);
+  const bands = productBands(products);
+  const shown = filterByBand(products, band);
+
+  return (
+    <>
+      {bands.length > 1 && (
+        <div style={S.chips}>
+          {/* 「전체」에는 개수를 안 붙인다 — 바로 위 「상품 N개」가 이미 같은 수를 말한다. */}
+          <Chip label="전체" active={band === null} onClick={() => setBand(null)} />
+          {bands.map((b) => (
+            <Chip
+              key={b.band}
+              label={BAND_KO[b.band]}
+              count={b.count}
+              active={band === b.band}
+              onClick={() => setBand(b.band)}
+            />
+          ))}
+        </div>
+      )}
+
+      <ul style={S.list}>
+        {shown.map((prod) => (
+          <li key={prod.url}>
+            <button style={S.item} onClick={() => onOpen(prod.url)}>
+              <span style={{ minWidth: 0 }}>
+                <span style={S.name}>{prod.name}</span>
+                {prod.note && <span style={S.note}>{prod.note}</span>}
+              </span>
+              <span style={S.arrow}>›</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * 개수를 라벨에 붙인다 — **눌러 보기 전에 얼마나 좁혀지는지 알아야** 누를지 정한다.
+ *
+ * 선택은 색만으로 알리지 않는다(`aria-pressed` + 배경 + 테두리) — 색을 구분하기 어려운 사람에게
+ * 색 하나는 정보가 아니다. 기구 선택 화면에서 같은 이유로 체크 표시를 붙였다.
+ *
+ * ⚠️ 선택 배경은 `--blue`가 아니라 **`--blue-dark`** 다. 12px 글씨는 WCAG AA가 4.5:1을 요구하는데
+ * `--blue`(#3182f6) 위의 흰 글씨는 **3.71:1로 미달**이고 `--blue-dark`(#1b64da)는 5.41:1이다(실측).
+ */
+function Chip({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count?: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      style={{
+        ...ui.chip,
+        // `ui.chip`은 원래 **누르지 않는 라벨**이라 세로 여백이 얇다. 버튼으로 쓰는 여기서는 손가락 몫을 더한다.
+        padding: '9px 12px',
+        ...(active
+          ? { background: 'var(--blue-dark)', borderColor: 'var(--blue-dark)', color: '#fff' }
+          : null),
+      }}
+      onClick={onClick}
+      aria-pressed={active}
+    >
+      {label}
+      {count !== undefined && ` ${count}`}
+    </button>
+  );
+}
+
 /** 이보다 낮은 배수는 안 띄운다. 맨몸 사용자의 덤벨(2.7배)처럼 셀 만한 것만 남긴다. */
 const MIN_RATIO_TO_SHOW = 1.5;
 
 const S: Record<string, React.CSSProperties> = {
+  // 칩이 화면 폭을 넘으면 접힌다 — 가로 스크롤은 옆으로 흐르는 것이 있다는 사실 자체가 안 보인다.
+  chips: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   list: { listStyle: 'none', margin: '4px 0 0', padding: 0 },
   item: {
     display: 'flex',
