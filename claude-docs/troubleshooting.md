@@ -22,6 +22,7 @@
      각 항목의 frontmatter(summary)에서 재생성합니다. 내용을 바꾸려면 그 항목의
      summary를 고치세요(단일 출처). 최신 항목이 위. -->
 
+- [T-228](troubleshooting/T-228.md) · 미니앱에서 연 토스쇼핑 쉐어링크는 뒤로 가기로 못 돌아온다 — 플랫폼에 방법이 없고 토스가 개선 중인 알려진 문제라, 고치려 들지 말고 안내로 덮는다
 - [T-227](troubleshooting/T-227.md) · iCloud 메모 본문은 canvas로 그려져 DOM에 텍스트가 없다 — 편집기의 복사 기능으로 시스템 클립보드에 담고 `Get-Clipboard`로 읽는다
 - [T-226](troubleshooting/T-226.md) · 인라인 스타일에서 `border` shorthand를 쓰는 베이스에 `borderColor`만 덮으면 React가 리렌더에서 그 값을 지운다 — 첫 렌더에는 멀쩡해서 눈으로 못 잡는다
 - [T-225](troubleshooting/T-225.md) · 뒤로 갈수록 가늘어지는 띠를 선(stroke)으로 그렸더니 원근이 안 났다 — 굵기는 path 하나에 하나뿐이라 겉모양만 좁아진다. 면으로 채우면 이번엔 굽은 데 안쪽이 제 살을 파고들어 덩어리가 된다

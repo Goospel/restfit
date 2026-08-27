@@ -9,6 +9,7 @@ import {
   HAS_ANY_LINK,
   productBadge,
   productBands,
+  RETURN_NOTICE,
   SHARE_LINKS,
   type Product,
   type ProductBand,
@@ -157,6 +158,12 @@ function ProductList({
         </div>
       )}
 
+      {/*
+        ⚠️ **누르기 전에** 읽혀야 하는 안내라 목록 위에 둔다 — 아래에 두면 스크롤해야 보이고,
+        그때는 이미 눌러 나간 뒤다. 자세한 사정은 `RETURN_NOTICE` 주석.
+      */}
+      <p style={S.notice}>{RETURN_NOTICE}</p>
+
       <ul style={S.list}>
         {shown.map((prod) => (
           <li key={prod.url}>
@@ -224,6 +231,22 @@ const MIN_RATIO_TO_SHOW = 1.5;
 const S: Record<string, React.CSSProperties> = {
   // 칩이 화면 폭을 넘으면 접힌다 — 가로 스크롤은 옆으로 흐르는 것이 있다는 사실 자체가 안 보인다.
   chips: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  /**
+   * 경고가 아니라 **길 안내**다 — 빨간색·아이콘을 붙이면 「위험한 링크」로 읽혀 누르기를 망설이게 된다.
+   * 색은 본문 계열로 두고, 배경 한 겹으로 목록과 구분만 한다.
+   *
+   * ⚠️ 배경은 `--bg-sub`가 아니라 **`--bg`(흰색)** 다. 이 안내가 앉는 카드가 이미 `--bg-sub`라
+   * 같은 색을 주면 경계가 사라져 그냥 본문으로 읽힌다.
+   */
+  notice: {
+    margin: '10px 0 0',
+    padding: '8px 10px',
+    borderRadius: 8,
+    background: 'var(--bg)',
+    fontSize: 12,
+    lineHeight: 1.5,
+    color: 'var(--text-sub)',
+  },
   list: { listStyle: 'none', margin: '4px 0 0', padding: 0 },
   item: {
     display: 'flex',
