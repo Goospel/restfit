@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EXERCISES } from '../data/exercises';
-import { isAvoided } from './profile';
+import { isAvoided, isFeel, nextExperience } from './profile';
 
 /** 설계 §3.2의 실측 수치는 전부 **근력 408종** 기준이다. */
 const STRENGTH = EXERCISES.filter((e) => e.category === 'strength');
@@ -53,5 +53,68 @@ describe('isAvoided — 불편 부위 하드 제외', () => {
     const both = STRENGTH.filter((e) => isAvoided(e, ['knee', 'shoulder']));
     expect(both).toHaveLength(new Set([...knee, ...shoulder]).size);
     expect(both.length).toBeGreaterThan(Math.max(knee.length, shoulder.length));
+  });
+});
+
+describe('nextExperience — 세션 피드백 승급·강등', () => {
+  it('빈 기록이면 유지한다', () => {
+    // 첫 세션에 아무 근거 없이 수준을 옮기면 온보딩 답을 즉시 뒤집는 꼴이다.
+    expect(nextExperience('beginner', [])).toBe('beginner');
+  });
+
+  it('3연속 easy면 한 단계 올린다', () => {
+    expect(nextExperience('beginner', ['easy', 'easy', 'easy'])).toBe('intermediate');
+    expect(nextExperience('intermediate', ['easy', 'easy', 'easy'])).toBe('advanced');
+  });
+
+  it('easy 2개까지는 유지한다 — 승급 임계는 정확히 3이다', () => {
+    // ★ 임계가 2로 내려가면 「조금 쉬웠던 이틀」이 곧바로 승급이 된다.
+    expect(nextExperience('beginner', ['easy', 'easy'])).toBe('beginner');
+  });
+
+  it('2연속 hard면 한 단계 내린다 — 강등이 승급보다 민감한 것은 의도다', () => {
+    // 과부하 쪽 오류가 이탈·부상 비용이 더 크다(설계 §3.6).
+    expect(nextExperience('advanced', ['hard', 'hard'])).toBe('intermediate');
+    expect(nextExperience('intermediate', ['hard', 'hard'])).toBe('beginner');
+  });
+
+  it('hard 1개로는 안 내린다 — 강등 임계는 정확히 2다', () => {
+    expect(nextExperience('advanced', ['hard'])).toBe('advanced');
+  });
+
+  it('상급에서 더 못 오르고, 초급에서 더 못 내린다', () => {
+    // 사다리 밖으로 나가면 EXPERIENCE_KEYS 인덱스가 undefined가 되어 화면이 죽는다.
+    expect(nextExperience('advanced', ['easy', 'easy', 'easy'])).toBe('advanced');
+    expect(nextExperience('beginner', ['hard', 'hard'])).toBe('beginner');
+  });
+
+  it('feel이 없는(건너뛴) 레코드가 스트릭을 끊는다', () => {
+    // ★ **보수적이어야 한다** — 무응답을 easy로 세면 아무 말 안 한 사람을 오승급시킨다.
+    expect(nextExperience('beginner', [undefined, 'easy', 'easy', 'easy'])).toBe('beginner');
+    expect(nextExperience('beginner', ['easy', undefined, 'easy', 'easy'])).toBe('beginner');
+    expect(nextExperience('advanced', [undefined, 'hard', 'hard'])).toBe('advanced');
+  });
+
+  it('ok가 스트릭을 끊는다', () => {
+    // 「적당하다」는 지금 수준이 맞다는 뜻이다 — 그게 스트릭을 이어 주면 안 된다.
+    expect(nextExperience('beginner', ['easy', 'easy', 'ok', 'easy'])).toBe('beginner');
+    expect(nextExperience('advanced', ['hard', 'ok', 'hard'])).toBe('advanced');
+  });
+
+  it('가장 최근 것만 본다 — 옛 스트릭은 되살아나지 않는다', () => {
+    // 최근 것이 앞이다. 뒤쪽에 남은 3연속 easy가 오늘의 판정을 건드리면
+    // 한 번 쌓인 스트릭이 영원히 승급을 예약해 둔 셈이 된다.
+    expect(nextExperience('beginner', ['ok', 'easy', 'easy', 'easy'])).toBe('beginner');
+  });
+});
+
+describe('isFeel — 저장소에서 읽은 값', () => {
+  it('어휘 안의 값만 통과시킨다', () => {
+    expect(isFeel('easy')).toBe(true);
+    expect(isFeel('ok')).toBe(true);
+    expect(isFeel('hard')).toBe(true);
+    expect(isFeel('very-hard')).toBe(false);
+    expect(isFeel(undefined)).toBe(false);
+    expect(isFeel(3)).toBe(false);
   });
 });

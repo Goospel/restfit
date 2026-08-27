@@ -17,8 +17,20 @@ import {
 import { adPlan, AD_GROUP_ID, nextAdState, type AdState } from '../logic/adPlan';
 import { defaultWeightFor, type EquipSpec } from '../logic/equipSpec';
 import { midReps } from '../logic/goal';
-import { lastSetOf, type WorkoutRecord } from '../storage';
-import { mmss, ui } from '../ui';
+import { EXPERIENCE_KEYS, FEEL_KEYS, FEEL_LABEL, nextExperience, type Feel, type Profile } from '../logic/profile';
+import { lastSetOf, recentFeels, type WorkoutRecord } from '../storage';
+import { mmss, specChipStyle, ui } from '../ui';
+
+/** 승급 안내. 이미 반영된 사실을 알릴 뿐이다 — 「올려 드릴까요?」로 물으면 탭이 하나 더 는다. */
+const NOTE_UP = '다음부터 조금 더 어려운 동작을 드릴게요.';
+
+/**
+ * 강등 안내. **부드러워야 한다.**
+ *
+ * 「너무 어려웠나 봐요」처럼 사용자를 주어로 두면 실패 통보로 읽힌다. 힘들다고 답한 것은
+ * 앱이 원한 정직한 답인데, 그 답의 보상이 지적이면 다음부터 아무도 안 누른다.
+ */
+const NOTE_DOWN = '다음부터 조금 가볍게 드릴게요.';
 
 /**
  * 운동 진행. **제품의 심장이다.**
@@ -37,6 +49,8 @@ export function Workout({
   history,
   spec,
   date,
+  profile,
+  onProfileChange,
 }: {
   session: Session;
   /** 이 세션의 유닛(상체/하체). 루틴이 한 유닛으로 뽑히므로 세션 전체에 하나다. 기록에 그대로 남는다. */
@@ -47,9 +61,14 @@ export function Workout({
   /** 보유 기구 상세. 처음 하는 운동의 무게를 0 대신 여기서 채운다. */
   spec: EquipSpec;
   date: string;
+  /** `null`이면 승급·강등을 아예 안 돌린다 — 피드백은 받아 두되 옮길 값이 없다. */
+  profile: Profile | null;
+  onProfileChange: (p: Profile) => void;
 }) {
   const s = session;
   const current = s.exercises[s.index];
+  /** 오늘의 체감. **선택 사항이라 `undefined`가 기본이자 정상값이다.** */
+  const [feel, setFeel] = useState<Feel | undefined>(undefined);
   const [weight, setWeight] = useState('0');
   const [reps, setReps] = useState('10');
   const [now, setNow] = useState(() => Date.now());
@@ -127,18 +146,42 @@ export function Workout({
     if (resting && left === 0) onChange(endRest(s));
   }, [resting, left]);
 
-  /** 지금까지 한 것을 기록으로 만든다. 한 세트도 안 했으면 남기지 않는다. */
+  /**
+   * 지금까지 한 것을 기록으로 만든다. 한 세트도 안 했으면 남기지 않는다.
+   *
+   * `feel`은 **고른 경우에만** 넣는다 — 키를 `undefined`로 박아 두면 저장된 JSON에
+   * 「모른다」와 「안 골랐다」의 구분이 남지 않는다.
+   */
   function toRecord(): WorkoutRecord | null {
     const entries = s.exercises
       .map((e, i) => ({ id: e.id, name: e.name, sets: s.done[i] }))
       .filter((e) => e.sets.length > 0);
     if (entries.length === 0) return null;
-    return { date, group, entries };
+    return { date, group, entries, ...(feel ? { feel } : null) };
   }
 
   // ── 완료
   if (s.finished) {
     const total = s.done.reduce((n, sets) => n + sets.length, 0);
+    /**
+     * 승급·강등 판정. **오늘 것이 아직 기록에 없으니 맨 앞에 얹어서 본다.**
+     *
+     * 화면에 보여 줄 값과 실제로 저장할 값을 **여기서 한 번만** 구한다 — 두 번 계산하면
+     * 안내 문구와 저장 결과가 갈라지는 날이 온다.
+     *
+     * ⚠️ 프로필이 없으면 판정 자체를 안 한다. 여기서 프로필을 대신 만들면 「경험을 안 고른
+     * 사람」이 조용히 사라져, 온보딩 안내 칩도 함께 증발한다(설계 §3.6 · 반쪽 프로필 금지).
+     */
+    const judged = profile ? nextExperience(profile.experience, [feel, ...recentFeels(history)]) : null;
+    const moved = judged && judged !== profile!.experience ? judged : null;
+
+    function save() {
+      const rec = toRecord();
+      // 기록이 안 남는 세션은 판정 근거도 안 남는다 — 다음 세션에 재현되지 않을 승급은 안 한다.
+      if (rec && moved && profile) onProfileChange({ ...profile, experience: moved });
+      onFinish(rec);
+    }
+
     return (
       <main style={ui.pageFull}>
         <div style={{ ...ui.spacer, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
@@ -152,7 +195,33 @@ export function Workout({
             </p>
           </div>
         </div>
-        <button style={ui.primary} onClick={() => onFinish(toRecord())}>
+
+        {/* 1문항. **건너뛸 수 있어야 한다** — 필수로 만들면 응답률이 아니라 기록 저장률이 깎인다. */}
+        <div style={{ textAlign: 'center', marginBottom: 12 }}>
+          <p style={{ ...ui.sub, marginBottom: 8 }}>오늘 운동 어땠나요?</p>
+          <div style={{ ...ui.row, justifyContent: 'center' }}>
+            {FEEL_KEYS.map((k) => (
+              <button
+                key={k}
+                style={{ ...specChipStyle(feel === k), flex: 1, maxWidth: 110, padding: '11px 0' }}
+                aria-pressed={feel === k}
+                // 다시 누르면 풀린다 — 잘못 누른 답을 되돌릴 길이 없으면 틀린 답이 그대로 저장된다.
+                onClick={() => setFeel(feel === k ? undefined : k)}
+              >
+                {FEEL_LABEL[k]}
+              </button>
+            ))}
+          </div>
+          {moved && (
+            <p style={{ ...ui.sub, margin: '10px 0 0', color: 'var(--blue-dark)' }}>
+              {/* ⚠️ 사다리 위·아래는 **인덱스로** 가른다. 문자열 비교는 'advanced' < 'beginner'라
+                  알파벳 순서가 난이도 순서를 뒤집어, 승급에 강등 문구가 뜬다. */}
+              {EXPERIENCE_KEYS.indexOf(moved) > EXPERIENCE_KEYS.indexOf(profile!.experience) ? NOTE_UP : NOTE_DOWN}
+            </p>
+          )}
+        </div>
+
+        <button style={ui.primary} onClick={save}>
           기록 저장하고 끝내기
         </button>
       </main>

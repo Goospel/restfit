@@ -1,7 +1,7 @@
 import { EQUIPMENT, GROUP_KEYS, UNIT_KEYS, unitOf, type EquipKey, type MuscleGroup, type Unit } from './data/exercises';
 import { BAND_OPTIONS, BENCH_OPTIONS, WEIGHED, WEIGHT_OPTIONS, type EquipSpec } from './logic/equipSpec';
 import { isGoal, type Goal } from './logic/goal';
-import { isAvoidArea, isExperience, type Profile } from './logic/profile';
+import { isAvoidArea, isExperience, isFeel, type Feel, type Profile } from './logic/profile';
 import type { SetLog } from './logic/session';
 
 /**
@@ -39,6 +39,13 @@ export type WorkoutRecord = {
     name: string;
     sets: SetLog[];
   }[];
+  /**
+   * 그날의 체감 난이도. **없는 것이 정상 경로다** — 1문항은 선택이고, 구 레코드에는 아예 없다.
+   *
+   * `undefined`가 「모른다」로 남아야 승급 판정이 그 자리를 스트릭 끊김으로 읽는다.
+   * 여기에 기본값을 채우면 아무 말도 안 한 사람이 오승급한다(`nextExperience` 주석).
+   */
+  feel?: Feel;
 };
 
 function read(key: string, storage: Storage): unknown {
@@ -174,9 +181,22 @@ function isRecord(v: unknown): v is WorkoutRecord {
   return typeof r.date === 'string' && RECORD_GROUPS.includes(r.group) && Array.isArray(r.entries);
 }
 
+/**
+ * 어휘 밖 `feel`만 떨궈 낸다 — **레코드 자체는 살린다.**
+ *
+ * `isRecord`에서 함께 기각하지 않는 이유: 옛 버전이 남긴 이상한 값 하나 때문에 그날의
+ * 세트를 통째로 버리는 건 손해가 너무 크다. 기록은 광고보다 귀하다. 값을 버린 자리는
+ * 「건너뛴 세션」과 같아져서 판정에서만 조용히 빠진다.
+ */
+function stripFeel(r: WorkoutRecord): WorkoutRecord {
+  if (r.feel === undefined || isFeel(r.feel)) return r;
+  const { feel: _dropped, ...rest } = r;
+  return rest;
+}
+
 export function loadHistory(storage: Storage = localStorage): WorkoutRecord[] {
   const v = read(HISTORY_KEY, storage);
-  return Array.isArray(v) ? v.filter(isRecord) : [];
+  return Array.isArray(v) ? v.filter(isRecord).map(stripFeel) : [];
 }
 
 /** 오래된 것이 앞. 상한을 넘으면 앞에서 잘린다. */
@@ -208,6 +228,16 @@ export function recentUnits(history: WorkoutRecord[]): Unit[] {
     if (!out.includes(u)) out.push(u);
   }
   return out;
+}
+
+/**
+ * `nextExperience`가 받는 형태 — **최근 것이 앞**, 빈자리는 빈자리로.
+ *
+ * ⚠️ `recentUnits`와 달리 **거르지도 압축하지도 않는다.** feel 없는 레코드를 빼면
+ * 건너뛴 세션을 사이에 두고도 스트릭이 이어져 오승급한다 — 그 구멍이 신호다.
+ */
+export function recentFeels(history: WorkoutRecord[]): (Feel | undefined)[] {
+  return history.map((r) => r.feel).reverse();
 }
 
 /**

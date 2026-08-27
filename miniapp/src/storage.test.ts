@@ -13,6 +13,7 @@ import {
   saveEquipSpec,
   saveGoal,
   saveProfile,
+  recentFeels,
   recentUnits,
   saveOwned,
   todayKey,
@@ -132,6 +133,34 @@ describe('운동 기록', () => {
     const s = fakeStorage({ throwOnSet: true });
     expect(appendRecord(rec('2026-08-25', 'chest'), s)).toHaveLength(1);
   });
+
+  it('feel을 함께 저장하고 그대로 읽어낸다', () => {
+    const s = fakeStorage();
+    appendRecord({ ...rec('2026-08-26', 'upper'), feel: 'hard' }, s);
+    expect(loadHistory(s)[0].feel).toBe('hard');
+  });
+
+  it('feel이 없는 구 레코드는 그대로 통과한다', () => {
+    // 새 필드를 필수로 만들면 배포 당일에 지난 기록이 통째로 사라진다.
+    const s = fakeStorage();
+    s.setItem('restfit.history', JSON.stringify([rec('2026-08-25', 'chest')]));
+    expect(loadHistory(s)).toHaveLength(1);
+    expect(loadHistory(s)[0].feel).toBeUndefined();
+  });
+
+  it('어휘 밖 feel은 레코드를 살리고 feel만 버린다', () => {
+    // ★ **기록은 광고보다 귀하다.** 옛 버전이 남긴 이상한 feel 하나 때문에 그날의 세트
+    //   전체를 버리면 안 된다 — 판정에서만 빠지면 충분하다(건너뛴 것과 같은 취급).
+    const s = fakeStorage();
+    s.setItem(
+      'restfit.history',
+      JSON.stringify([{ ...rec('2026-08-25', 'upper', [{ id: 'x', name: 'x', sets: [{ weight: 0, reps: 10 }] }]), feel: 'very-hard' }]),
+    );
+    const h = loadHistory(s);
+    expect(h).toHaveLength(1);
+    expect(h[0].entries[0].sets).toHaveLength(1);
+    expect(h[0].feel).toBeUndefined();
+  });
 });
 
 describe('lastSetOf', () => {
@@ -194,6 +223,28 @@ describe('recentUnits', () => {
 
   it('빈 기록이면 빈 목록이다', () => {
     expect(recentUnits([])).toEqual([]);
+  });
+});
+
+describe('recentFeels', () => {
+  it('최근 것이 앞으로 오게 뒤집는다', () => {
+    // nextExperience가 「최근 것이 앞」인 목록을 받는다. 순서가 뒤집히면 옛 스트릭으로 판정한다.
+    const h = [{ ...rec('2026-08-24', 'lower'), feel: 'hard' as const }, { ...rec('2026-08-25', 'upper'), feel: 'easy' as const }];
+    expect(recentFeels(h)).toEqual(['easy', 'hard']);
+  });
+
+  it('건너뛴 레코드의 빈자리를 그대로 남긴다', () => {
+    // ★ 구멍을 압축해 버리면 스트릭이 이어져 **오승급**한다 — 빈자리가 곧 「끊김」 신호다.
+    const h = [
+      { ...rec('2026-08-23', 'upper'), feel: 'easy' as const },
+      rec('2026-08-24', 'lower'),
+      { ...rec('2026-08-25', 'upper'), feel: 'easy' as const },
+    ];
+    expect(recentFeels(h)).toEqual(['easy', undefined, 'easy']);
+  });
+
+  it('빈 기록이면 빈 목록이다', () => {
+    expect(recentFeels([])).toEqual([]);
   });
 });
 

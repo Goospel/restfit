@@ -165,6 +165,9 @@ export function App() {
         history={history}
         spec={spec}
         date={date}
+        // 완료 화면의 피드백 1문항이 승급·강등을 판정해 여기로 되돌린다(설계 §3.6).
+        profile={profile}
+        onProfileChange={saveProfileAnd}
       />
     );
   }
