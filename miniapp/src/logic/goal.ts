@@ -1,5 +1,7 @@
 import type { IconName } from '../components/Icon';
 import type { Exercise } from '../data/exercises';
+// 타입만 가져온다 — 컴파일에서 지워지므로 `session`이 이 모듈을 도로 import 해도 순환이 안 생긴다.
+import type { SetLog } from './session';
 
 /**
  * 운동 목적. **반복 횟수·휴식 길이·종목 수를 한꺼번에 정한다.**
@@ -89,6 +91,50 @@ export function isGoal(v: unknown): v is Goal {
 export function midReps(goal: Goal): number {
   const [lo, hi] = GOALS[goal].reps;
   return Math.round((lo + hi) / 2);
+}
+
+/**
+ * 맨몸 운동의 「동작을 바꿀 때」 컷(회).
+ *
+ * 반복 25~30회를 넘기면 근비대 효율이 급락한다(리서치 맨몸 사다리 3). 기구는 무게를 얹으면
+ * 되지만 맨몸은 얹을 데가 없어서, 이 지점부터는 **더 어려운 동작**이 유일한 진행 수단이다.
+ */
+export const BODYWEIGHT_LADDER_REPS = 25;
+
+/**
+ * 다음 세트의 입력 기본값 — **double progression**(설계 §3.7).
+ *
+ * 「지난번 **모든** 세트가 목표 상단에 닿았으면 한 단 올린다」. 문헌(Plotkin 2022)과
+ * 실무(StrongLifts +2.5kg)의 교차점이다.
+ *
+ * ⚠️ **「모든 세트」가 규칙이다.** 「한 세트라도」로 느슨해지면 첫 세트만 잘 나온 날에 승급해,
+ * 다음 주 내내 못 드는 무게가 기본값으로 떠 있는다.
+ *
+ * ⚠️ **무게를 올리면 횟수는 하단으로 되돌린다.** 안 되돌리면 무게만 계속 올라 곧 벽에 박는다 —
+ * 「무게↑ → 횟수를 다시 쌓아 올림」의 왕복이 이 규칙의 전부다.
+ *
+ * ⚠️ 맨몸은 상단 **초과를 허용**한다. 얹을 무게가 없으니 되돌릴 곳도 없다.
+ *
+ * 이 값은 **입력칸 기본값일 뿐**이다 — 루틴 선발·세션 상태 기계는 이 함수를 모른다.
+ *
+ * @param lastSets 지난번 그 운동의 세트 전부(`lastSetsOf`). 비면 처음 하는 운동이다.
+ * @param bodyweight 맨몸인가(`requires`가 비었는가).
+ * @param defaultWeight 기록이 없을 때 쓸 무게(`defaultWeightFor`) — 보유 기구를 아는 쪽이 넘긴다.
+ */
+export function suggestNext(
+  lastSets: readonly SetLog[],
+  goal: Goal,
+  bodyweight: boolean,
+  defaultWeight: number,
+): SetLog {
+  const last = lastSets[lastSets.length - 1];
+  if (!last) return { weight: defaultWeight, reps: midReps(goal) };
+
+  const [lo, hi] = GOALS[goal].reps;
+  // 경계는 **포함**이다 — 상단을 정확히 채운 것이 곧 목표 달성이다.
+  if (!lastSets.every((s) => s.reps >= hi)) return last;
+
+  return bodyweight ? { weight: last.weight, reps: last.reps + 1 } : { weight: last.weight + 2.5, reps: lo };
 }
 
 /**

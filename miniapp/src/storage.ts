@@ -216,6 +216,26 @@ export function lastSetOf(history: WorkoutRecord[], exerciseId: string): SetLog 
 }
 
 /**
+ * 이 운동을 마지막으로 했을 때의 **세트 전체**. 졸업 판정(§3.7)이 먹는다.
+ *
+ * ⚠️ `lastSetOf`와 나란히 두는 이유는 **판정과 표시가 서로 다른 값을 쓰기 때문이다.**
+ * "지난번 20kg × 10"은 마지막 세트 하나면 되지만, 「전 세트가 상단에 닿았나」는 세트를
+ * 다 봐야 안다 — 마지막 세트만 보면 첫 세트에서 무너진 날에도 승급한다.
+ *
+ * ⚠️ **여러 레코드의 세트를 합치지 않는다.** 마지막 등장 하나만 본다 — 옛 기록이 섞이면
+ * 그 안의 낮은 세트 때문에 전 세트 판정이 영영 안 선다.
+ *
+ * 없으면 `null`이 아니라 **빈 배열**이다. 호출부가 `every`로 바로 훑는다.
+ */
+export function lastSetsOf(history: WorkoutRecord[], exerciseId: string): SetLog[] {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const entry = history[i].entries.find((e) => e.id === exerciseId);
+    if (entry?.sets.length) return entry.sets;
+  }
+  return [];
+}
+
+/**
  * `pickRoutine`이 받는 형태 — **최근 것이 앞**, 중복 제거.
  *
  * ⚠️ **유닛으로 사상한 뒤에 중복을 제거한다.** 순서를 바꾸면 `'chest'`와 `'upper'`가 서로 다른

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ICONS } from '../components/Icon';
 import { MIN_REST_SECONDS } from './adPlan';
-import { DEFAULT_GOAL, GOAL_KEYS, GOALS, midReps, restSecondsForGoal } from './goal';
+import { DEFAULT_GOAL, GOAL_KEYS, GOALS, midReps, restSecondsForGoal, suggestNext } from './goal';
 
 describe('GOALS', () => {
   it('모든 목적의 휴식이 광고 하한을 넘는다', () => {
@@ -100,5 +100,43 @@ describe('restSecondsForGoal', () => {
 
   it('목적이 바뀌면 값도 바뀐다', () => {
     expect(restSecondsForGoal('isolation', 'fatLoss')).not.toBe(restSecondsForGoal('isolation', 'muscle'));
+  });
+});
+
+describe('suggestNext — 졸업 프리필 (double progression)', () => {
+  // muscle 6~12 / fatLoss 12~20. 상단에 닿았는지가 졸업 판정의 전부다.
+  const set = (weight: number, reps: number) => ({ weight, reps });
+
+  it('전 세트가 상단에 닿으면 무게를 2.5kg 올리고 횟수는 하단으로 되돌린다', () => {
+    // ★ double progression의 핵심 — 횟수를 안 되돌리면 무게만 오르다 곧 못 드는 무게가 된다.
+    expect(suggestNext([set(20, 12), set(20, 12), set(20, 12)], 'muscle', false, 0)).toEqual({ weight: 22.5, reps: 6 });
+  });
+
+  it('한 세트라도 상단에 못 닿으면 지난 마지막 세트 값 그대로다', () => {
+    // ★ 「모든 세트」가 규칙이다. 「한 세트라도」로 느슨해지면 첫 세트만 잘 나온 날에 승급해
+    //   다음 주 내내 못 드는 무게가 기본값으로 뜬다.
+    expect(suggestNext([set(20, 12), set(20, 11), set(20, 12)], 'muscle', false, 0)).toEqual({ weight: 20, reps: 12 });
+  });
+
+  it('정확히 상단이면 도달이다 — 경계는 포함', () => {
+    expect(suggestNext([set(20, 12)], 'muscle', false, 0).weight).toBe(22.5);
+    expect(suggestNext([set(20, 11)], 'muscle', false, 0).weight).toBe(20);
+  });
+
+  it('맨몸은 무게 대신 횟수를 하나 올린다 — 상단 초과를 허용한다', () => {
+    // 맨몸에 +2.5kg는 얹을 데가 없다. 하단으로 되돌리면 진행이 아니라 후퇴다.
+    expect(suggestNext([set(0, 12), set(0, 13)], 'muscle', true, 0)).toEqual({ weight: 0, reps: 14 });
+  });
+
+  it('목적이 다르면 상단도 다르다 — muscle 12 · fatLoss 20', () => {
+    // 같은 12회 기록이 muscle에서는 졸업, fatLoss에서는 아직이다. 상단을 상수로 박으면 이게 깨진다.
+    const sets = [set(20, 12), set(20, 12)];
+    expect(suggestNext(sets, 'muscle', false, 0).weight).toBe(22.5);
+    expect(suggestNext(sets, 'fatLoss', false, 0)).toEqual({ weight: 20, reps: 12 });
+    expect(suggestNext([set(20, 20), set(20, 20)], 'fatLoss', false, 0)).toEqual({ weight: 22.5, reps: 12 });
+  });
+
+  it('기록이 없으면 현행 기본값 — 넘겨받은 무게와 목적의 중간 횟수', () => {
+    expect(suggestNext([], 'fatLoss', false, 10)).toEqual({ weight: 10, reps: midReps('fatLoss') });
   });
 });

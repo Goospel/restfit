@@ -11,11 +11,11 @@ import { Workout } from './Workout';
 
 afterEach(cleanup);
 
-const ex = (id: string): Exercise => ({
+const ex = (id: string, requires: Exercise['requires'] = []): Exercise => ({
   id,
   name: id,
   nameEn: id,
-  requires: [],
+  requires,
   category: 'strength',
   level: 'beginner',
   force: null,
@@ -159,5 +159,48 @@ describe('운동 완료 — 세션 피드백', () => {
     save();
     expect(onFinish).toHaveBeenCalledWith(null);
     expect(onProfileChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('세트 진행 — 졸업 프리필 (§3.7)', () => {
+  /** 그 운동을 지난번에 이렇게 했다는 기록. 세트 수·횟수가 졸업 판정의 전부다. */
+  const did = (id: string, weight: number, reps: number[]): WorkoutRecord[] => [
+    { date: '2026-08-26', group: 'upper', entries: [{ id, name: id, sets: reps.map((r) => ({ weight, reps: r })) }] },
+  ];
+  // health는 8~15회. 상단 15에 닿았는지로 갈린다.
+  const running = (e: Exercise) => startSession([e], 'health');
+  const repsInput = () => screen.getByLabelText('횟수') as HTMLInputElement;
+  const weightInput = () => screen.getByLabelText('무게 (kg)') as HTMLInputElement;
+
+  it('기구 운동에서 전 세트가 상단이면 무게를 올리고 횟수는 하단으로 채운다', () => {
+    const e = ex('bench', ['barbell']);
+    setup({ session: running(e), history: did('bench', 20, [15, 15, 15]) });
+    expect(weightInput().value).toBe('22.5');
+    expect(repsInput().value).toBe('8');
+  });
+
+  it('한 세트라도 모자라면 지난 마지막 세트 값이 그대로 뜬다', () => {
+    const e = ex('bench', ['barbell']);
+    setup({ session: running(e), history: did('bench', 20, [15, 14, 15]) });
+    expect(weightInput().value).toBe('20');
+    expect(repsInput().value).toBe('15');
+  });
+
+  it('맨몸 25회면 다음 동작 힌트가 뜬다', () => {
+    // 반복 25~30회를 넘기면 근비대 효율이 급락한다 — 무게를 못 얹으니 동작을 바꿀 때다.
+    setup({ session: running(ex('push')), history: did('push', 0, [25, 25, 25]) });
+    expect(screen.getByText(/더 어려운 동작/)).toBeTruthy();
+  });
+
+  it('맨몸 24회면 아직 안 뜬다 — 경계는 25다', () => {
+    setup({ session: running(ex('push')), history: did('push', 0, [24, 24, 24]) });
+    expect(screen.queryByText(/더 어려운 동작/)).toBeNull();
+    // 힌트는 없어도 프리필은 진행한다 — 둘은 다른 규칙이다.
+    expect(repsInput().value).toBe('25');
+  });
+
+  it('기구 운동은 25회를 넘겨도 힌트가 없다 — 무게를 얹을 데가 있다', () => {
+    setup({ session: running(ex('bench', ['barbell'])), history: did('bench', 20, [26, 26, 26]) });
+    expect(screen.queryByText(/더 어려운 동작/)).toBeNull();
   });
 });
