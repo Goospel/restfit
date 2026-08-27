@@ -98,6 +98,22 @@ describe('온보딩 3단계', () => {
     expect(pressed('없음')).toBe('true');
   });
 
+  it('부위는 누른 순서가 아니라 어휘 순서로 저장된다', () => {
+    // 같은 조합이 저장소에 여러 모양(`['lowerBack','knee']` / `['knee','lowerBack']`)으로
+    // 남으면, 나중에 저장값을 눈으로 대조할 때 **다른 설정처럼 보인다.**
+    // ⚠️ 순서를 뒤집어 눌러야 잡힌다 — 어휘 순서대로 누르면 그냥 이어 붙여도 답이 같아
+    // 테스트가 공허해진다(`[...value, k]`로 바꿔도 통과했다).
+    const { onDone } = setup();
+    click('다음');
+    click('아니요');
+    click('허리');
+    click('무릎');
+    click('다음');
+    click(/건강 유지/);
+    click('오늘의 루틴 보기');
+    expect(onDone).toHaveBeenCalledWith('health', { experience: 'beginner', avoid: ['knee', 'lowerBack'] });
+  });
+
   it('치료 효능을 주장하지 않고, 전문가 상담을 안내한다', () => {
     // 심사·안전 양쪽이 걸린 문구다. 「낫게 해 준다」로 읽히면 의료 주장이 된다.
     setup();

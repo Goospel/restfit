@@ -78,6 +78,16 @@ describe('설정 — 운동 경험 · 불편한 부위', () => {
       expect(save).toHaveBeenCalledWith({ experience: 'beginner', avoid: [] });
     });
 
+    it('잠긴 것이 눈에 보이고, 아무 칩도 선택돼 보이지 않는다', () => {
+      // `disabled`만 걸면 **시각 표시가 0이다** — 인라인 스타일이 브라우저 기본 비활성
+      // 색을 통째로 덮어서, 눌러도 안 눌리는 칩이 멀쩡한 칩과 똑같이 보인다.
+      // 게다가 「없음」은 값이 빈 배열이라 파랗게 켜져, **고르지도 않은 답이 이미
+      // 골라진 것처럼** 읽힌다.
+      setup(null);
+      expect(btn('없음').getAttribute('aria-pressed')).toBe('false');
+      expect(getComputedStyle(btn('무릎')).opacity).toBe('0.45');
+    });
+
     it('경험을 고르기 전에는 부위를 못 고른다', () => {
       // 경험 없이 부위만 저장할 방법이 없다 — 프로필은 경험이 있어야 성립한다.
       // 여기서 아무 경험이나 대신 채우면 그게 바로 「반쪽 프로필」이다.

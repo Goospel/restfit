@@ -20,7 +20,10 @@ export function AvoidPicker({
   onChange: (next: AvoidArea[]) => void;
   disabled?: boolean;
 }) {
-  const none = value.length === 0;
+  // ⚠️ 잠긴 동안에는 「없음」도 켜지 않는다. 값이 빈 배열이라 켜는 게 자연스러워 보이지만,
+  // 아직 **고르지도 않은 답**이 이미 골라진 것처럼 읽힌다 — 잠금은 「값이 없다」는 뜻이지
+  // 「없음을 골랐다」가 아니다.
+  const none = !disabled && value.length === 0;
 
   function toggle(k: AvoidArea) {
     // 어휘 순서로 다시 만든다 — 누른 순서대로 담으면 같은 조합이 저장소에 여러 모양으로
@@ -31,13 +34,19 @@ export function AvoidPicker({
   return (
     <div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <button style={specChipStyle(none)} aria-pressed={none} disabled={disabled} onClick={() => onChange([])}>
+        <button style={specChipStyle(none, disabled)} aria-pressed={none} disabled={disabled} onClick={() => onChange([])}>
           없음
         </button>
         {AVOID_KEYS.map((k) => {
           const on = value.includes(k);
           return (
-            <button key={k} style={specChipStyle(on)} aria-pressed={on} disabled={disabled} onClick={() => toggle(k)}>
+            <button
+              key={k}
+              style={specChipStyle(on, disabled)}
+              aria-pressed={on}
+              disabled={disabled}
+              onClick={() => toggle(k)}
+            >
               {AVOID_LABEL[k]}
             </button>
           );

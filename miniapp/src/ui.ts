@@ -149,8 +149,19 @@ export const goalStyle = (on: boolean): CSSProperties => ({
   borderRadius: 14,
 });
 
-/** 기구 상세용 작은 칩. 한 줄에 여러 개가 들어가야 해서 `pickStyle`보다 작다. */
-export const specChipStyle = (on: boolean): CSSProperties => ({
+/**
+ * 기구 상세용 작은 칩. 한 줄에 여러 개가 들어가야 해서 `pickStyle`보다 작다.
+ *
+ * ⚠️ `off`는 **반드시 눈에 보여야 한다.** `disabled` 속성만 걸면 표시가 0이다 —
+ * 여기서 `color`·`background`를 인라인으로 지정하는 순간 브라우저 기본 비활성 색이
+ * 통째로 덮여서, 눌러도 안 눌리는 칩이 멀쩡한 칩과 똑같이 보인다.
+ *
+ * 흐리게 하는 채널로 `opacity`를 고른 이유: `index.css`가 이미 **누르는 느낌**을
+ * `opacity`로 준다(`button:active:not(:disabled)`). 그 규칙이 `:disabled`를 빼고 있어
+ * 둘이 겹치지 않고, 「눌리는 것은 진해졌다 돌아오고 안 눌리는 것은 계속 흐리다」로
+ * 같은 축 위에서 읽힌다.
+ */
+export const specChipStyle = (on: boolean, off = false): CSSProperties => ({
   padding: '7px 11px',
   fontSize: 13,
   fontWeight: 600,
@@ -158,6 +169,7 @@ export const specChipStyle = (on: boolean): CSSProperties => ({
   background: on ? '#eff6ff' : '#fff',
   border: `1px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
   borderRadius: 999,
+  opacity: off ? 0.45 : 1,
 });
 
 /** 초 → `M:SS`. */
