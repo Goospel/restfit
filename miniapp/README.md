@@ -1,12 +1,15 @@
 # miniapp — 홈트가어렵나
 
-앱 본체(홈·기구·운동·기록)와 **Phase 0.5 실측 도구**가 함께 들어 있다. 배경은 [설계](../docs/2026-08-25-design.md).
+앱 본체(홈·기구·운동·기록). 배경은 [설계](../docs/2026-08-25-design.md).
+
+> **Phase 0.5 실측 도구(`Probe` 화면)는 걷었다.** 실측은 끝났고(광고 8/8 · 쉐어링크 복귀 정상),
+> 결과와 근거는 [plan.md의 Phase 0.5](../plan.md)에 남아 있다. 다시 필요하면 git 이력에 있다.
 
 ---
 
-## 실기기에 올리기 (실측 전제)
+## 실기기에 올리기
 
-**광고는 토스 앱 안에서만 뜬다.** 브라우저에서는 SDK가 없어 아무것도 안 나온다 — 그래서 실측 전에 배포가 먼저다.
+**광고는 토스 앱 안에서만 뜬다.** 브라우저에서는 SDK가 없어 아무것도 안 나온다.
 
 ```bash
 npm run release          # npm run build && ait build → home-workout-hard.ait
@@ -16,8 +19,6 @@ npx ait deploy           # 업로드. intoss-private scheme이 나온다
 
 1. **앱인토스 콘솔에 앱을 등록**하고 **API 키**를 받는다 ← *이게 없으면 `deploy`에서 막힌다*
 2. `ait deploy`가 뱉는 **`intoss-private://…` scheme**을 폰으로 열면 **심사 없이** 토스 앱 안에서 실행된다
-3. 콘솔에서 **광고 그룹 ID**를 발급받는다
-4. 앱에서 **기록 탭 → `개발자용 · Phase 0.5 실측`** 으로 들어가 아래 ①②를 잰다
 
 > `npm run release`가 두 단계를 묶는 이유: `ait build`는 `dist/`를 **있는 그대로** 싸기 때문에, 빌드를 빼먹으면 옛 번들이 그대로 올라간다(BookTimer T-150이 그 사고였다).
 
@@ -25,87 +26,43 @@ npx ait deploy           # 업로드. intoss-private scheme이 나온다
 
 ---
 
-## ① 광고를 세션당 몇 번 틀 수 있는가 ★★★
+## 개발용 입구는 배포 번들에 없다
 
-**이 서비스의 수익 전체가 이 가정 위에 있다.** 휴식마다 광고를 트는 모델인데 5회에서 막히면 절반 이하로 줄어든다.
+기록 탭의 **「온보딩 다시 보기」** 는 개발용이다 — 폰에서는 localStorage를 손댈 방법이 없어, 온보딩을 고쳐도 이 버튼 없이는 실기기에서 두 번 볼 수 없다. 사용자에게는 「내 조건」에 기구·목적 변경이 이미 있어 필요 없다.
 
-### 절차
+`History.tsx`의 `DEV_TOOLS = import.meta.env.MODE !== 'production'` 한 줄이 가른다. `vite build`의 기본 모드가 `production`이라 **릴리스에서는 상수 `false`로 접혀 블록이 트리셰이킹으로 사라진다** — 가리는 게 아니라 번들에 없다.
 
-1. 앱인토스 콘솔에서 **광고 그룹 ID**를 발급받아 입력란에 넣는다
-2. **「광고 1회 시도」를 반복해서 누른다.** 실제 흐름과 같은 순서(`load` → `show`)로 요청한다
-3. **몇 번째에서 막히는지**, 어떤 에러가 나오는지 로그로 확인한다
+실기기에서 확인해야 하면 개발 모드로 뽑는다:
 
-### 읽는 법
-
-```
-광고 #3 load 요청
-광고 #3 load OK — loaded
-광고 #3 show OK — impression      ← 정상
+```bash
+npm run release:dev      # vite build --mode development + ait build → 개발용 입구가 남은 번들
 ```
 
+⚠️ **심사에 올릴 번들은 반드시 `npm run release`(production)로 다시 뽑는다.** 둘 다 같은 `dist/`를 쓰므로, 개발 번들을 만든 뒤 그대로 `ait deploy` 하면 개발용 입구가 딸려 나간다.
+
+검증은 번들에서 문구를 직접 센다 — 소스에 따옴표째 실린 리터럴이라 minify에 살아남는다:
+
+```bash
+rg -c "온보딩 다시 보기" dist/assets/*.js    # production: 0건 / development: 1건
 ```
-광고 #6 load 요청
-광고 #6 load 실패 — no fill       ← 여기서 막혔다. 6회가 상한
-```
-
-`timeout`은 15초(load) / 90초(show) 안에 아무 이벤트도 안 온 경우다.
-
-⚠️ **앱인토스 광고 정책에 노출 빈도 제한이 있는지도 함께 확인한다.** 정책이 막으면 실측 이전에 끝이다.
-
----
-
-## ② 미니앱에서 쉐어링크 복귀가 되는가
-
-[앱인토스 개발자 커뮤니티](https://techchat-apps-in-toss.toss.im/t/toss-im/4625)에 앱 복귀가 불안정하다는 제보가 있고 토스 답변은 *"내부 개선 논의 중"*(미해결)이다. 제보자는 결국 토스쇼핑 링크를 빼고 쿠팡을 쓰고 있다.
-
-**쉐어링크는 보조 수익이라 실패해도 치명적이지 않다.** 실패하면 광고 단독으로 간다.
-
-### 절차
-
-1. **쉐어링크를 수동으로 발급** — 토스쇼핑 앱에서 아무 상품이나 열고 상단 공유 아이콘 → **쉐어링크 공유하기**
-   > Open API 승인이 **필요 없다.** 승인을 기다리지 않고 지금 잴 수 있다.
-2. 링크를 붙여넣고 **`Device.openURL`** 을 누른다
-3. 토스쇼핑에서 잠시 머문 뒤 미니앱으로 돌아온다
-4. **`openURL (구 API)`** 로도 반복한다
-
-### 읽는 법
-
-| 로그 흐름 | 뜻 |
-|---|---|
-| `호출 →` → `복귀 감지` | ✅ **정상.** 세션이 유지된 채 돌아왔다 |
-| `호출 →` → `앱 마운트` | ❌ **세션이 꼬여 재시작됐다.** 화면에 경고가 뜬다 |
-| 아무것도 없음 | ❌ **복귀 자체가 실패했다** |
-
-### 두 버튼을 다 눌러야 하는 이유
-
-프레임워크에서 `openURL`은 **deprecated**이고 `Device.openURL`이 후속인데, **커뮤니티 제보는 구 API 기준**이었다. 시그니처가 같아 같은 브리지일 가능성이 높지만 후속에서 고쳐졌을 수도 있다.
 
 ---
 
 ## 설계 메모
 
-- **로그는 localStorage에 남는다.** 재려는 실패 모드 중 하나가 "세션이 꼬여 재시작"인데, 메모리에만 두면 재시작 순간 「호출 → 재시작」 순서가 통째로 사라져 정작 알고 싶은 증거를 잃는다.
-- **재시작 판정은 「열기 호출 다음에 마운트가 왔는가」로 좁혔다.** 단순히 "마운트 2번 이상"으로 세면 **어제 로그에도 걸린다**(로그가 저장소에 남으니까). 오탐 하나면 실측 전체를 못 믿게 된다.
-- **`StrictMode`는 Phase 2에서 다시 켰다.** 처음엔 이중 마운트가 실측 로그를 오염시킬까 봐 껐는데, 재시작 판정이 「열기 호출 **다음에** 마운트가 왔는가」라 이중 마운트에 영향받지 않는다. 반대로 타이머·광고 effect의 정리 누락은 StrictMode가 아니면 못 잡는다. **관측을 지키려다 진짜 버그를 놓치는 쪽이 더 비쌌다.**
-- **TDS(`@toss/tds-mobile`)를 아직 넣지 않았다.** 실측에 불필요하다. 다만 React는 **18로 핀**해 뒀다 — TDS 2.5.1의 peer가 19를 받지 않아 나중에 충돌하지 않도록.
-- `awaitAdEvent`는 Phase 3 광고 통합에서 **그대로 재사용**한다. 콜백을 Promise로 감싸는 자리라 정리 함수 누락·중복 종료·타임아웃을 테스트로 못 박아 뒀다.
+- **`StrictMode`는 Phase 2에서 다시 켰다.** 처음엔 이중 마운트가 실측 로그를 오염시킬까 봐 껐는데, 타이머·광고 effect의 정리 누락은 StrictMode가 아니면 못 잡는다. **관측을 지키려다 진짜 버그를 놓치는 쪽이 더 비쌌다.**
+- **TDS(`@toss/tds-mobile`)를 아직 넣지 않았다.** 다만 React는 **18로 핀**해 뒀다 — TDS 2.5.1의 peer가 19를 받지 않아 나중에 충돌하지 않도록.
+- `awaitAdEvent`(`adProbe.ts`)는 실측 도구에서 왔지만 **Phase 3 광고 통합이 그대로 쓴다.** 콜백을 Promise로 감싸는 자리라 정리 함수 누락·중복 종료·타임아웃을 테스트로 못 박아 뒀다.
 
 ## 개발
 
 ```bash
 npm install
-npm test        # 140건
-npm run dev     # http://localhost:5310
-npm run build   # tsc -b && vite build → dist/
-npm run release # build + ait build → .ait 아티팩트
-npm run data    # 운동 데이터 재생성 (원본 정제 → src/data/exercises.json)
-```
-
-브라우저에서 복귀 감지를 흉내 내려면 콘솔에서:
-
-```js
-Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>'hidden'});
-document.dispatchEvent(new Event('visibilitychange'));
-Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>'visible'});
-document.dispatchEvent(new Event('visibilitychange'));
+npm test            # 197건
+npm run dev         # http://localhost:5310
+npm run build       # tsc -b && vite build → dist/
+npm run build:dev   # 개발용 입구가 남는 빌드 (--mode development)
+npm run release     # build + ait build → .ait 아티팩트 (심사·출시용)
+npm run release:dev # build:dev + ait build (실기기 확인용)
+npm run data        # 운동 데이터 재생성 (원본 정제 → src/data/exercises.json)
 ```

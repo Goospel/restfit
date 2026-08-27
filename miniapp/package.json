@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:dev": "tsc -b && vite build --mode development",
     "test": "vitest run",
     "data": "node scripts/build-exercises.mjs",
-    "release": "npm run build && ait build"
+    "release": "npm run build && ait build",
+    "release:dev": "npm run build:dev && ait build"
   },
   "dependencies": {
     "@apps-in-toss/web-framework": "^3.0.4",
