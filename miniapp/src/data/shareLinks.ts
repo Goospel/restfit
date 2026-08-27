@@ -205,6 +205,24 @@ export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
     { name: '프로-스펙스 고탄성 고무 풀업밴드', url: 'https://toss.im/_m/vRB0EQ4b', note: '큰 루프 · 폭 38mm · 풀업 보조' },
     { name: '레토 풀업 라텍스 턱걸이 밴드', url: 'https://toss.im/_m/p9bQ3zZu', note: '큰 루프 · 4단계 · 풀업 보조' },
   ],
+  /**
+   * ⚠️ **설치 방식이 유일한 선택 축인데 상품명이 그것을 안 말한다.** 원룸에서는 문틀에 구멍을
+   * 뚫을 수 있느냐가 살지 말지를 가르는데, 뽑아 온 10건 중 이름으로 방식을 알 수 있는 것은 3건뿐이다.
+   * 그래서 `note`에는 **이름에 실제로 쓰인 말만** 옮기고, 모르는 것은 비운다 — 지어내면 그게 거짓이다.
+   * 무게 축이 없어 `weight`·`kg`도 비우므로 칩도 배지도 안 뜬다.
+   */
+  pullupBar: [
+    { name: '아리프 듀얼락 풀그립 문틀철봉', url: 'https://toss.im/_m/Z9Mj8Aj8', note: '2중 잠금 · 문틀 폭 80~102cm' },
+    { name: '스케쳐스 문틀철봉 더블락 와이드', url: 'https://toss.im/_m/ReeERZbr', note: '2중 잠금 · 와이드 그립' },
+    { name: '프로스펙스 흠집방지 안전 철봉 V3', url: 'https://toss.im/_m/Hbafzps8', note: '문틀 흠집 방지' },
+    { name: '숀리 하이퍼 문틀철봉', url: 'https://toss.im/_m/RfyL2iBC' },
+    { name: '아디다스 문틀철봉 도어짐', url: 'https://toss.im/_m/7g6YucDx' },
+    { name: '바디스컬쳐 도어짐 DYBSDJ03', url: 'https://toss.im/_m/VJ4mq5dl' },
+    { name: 'IWANNA 문틀 실내 턱걸이기구', url: 'https://toss.im/_m/DFHJb4Wo' },
+    { name: '문틀 턱걸이바', url: 'https://toss.im/_m/fSDalEWu' },
+    { name: '문틀 턱걸이 철봉', url: 'https://toss.im/_m/jtDQZUH3' },
+    { name: '가정용 고정형 풀업 문틀 철봉', url: 'https://toss.im/_m/dkASVY7l' },
+  ],
 };
 
 /**

@@ -10,9 +10,11 @@ Open API를 안 쓰는 이유는 [plan.md](../../plan.md) Phase 4.
 | 케틀벨 | [kettlebell.md](kettlebell.md) | `kettlebell` | **24** ✅ 네 구간 다 찼다 |
 | 벤치 | [bench.md](bench.md) | `bench` | **12** ✅ 전부 각도 조절식 |
 | 밴드 | [band.md](band.md) | `band` | **23** ✅ 긴 밴드 위주 · 세 종류 |
-| 풀업바 | [pullup-bar.md](pullup-bar.md) | `pullupBar` | 0 |
+| 풀업바 | [pullup-bar.md](pullup-bar.md) | `pullupBar` | **10** ✅ 전부 문틀형 |
 
 > **필요한 건 이 5종뿐이다**(`SHOP_CANDIDATES`). 나머지 기구는 링크를 넣어도 추천에 안 떠서 화면에 안 나온다 — 바벨·짐볼·폼롤러·메디신볼·복근롤러는 후보에서 이미 빠졌다(이유는 plan.md Phase 4).
+
+✅ **2026-08-27 — 5종이 다 찼다.** 여기부터는 새로 뽑는 일이 아니라 **살아 있는지 보는 일**이다(아래 「살아 있는지 점검」). 다음 점검은 2026-11 무렵.
 
 ⚠️ **정답은 언제나 [`shareLinks.ts`](../../miniapp/src/data/shareLinks.ts)다.** 기구 파일의 「반영된 링크」는 그 사본이고,
 **어긋나면 테스트가 실패한다**(`기구 문서 ↔ shareLinks.ts`) — 한쪽만 고칠 수 없다.
