@@ -134,6 +134,8 @@ export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
     { name: '접이식 각도조절 인클라인 디클라인 벤치', url: 'https://toss.im/_m/dwwJFk2q', note: '평벤치 자세까지 · 접이식' },
     { name: '대한 접이식 만능 벤치', url: 'https://toss.im/_m/FQUqLmN9', note: '평벤치 자세까지 · 접이식 · 2대' },
     { name: '트라히어 IB650 인클라인 접이식 벤치프레스', url: 'https://toss.im/_m/dhcqYJ2q', note: '접이식' },
+    { name: '이고웰 인디클라인 인디벤치', url: 'https://toss.im/_m/pShUuJvi', note: '프리처 컬 패드 · 다리 고정 롤러' },
+    { name: '14in1 벤치프레스', url: 'https://toss.im/_m/5PBx34KD', note: '접이식 · 다리 고정 롤러' },
     { name: '로베라 각도조절 인클라인 벤치프레스', url: 'https://toss.im/_m/T0jjQ40b' },
     { name: '올웨이트 각도조절 헬스벤치 AWBH001', url: 'https://toss.im/_m/dw53Vq1v' },
     { name: '프로스펙스 멀티 인클라인 벤치', url: 'https://toss.im/_m/5Uhh3Rds' },
