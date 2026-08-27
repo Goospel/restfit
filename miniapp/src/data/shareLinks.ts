@@ -25,7 +25,15 @@ export type Product = {
 };
 
 export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
-  dumbbell: [{ name: '아이워너 육각 아령 5kg 2개입', url: 'https://toss.im/_m/jnf2rJC3', note: '가벼움 · 입문용' }],
+  dumbbell: [{ name: '아이워너 육각 아령 5kg 2개입', url: 'https://toss.im/_m/jnf2rJC3', note: '가벼움 · 5kg 이하' }],
+  // 무게 구간이 겹치지 않게 고른다 — 같은 구간을 둘 놓으면 고르는 기준이 사라진다.
+  // 마지막 하나는 조절식이다. 「모르겠어요」가 1급 선택지인 앱이라(`equipSpec`) 구간을 못 고르는 사람에게 답이 된다.
+  kettlebell: [
+    { name: '앳플리 소프트 케틀벨 4kg', url: 'https://toss.im/_m/Fs0BdFhh', note: '가벼움 · 8kg 이하 · 소프트' },
+    { name: '이고웰 저소음 케틀벨 10kg', url: 'https://toss.im/_m/Lw9ELaNo', note: '보통 · 8~16kg · 저소음' },
+    { name: '아리프 레드라인 케틀벨 16kg', url: 'https://toss.im/_m/3ASLcWf7', note: '무거움 · 16kg 이상' },
+    { name: '멜킨 트위스트벨 20kg', url: 'https://toss.im/_m/JK7IOFw4', note: '무게를 모르겠다면 · 7단계 조절' },
+  ],
 };
 
 /**
