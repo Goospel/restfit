@@ -1,6 +1,7 @@
 import { EQUIPMENT, GROUP_KEYS, type EquipKey, type MuscleGroup } from './data/exercises';
 import { BAND_OPTIONS, BENCH_OPTIONS, WEIGHED, WEIGHT_OPTIONS, type EquipSpec } from './logic/equipSpec';
 import { isGoal, type Goal } from './logic/goal';
+import { isAvoidArea, isExperience, type Profile } from './logic/profile';
 import type { SetLog } from './logic/session';
 
 /**
@@ -16,6 +17,7 @@ const OWNED_KEY = 'restfit.owned';
 const HISTORY_KEY = 'restfit.history';
 const GOAL_KEY = 'restfit.goal';
 const SPEC_KEY = 'restfit.equipSpec';
+const PROFILE_KEY = 'restfit.profile';
 
 /** 기록 상한. 무한히 자라면 저장이 실패해 **그날 운동이 통째로 사라진다.** */
 export const HISTORY_MAX = 400;
@@ -84,6 +86,30 @@ export function saveGoal(goal: Goal, storage: Storage = localStorage): void {
 }
 
 /**
+ * 운동 프로필(훈련 수준 · 불편 부위). **`null`은 「아직 안 물어봤다」는 뜻이다.**
+ *
+ * 기존 사용자는 여기가 계속 `null`이고, 그 상태에서는 개인화 경로를 통째로 건너뛴다 —
+ * **업데이트가 그 사람의 오늘 루틴을 바꾸지 않는다**는 보증이 여기서 나온다.
+ *
+ * ⚠️ **`experience`가 어휘 밖이면 `avoid`가 멀쩡해도 프로필 전체를 버린다.** 기구 상세처럼
+ * 필드별로 걸러 반쪽을 남기면 「불편 부위는 먹는데 난이도는 안 먹는」 상태가 조용히 생겨,
+ * 나중에 루틴이 이상하다는 제보를 받았을 때 원인을 짚을 수가 없다. 반쪽 프로필은
+ * 반쪽 개인화다. 반대로 `avoid`는 어휘 밖 값만 걸러낸다 — 부위 어휘가 바뀌었다고
+ * 훈련 수준까지 날릴 이유는 없다.
+ */
+export function loadProfile(storage: Storage = localStorage): Profile | null {
+  const v = read(PROFILE_KEY, storage);
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null;
+  const { experience, avoid } = v as { experience?: unknown; avoid?: unknown };
+  if (!isExperience(experience)) return null;
+  return { experience, avoid: Array.isArray(avoid) ? avoid.filter(isAvoidArea) : [] };
+}
+
+export function saveProfile(profile: Profile, storage: Storage = localStorage): void {
+  write(PROFILE_KEY, profile, storage);
+}
+
+/**
  * 온보딩을 안 한 상태로 되돌린다 — **목적과 기구를 함께 지운다.**
  *
  * 목적만 지우면 온보딩 1단계에 이미 고른 기구가 남아 첫 진입 경험이 재현되지 않는다.
@@ -95,6 +121,9 @@ export function clearOnboarding(storage: Storage = localStorage): void {
   remove(OWNED_KEY, storage);
   // 기구를 지우면서 상세만 남기면 안 가진 기구의 무게가 기본값으로 새어 나온다.
   remove(SPEC_KEY, storage);
+  // 온보딩 2단계(경험·불편 부위)도 같은 이유로 지운다 — 남으면 그 단계가 이미
+  // 답해진 채로 떠서 재현이 반쪽이 된다.
+  remove(PROFILE_KEY, storage);
 }
 
 /**
