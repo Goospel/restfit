@@ -7,6 +7,7 @@ import {
   DISCLOSURE,
   filterByBand,
   HAS_ANY_LINK,
+  productBadge,
   productBands,
   SHARE_LINKS,
   type Product,
@@ -160,6 +161,11 @@ function ProductList({
         {shown.map((prod) => (
           <li key={prod.url}>
             <button style={S.item} onClick={() => onOpen(prod.url)}>
+              {/*
+                배지가 없어도 자리는 남긴다 — 지우면 그 줄만 이름이 왼쪽으로 튀어나와,
+                무게순으로 세워 둔 정렬이 그 한 줄 때문에 흐트러진다.
+              */}
+              <span style={S.badge}>{productBadge(prod)}</span>
               <span style={{ minWidth: 0 }}>
                 <span style={S.name}>{prod.name}</span>
                 {prod.note && <span style={S.note}>{prod.note}</span>}
@@ -229,6 +235,20 @@ const S: Record<string, React.CSSProperties> = {
     background: 'none',
     border: 0,
     borderTop: '1px solid var(--line)',
+  },
+  /**
+   * 무게 배지. **오른쪽 정렬 + `tabular-nums`** 라야 자릿수가 달라도(4kg·10kg·22.6kg)
+   * `kg`이 세로로 맞아떨어져 목록이 무게순이라는 게 눈에 들어온다.
+   * 폭은 가장 긴 값(`22.6kg`)에 맞춘 고정값이다 — 내용에 따라 늘면 정렬이 무너진다.
+   */
+  badge: {
+    width: 52,
+    flexShrink: 0,
+    textAlign: 'right',
+    fontSize: 12,
+    fontWeight: 700,
+    color: 'var(--text-sub)',
+    fontVariantNumeric: 'tabular-nums',
   },
   name: { display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text)' },
   note: { display: 'block', fontSize: 12, color: 'var(--text-weak)', marginTop: 2 },

@@ -37,6 +37,14 @@ export type Product = {
    * 「전체」에서만 보인다 — 정보가 없는 상품이 치르는 마땅한 대가다.
    */
   weight?: ProductBand;
+  /**
+   * 배지에 뜨는 무게. **이름에서 떼어 왼쪽에 세운다** — 목록이 무게순인데 숫자가 이름 끝에
+   * 묻혀 있으면 정렬돼 있다는 사실이 눈에 안 들어온다.
+   *
+   * ⚠️ 그래서 `name`에는 kg을 남기지 않는다(테스트가 막는다). **조절식만 예외** —
+   * 배지가 「조절식」이라 최대 무게를 이름에서 잃으면 같은 제품군이 구분되지 않는다.
+   */
+  kg?: number;
 };
 
 /** 무게 구간. `WeightBand`(`equipSpec`)의 어휘에 조절식을 더한 것이다 — 상품에는 「모름」 대신 「비움」이 있다. */
@@ -62,6 +70,18 @@ export function productBands(products: readonly Product[]): { band: ProductBand;
     .filter((b) => b.count > 0);
 }
 
+/**
+ * 목록 왼쪽에 세우는 배지. 없으면 `null`이고 화면은 **빈 자리로 남긴다** — 배지를 지우면
+ * 그 줄만 이름이 왼쪽으로 튀어나와 정렬이 흐트러진다.
+ *
+ * 조절식은 kg이 있어도 「조절식」이 이긴다. 그 상품에서 알아야 할 것은 **얼마인가**가 아니라
+ * **바꿀 수 있는가**이고, 최대 무게는 이름에 남겨 둔다.
+ */
+export function productBadge(p: Product): string | null {
+  if (p.weight === 'adjustable') return '조절식';
+  return p.kg === undefined ? null : `${p.kg}kg`;
+}
+
 /** `null`은 「전체」다 — 무게를 모르는 상품은 여기서만 보인다. 원본 순서(무게순)는 그대로 지킨다. */
 export function filterByBand(products: readonly Product[], band: ProductBand | null): readonly Product[] {
   return band === null ? products : products.filter((p) => p.weight === band);
@@ -73,33 +93,34 @@ export function filterByBand(products: readonly Product[], band: ProductBand | n
  */
 export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
   dumbbell: [
-    { name: '아이워너 육각 아령 5kg 2개입', url: 'https://toss.im/_m/jnf2rJC3', weight: 'light' },
+    { name: '아이워너 육각 아령', url: 'https://toss.im/_m/jnf2rJC3', weight: 'light', kg: 5, note: '2개입' },
   ],
   kettlebell: [
-    { name: '앳플리 소프트 케틀벨 4kg', url: 'https://toss.im/_m/Fs0BdFhh', weight: 'light', note: '소프트 · 바닥 보호' },
-    { name: '아디다스 아이언 케틀벨 4kg', url: 'https://toss.im/_m/XdyRAek7', weight: 'light', note: '철제' },
-    { name: 'K4스포츠 컬러 케틀벨 4kg', url: 'https://toss.im/_m/ljIh1c0l', weight: 'light', note: '컬러 코팅' },
-    { name: 'CABOSS 소프트 케틀벨 4kg', url: 'https://toss.im/_m/zNj6D6Ny', weight: 'light', note: '소프트' },
-    { name: '타미나스포츠 케틀벨 4.5kg', url: 'https://toss.im/_m/NVINBNJD', weight: 'light' },
-    { name: '타미나 말랑말랑 케틀벨 6kg', url: 'https://toss.im/_m/bnRI1Q01', weight: 'light', note: '소프트' },
-    { name: '여성용 케틀벨 6kg', url: 'https://toss.im/_m/TfC2HRMp', weight: 'light' },
-    { name: '이노이 솔리드 케틀벨 8kg', url: 'https://toss.im/_m/PBIhgbhh', weight: 'light', note: '철제' },
-    { name: '이고웰 말랑말랑 케틀벨 8kg', url: 'https://toss.im/_m/3N5rFpeC', weight: 'light', note: '소프트 · 저소음' },
-    { name: '홈트러브 소프트 케틀벨 8kg', url: 'https://toss.im/_m/hKCoIq2q', weight: 'light', note: '소프트' },
-    { name: '뭅뭅 브랜뉴 케틀벨 9kg', url: 'https://toss.im/_m/PBkKHZiw', weight: 'medium', note: '덤벨 겸용' },
-    { name: '이고웰 말랑말랑 케틀벨 10kg', url: 'https://toss.im/_m/Lw9ELaNo', weight: 'medium', note: '소프트 · 저소음' },
-    { name: '온플로 플로우벨 10kg', url: 'https://toss.im/_m/jmlOWcjc', weight: 'medium', note: '덤벨 겸용' },
-    { name: '유레카 다이나믹 케틀벨 10kg', url: 'https://toss.im/_m/l8R8NzM9', weight: 'medium' },
-    { name: '아리프 레드라인 케틀벨 12kg', url: 'https://toss.im/_m/jsYGp7v3', weight: 'medium', note: '철제' },
-    { name: '반석스포츠 K케틀벨 14kg', url: 'https://toss.im/_m/zzBcQfk7', weight: 'medium', note: '철제 · 국산' },
-    { name: '피테코 케틀벨 14kg', url: 'https://toss.im/_m/5xICevjr', weight: 'medium', note: '철제' },
-    { name: '아리프 레드라인 케틀벨 16kg', url: 'https://toss.im/_m/3ASLcWf7', weight: 'heavy', note: '철제' },
-    { name: '이고웰 스트롱 케틀벨 20kg', url: 'https://toss.im/_m/vpzpApKj', weight: 'heavy', note: '덤벨 겸용' },
+    { name: '앳플리 소프트 케틀벨', url: 'https://toss.im/_m/Fs0BdFhh', weight: 'light', kg: 4, note: '소프트 · 바닥 보호' },
+    { name: '아디다스 아이언 케틀벨', url: 'https://toss.im/_m/XdyRAek7', weight: 'light', kg: 4, note: '철제' },
+    { name: 'K4스포츠 컬러 케틀벨', url: 'https://toss.im/_m/ljIh1c0l', weight: 'light', kg: 4, note: '컬러 코팅' },
+    { name: 'CABOSS 소프트 케틀벨', url: 'https://toss.im/_m/zNj6D6Ny', weight: 'light', kg: 4, note: '소프트' },
+    { name: '타미나스포츠 케틀벨', url: 'https://toss.im/_m/NVINBNJD', weight: 'light', kg: 4.5 },
+    { name: '타미나 말랑말랑 케틀벨', url: 'https://toss.im/_m/bnRI1Q01', weight: 'light', kg: 6, note: '소프트' },
+    { name: '여성용 케틀벨', url: 'https://toss.im/_m/TfC2HRMp', weight: 'light', kg: 6 },
+    { name: '이노이 솔리드 케틀벨', url: 'https://toss.im/_m/PBIhgbhh', weight: 'light', kg: 8, note: '철제' },
+    { name: '이고웰 말랑말랑 케틀벨', url: 'https://toss.im/_m/3N5rFpeC', weight: 'light', kg: 8, note: '소프트 · 저소음' },
+    { name: '홈트러브 소프트 케틀벨', url: 'https://toss.im/_m/hKCoIq2q', weight: 'light', kg: 8, note: '소프트' },
+    { name: '뭅뭅 브랜뉴 케틀벨', url: 'https://toss.im/_m/PBkKHZiw', weight: 'medium', kg: 9, note: '덤벨 겸용' },
+    { name: '이고웰 말랑말랑 케틀벨', url: 'https://toss.im/_m/Lw9ELaNo', weight: 'medium', kg: 10, note: '소프트 · 저소음' },
+    { name: '온플로 플로우벨', url: 'https://toss.im/_m/jmlOWcjc', weight: 'medium', kg: 10, note: '덤벨 겸용' },
+    { name: '유레카 다이나믹 케틀벨', url: 'https://toss.im/_m/l8R8NzM9', weight: 'medium', kg: 10 },
+    { name: '아리프 레드라인 케틀벨', url: 'https://toss.im/_m/jsYGp7v3', weight: 'medium', kg: 12, note: '철제' },
+    { name: '반석스포츠 K케틀벨', url: 'https://toss.im/_m/zzBcQfk7', weight: 'medium', kg: 14, note: '철제 · 국산' },
+    { name: '피테코 케틀벨', url: 'https://toss.im/_m/5xICevjr', weight: 'medium', kg: 14, note: '철제' },
+    { name: '아리프 레드라인 케틀벨', url: 'https://toss.im/_m/3ASLcWf7', weight: 'heavy', kg: 16, note: '철제' },
+    { name: '이고웰 스트롱 케틀벨', url: 'https://toss.im/_m/vpzpApKj', weight: 'heavy', kg: 20, note: '덤벨 겸용' },
+    // 조절식은 이름에 최대 무게를 남긴다 — 배지가 「조절식」이라, 떼어 내면 같은 제품군 둘이 구분되지 않는다.
     { name: '바이줌 조절 케틀벨 13kg', url: 'https://toss.im/_m/NwXHc2Jt', weight: 'adjustable', note: '5단계' },
     { name: '멜킨 트위스트벨 20kg', url: 'https://toss.im/_m/JK7IOFw4', weight: 'adjustable', note: '7단계' },
     { name: '바이줌 조절 케틀벨 22.6kg', url: 'https://toss.im/_m/ZbP3TdiB', weight: 'adjustable', note: '5단계' },
     { name: 'HNF 케틀벨 그립', url: 'https://toss.im/_m/leT1Irxs', weight: 'adjustable', note: '그립만 · 원판 별도' },
-    // ⚠️ 상품명에 무게가 없어 구간을 못 정한다. 「전체」에서만 보이고 칩으로는 안 잡힌다.
+    // ⚠️ 상품명에 무게가 없어 구간을 못 정한다. 「전체」에서만 보이고 칩으로는 안 잡히며 배지도 빈다.
     { name: '케틀벨', url: 'https://toss.im/_m/7LnJNuk7' },
   ],
 };
