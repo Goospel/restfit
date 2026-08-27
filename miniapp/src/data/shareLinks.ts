@@ -172,6 +172,39 @@ export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
     // ⚠️ 상품명에 무게가 없어 구간을 못 정한다. 「전체」에서만 보이고 칩으로는 안 잡히며 배지도 빈다.
     { name: '케틀벨', url: 'https://toss.im/_m/7LnJNuk7' },
   ],
+  /**
+   * ⚠️ **긴 밴드를 앞에 세운다.** 앱의 밴드 운동 23개 중 **20개가 튜빙·평밴드**를 쓰고,
+   * 짧은 루프(힙밴드)로 되는 것은 **3개뿐**이다(몬스터 워크·힙 어덕션·힙 리프트).
+   * 앱은 셋을 `band` 하나로 보므로 루프만 산 사람에게도 23개가 다 열리지만 **실제로는 3개만 할 수 있다.**
+   * 무게 축이 없어 `weight`·`kg`을 비우므로 **칩도 배지도 안 뜨고**, `note` 맨 앞의 종류가 유일한 구분 수단이다.
+   */
+  band: [
+    { name: '홈트인 멀티 튜빙밴드 세트', url: 'https://toss.im/_m/xi45KnkB', note: '튜빙 · 손잡이 · 세트' },
+    { name: '프로이스 멀티 튜빙밴드 세트', url: 'https://toss.im/_m/pbnWjYYp', note: '튜빙 · 5종 세트' },
+    { name: '이노이 파워믹스 150LB 튜빙밴드', url: 'https://toss.im/_m/5OvvBSUq', note: '튜빙 · 세트' },
+    { name: '하디로어 멀티 튜빙밴드 세트', url: 'https://toss.im/_m/dAuSOZZl', note: '튜빙 · 세트' },
+    { name: '리복 파워 튜빙밴드 RSTB-16070-4', url: 'https://toss.im/_m/5Bkcdyhs', note: '튜빙 · 레벨1' },
+    { name: '에코벨 도어듀빙 밴드 풀세트', url: 'https://toss.im/_m/jp5z9JFp', note: '튜빙 · 문틀 고정 포함' },
+    { name: '도어 튜빙 밴드', url: 'https://toss.im/_m/DBUyJGHo', note: '튜빙 · 문틀 고정 포함' },
+    { name: '런웨이브 풀업 밴드', url: 'https://toss.im/_m/lG3Yaose', note: '튜빙 · 손잡이 · 문틀 고정 포함' },
+    { name: '올킬 전신 슬림 튜빙 밴드', url: 'https://toss.im/_m/fOH3tN0g', note: '튜빙 · 2개입' },
+    // 세라밴드는 **색이 곧 강도**다(옐로우 < 레드 < 그린). 이름에서 색을 떼면 셋이 구분되지 않는다.
+    { name: '세라밴드 2M 오리지널 옐로우', url: 'https://toss.im/_m/Fa1Vj9Qy', note: '평밴드 2m · 약' },
+    { name: '세라밴드 2M 오리지널 레드', url: 'https://toss.im/_m/LpbsCWPo', note: '평밴드 2m · 중' },
+    { name: '세라밴드 2M 오리지널 그린', url: 'https://toss.im/_m/Ff9bVX8s', note: '평밴드 2m · 강' },
+    { name: '트라히어 RB 재활 튜빙 밴드', url: 'https://toss.im/_m/NltLMiL5', note: '평밴드 2m · 재활용' },
+    { name: '코스트몰 라텍스 밴드', url: 'https://toss.im/_m/XvzrqXEt', note: '평밴드 · 상급자용' },
+    { name: 'RADY 스트레칭 밴드', url: 'https://toss.im/_m/f0bnKiv4', note: '평밴드 · 2개입' },
+    { name: '아이워너 라텍스 루프 밴드', url: 'https://toss.im/_m/DCkMfWMe', note: '루프 6종 세트' },
+    { name: '라텍스 루프 탄성밴드', url: 'https://toss.im/_m/LyYGtuxn', note: '루프 5종 세트 · 파우치' },
+    { name: '스쿼트밴드 홈트레이닝 탄력밴드', url: 'https://toss.im/_m/94mco1zd', note: '루프 5종 세트' },
+    { name: '스케쳐스 라텍스 스쿼트 루프 힙업 밴드', url: 'https://toss.im/_m/FPyG1Wsh', note: '루프 3종 세트' },
+    { name: '엑피트 라텍스 루프밴드', url: 'https://toss.im/_m/DG8hnSbh', note: '루프 5단계' },
+    { name: '하체 애플힙 파워힙업 스쿼트밴드', url: 'https://toss.im/_m/HkYjItd8', note: '루프 · 하체 전용' },
+    // 큰 루프는 길어서 스쿼트·굿모닝에도 쓰지만, 「밴드 어시스티드 풀업」은 풀업바가 있어야 열린다.
+    { name: '프로-스펙스 고탄성 고무 풀업밴드', url: 'https://toss.im/_m/vRB0EQ4b', note: '큰 루프 · 폭 38mm · 풀업 보조' },
+    { name: '레토 풀업 라텍스 턱걸이 밴드', url: 'https://toss.im/_m/p9bQ3zZu', note: '큰 루프 · 4단계 · 풀업 보조' },
+  ],
 };
 
 /**
