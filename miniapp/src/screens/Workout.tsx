@@ -171,15 +171,21 @@ export function Workout({
      *
      * ⚠️ 프로필이 없으면 판정 자체를 안 한다. 여기서 프로필을 대신 만들면 「경험을 안 고른
      * 사람」이 조용히 사라져, 온보딩 안내 칩도 함께 증발한다(설계 §3.6 · 반쪽 프로필 금지).
+     *
+     * ⚠️ **오늘 답이 목록의 맨 앞이다.** 끝에 붙이면 정반대가 된다 — 직전 3세션이 쉬웠던
+     * 사람이 오늘 「힘듦」을 골랐는데 승급한다.
+     *
+     * ⚠️ **`total > 0`이 여기에 있어야 한다.** 「기록이 남는 세션만 판정한다」를 반영하는
+     * 쪽(`save`)에만 걸면 조건이 둘로 갈라져, 전 종목을 건너뛴 사람이 「어려운 동작을
+     * 드릴게요」를 읽고도 아무 일이 안 일어난다(리뷰가 실측). 문구와 반영은 한 값에서 나온다.
      */
-    const judged = profile ? nextExperience(profile.experience, [feel, ...recentFeels(history)]) : null;
+    const judged = profile && total > 0 ? nextExperience(profile.experience, [feel, ...recentFeels(history)]) : null;
     const moved = judged && judged !== profile!.experience ? judged : null;
 
     function save() {
-      const rec = toRecord();
-      // 기록이 안 남는 세션은 판정 근거도 안 남는다 — 다음 세션에 재현되지 않을 승급은 안 한다.
-      if (rec && moved && profile) onProfileChange({ ...profile, experience: moved });
-      onFinish(rec);
+      // `moved`가 이미 「기록이 남는 세션인가」까지 담고 있다 — 여기서 조건을 덧붙이면 갈라진다.
+      if (moved && profile) onProfileChange({ ...profile, experience: moved });
+      onFinish(toRecord());
     }
 
     return (

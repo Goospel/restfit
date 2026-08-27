@@ -107,6 +107,19 @@ describe('운동 완료 — 세션 피드백', () => {
     expect(onProfileChange).toHaveBeenCalledWith({ experience: 'intermediate', avoid: ['knee'] });
   });
 
+  it('오늘 답이 스트릭의 맨 앞이다 — 3연속 easy 뒤에 「힘듦」이면 승급이 아니다', () => {
+    // ★ 오늘 것을 목록 **끝**에 붙이면 정반대가 된다: 직전 3세션이 쉬웠던 사람이 오늘
+    //   「힘듦」을 골랐는데 승급한다. 균일한 feel만 넣은 케이스는 앞뒤가 같은 답을 내서
+    //   이 뒤집기를 못 잡는다 — 비대칭 기록이 있어야 순서가 잠긴다.
+    const { onProfileChange } = setup({
+      history: [feelRec('2026-08-24', 'easy'), feelRec('2026-08-25', 'easy'), feelRec('2026-08-26', 'easy')],
+    });
+    click('힘듦');
+    expect(screen.queryByText(/어려운 동작/)).toBeNull();
+    save();
+    expect(onProfileChange).not.toHaveBeenCalled();
+  });
+
   it('스트릭이 안 찼으면 안내도 없고 프로필도 안 건드린다', () => {
     const { onProfileChange } = setup({ history: [feelRec('2026-08-26', 'easy')] });
     click('쉬움');
@@ -129,14 +142,20 @@ describe('운동 완료 — 세션 피드백', () => {
     expect(onProfileChange).not.toHaveBeenCalled();
   });
 
-  it('한 세트도 안 했으면 feel을 골라도 수준을 안 옮긴다', () => {
+  it('한 세트도 안 했으면 안내도 없고 수준도 안 옮긴다', () => {
     // 저장될 기록이 없으니 판정 근거도 없다 — 기록 없는 승급은 다음 세션에 재현되지 않는다.
+    //
+    // ★ **안내 문구까지 함께 잠근다.** 「반영은 안 하는데 문구는 뜬다」가 실제로 났다:
+    //   전 종목을 건너뛰면(마지막에 `skipExercise`가 finished를 세운다) 세트가 하나도 없는
+    //   채로 이 화면에 닿는데, 판정과 반영의 조건이 갈라져 있으면 사용자는 「어려운 동작을
+    //   드릴게요」를 읽고도 아무 일도 안 일어난다. 호출 0회만 보면 이 반쪽을 못 잡는다.
     const s = startSession([ex('push')], 'health');
     const { onFinish, onProfileChange } = setup({
       session: { ...s, finished: true },
       history: [feelRec('2026-08-25', 'easy'), feelRec('2026-08-26', 'easy')],
     });
     click('쉬움');
+    expect(screen.queryByText(/어려운 동작/)).toBeNull();
     save();
     expect(onFinish).toHaveBeenCalledWith(null);
     expect(onProfileChange).not.toHaveBeenCalled();
