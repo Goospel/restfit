@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
+import type { EquipKey } from './exercises';
 import { BAND_KO, filterByBand, productBadge, productBands, SHARE_LINKS, type Product } from './shareLinks';
 
 const p = (name: string, weight?: Product['weight']): Product => ({
@@ -94,6 +98,34 @@ describe('SHARE_LINKS 데이터', () => {
   it('링크가 중복되지 않는다 — 같은 상품이 두 줄로 뜨면 고르는 사람이 헷갈린다', () => {
     const urls = all.map((p) => p.url);
     expect(urls.length).toBe(new Set(urls).size);
+  });
+});
+
+/**
+ * 같은 링크가 **코드와 문서 두 곳에** 산다 — 코드는 앱이 읽고, 문서는 사람이 점검할 때 읽는다.
+ * 두 벌을 손으로 맞추면 반드시 어긋나고, **어긋난 쪽이 문서면 죽은 링크를 영영 못 찾는다**
+ * (점검은 문서를 보고 하기 때문이다). 그래서 여기서 묶는다.
+ *
+ * ⚠️ **「반영된 링크」 절만 본다.** 수집함은 아직 코드에 안 들어간 것을 담는 자리라,
+ * 거기까지 세면 붙여넣는 순간 빨간불이 켜져 계측기가 못 쓰게 된다.
+ */
+describe('기구 문서 ↔ shareLinks.ts', () => {
+  /** ⚠️ 파일명이 키와 다른 것이 있다(`pullupBar` → `pullup-bar.md`). 이 표가 그 유일한 대응이다. */
+  const DOCS: Record<string, string> = {
+    dumbbell: 'dumbbell.md',
+    kettlebell: 'kettlebell.md',
+    bench: 'bench.md',
+    band: 'band.md',
+    pullupBar: 'pullup-bar.md',
+  };
+  const DIR = fileURLToPath(new URL('../../../docs/sharelinks/', import.meta.url));
+
+  it.each(Object.entries(DOCS))('%s 문서의 링크가 코드와 순서까지 같다', (key, file) => {
+    const md = readFileSync(DIR + file, 'utf8');
+    // `### `는 안 걸린다 — `^## ` 는 세 번째 글자가 공백이어야 매치한다.
+    const section = md.split(/^## /m).find((s) => s.startsWith('반영된 링크')) ?? '';
+    const inDoc = section.match(/https:\/\/toss\.im\/_m\/\w+/g) ?? [];
+    expect(inDoc).toEqual((SHARE_LINKS[key as EquipKey] ?? []).map((p) => p.url));
   });
 });
 
