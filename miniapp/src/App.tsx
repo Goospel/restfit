@@ -50,8 +50,11 @@ export function App() {
   /** `null`이면 온보딩을 아직 안 끝냈다는 뜻이다. 기본값을 여기서 대신 채우면 그 구분이 사라진다. */
   const [goal, setGoal] = useState<Goal | null>(loadGoal);
   /**
-   * 훈련 수준·불편 부위. **아직 루틴에 안 먹인다** — 받아서 저장만 하는 단계라
-   * `pickRoutine`에 넘기지 않는다. 넘기는 순간 기존 사용자의 오늘 루틴이 바뀐다.
+   * 훈련 수준·불편 부위. `pickRoutine`이 이 값을 먹는다 — 불편 부위는 풀에서 하드로 빠지고,
+   * 훈련 수준은 선발 순서를 티어별로 정렬한다.
+   *
+   * ⚠️ `null`(안 채운 기존 사용자)이면 `pickRoutine`이 개인화를 통째로 건너뛴다 —
+   * 그 사람의 오늘 루틴은 배열 단위로 안 바뀐다(설계 §3.1).
    */
   const [profile, setProfile] = useState<Profile | null>(loadProfile);
 
@@ -74,8 +77,9 @@ export function App() {
       recentUnits(prior),
       date,
       GOALS[goal ?? DEFAULT_GOAL].exerciseCount,
+      profile,
     );
-  }, [owned, spec, history, date, goal]);
+  }, [owned, spec, history, date, goal, profile]);
 
   function saveOwnedAnd(next: typeof owned) {
     setOwned(next);
@@ -172,6 +176,7 @@ export function App() {
           routine={routine}
           history={history}
           goal={goal}
+          profile={profile}
           doneToday={history.some((r) => r.date === date)}
           onStart={() => setSession(startSession(routine.exercises, goal))}
           onOpenSettings={() => setSettings(true)}

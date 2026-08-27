@@ -1,5 +1,6 @@
-import { groupOf, unitOf, type EquipKey, type Exercise, type MuscleGroup, type Unit } from '../data/exercises';
+import { groupOf, unitOf, type EquipKey, type Exercise, type Level, type MuscleGroup, type Unit } from '../data/exercises';
 import { filterByEquipment } from './equipment';
+import { isAvoided, type Experience, type Profile } from './profile';
 
 /**
  * 오늘의 루틴. **규칙 기반이다 — LLM은 쓰지 않는다.**
@@ -61,11 +62,31 @@ const MAX_PER_MUSCLE = 3;
 export type Routine = { unit: Unit | null; exercises: Exercise[] };
 
 /**
+ * 경험별 티어 순위 — **작을수록 먼저 뽑힌다.** 같은 순위끼리는 섞이고, 순위 간 순서는 고정이다.
+ *
+ * **제외가 아니라 선발 순서인 이유**(설계 §3.4): 맨몸 근력은 57종뿐이고 부위 편중이 심하다 —
+ * 등 0종, 어깨는 상급 1종이 전부다. 난이도를 하드 필터로 만들면 맨몸 사용자의 풀이 비어
+ * **폴백 규칙을 따로 지어야 한다.** 선호 정렬은 풀이 넉넉하면 필터처럼 동작하고(상급 26/408은
+ * 초보에게 사실상 안 나온다), 마르면 자연히 다음 티어로 넘어간다 — **폴백이 규칙에 내장**된다.
+ *
+ * ⚠️ `advanced` 줄만 순서가 뒤집혀 있다(초급이 꼴찌). 오타가 아니라 표 그대로다.
+ */
+const TIER_RANK: Record<Experience, Record<Level, number>> = {
+  beginner: { beginner: 0, intermediate: 1, expert: 2 },
+  intermediate: { beginner: 0, intermediate: 0, expert: 1 },
+  advanced: { beginner: 1, intermediate: 0, expert: 0 },
+};
+
+/**
  * 부위 하나에서 뽑을 순서 — 근육을 돌아가며 하나씩.
  *
  * 그냥 섞어서 뽑으면 대퇴사두만 넷 나오는 날이 생긴다. 근육당 `MAX_PER_MUSCLE`에서 끊는다.
+ *
+ * @param tier 티어 순위표. `null`이면 정렬을 **아예 안 한다** — 프로필 미설정 사용자의 루틴이
+ *   현행과 배열 단위로 같아야 하기 때문이다(설계 §3.1). 정렬은 셔플한 뒤 **안정 정렬**로
+ *   얹으므로 티어 안의 순서는 그대로 시드가 정한 무작위다.
  */
-function muscleRoundRobin(list: Exercise[], r: () => number): Exercise[] {
+function muscleRoundRobin(list: Exercise[], r: () => number, tier: Record<Level, number> | null): Exercise[] {
   const buckets = new Map<string, Exercise[]>();
   for (const e of list) {
     const m = e.primaryMuscles[0] ?? '';
@@ -73,7 +94,10 @@ function muscleRoundRobin(list: Exercise[], r: () => number): Exercise[] {
     if (bucket) bucket.push(e);
     else buckets.set(m, [e]);
   }
-  const queues = shuffled([...buckets.keys()], r).map((m) => shuffled(buckets.get(m)!, r));
+  const queues = shuffled([...buckets.keys()], r).map((m) => {
+    const q = shuffled(buckets.get(m)!, r);
+    return tier ? q.sort((a, b) => tier[a.level] - tier[b.level]) : q;
+  });
 
   const out: Exercise[] = [];
   for (let round = 0; round < MAX_PER_MUSCLE; round++) {
@@ -85,6 +109,9 @@ function muscleRoundRobin(list: Exercise[], r: () => number): Exercise[] {
 /**
  * @param history 최근에 한 **유닛**. **최근 것이 앞**이다.
  * @param seed 날짜 문자열.
+ * @param profile 훈련 수준·불편 부위. ⚠️ **`null`이면 개인화를 통째로 건너뛴다** — 프로필을
+ *   안 채운 기존 사용자의 오늘 루틴이 배열 단위로 안 바뀌는 것이 마이그레이션 기본값이다
+ *   (설계 §3.1). 이 보장은 routine.test의 고정 기대값이 지킨다.
  */
 export function pickRoutine(
   exercises: Exercise[],
@@ -92,9 +119,17 @@ export function pickRoutine(
   history: Unit[],
   seed: string,
   count = 5,
+  profile?: Profile | null,
 ): Routine {
+  const avoid = profile?.avoid ?? [];
+  // 티어 순위는 프로필이 있을 때만. 없으면 `null`을 흘려보내 정렬 자체를 건너뛴다.
+  const tier = profile ? TIER_RANK[profile.experience] : null;
+
   // 근력만 고른다 — 스트레칭·유산소에는 세트와 휴식이 없고, 휴식이 없으면 광고 자리도 없다.
-  const available = filterByEquipment(exercises, owned).filter((e) => e.category === 'strength');
+  // 불편 부위는 여기서 **하드로** 뺀다 — 아래의 기구·부위 하한과 달리 폴백으로 되살리지 않는다.
+  const available = filterByEquipment(exercises, owned).filter(
+    (e) => e.category === 'strength' && !isAvoided(e, avoid),
+  );
 
   const byGroup = new Map<MuscleGroup, Exercise[]>();
   for (const e of available) {
@@ -163,7 +198,7 @@ export function pickRoutine(
   const groups = byUnit.get(unit)!;
   const richGroups = groups.filter((g) => byGroup.get(g)!.length >= MIN_PER_GROUP);
   const queues = shuffled(richGroups.length > 0 ? richGroups : groups, r).map((g) =>
-    muscleRoundRobin(byGroup.get(g)!, r),
+    muscleRoundRobin(byGroup.get(g)!, r, tier),
   );
 
   const picked: Exercise[] = [];

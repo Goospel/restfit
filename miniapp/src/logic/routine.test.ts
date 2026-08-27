@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Profile } from './profile';
 import { pickRoutine } from './routine';
-import { EXERCISES, type Exercise, type MuscleGroup, type Unit } from '../data/exercises';
+import { EXERCISES, type EquipKey, type Exercise, type MuscleGroup, type Unit } from '../data/exercises';
 
 const ex = (id: string, muscle: string, o: Partial<Exercise> = {}): Exercise => ({
   id,
@@ -299,5 +300,169 @@ describe('pickRoutine', () => {
     const before = FULL.map((e) => e.id);
     pickRoutine(FULL, [], [], '2026-08-25');
     expect(FULL.map((e) => e.id)).toEqual(before);
+  });
+});
+
+describe('pickRoutine — 개인화(profile)', () => {
+  const OWNED: EquipKey[] = ['dumbbell', 'barbell', 'bench'];
+
+  /**
+   * PR 3 **직전**(2분할만 들어간 상태)의 실제 출력이다. 손으로 고른 값이 아니라 그때의
+   * `pickRoutine`을 돌려 받아 적었다.
+   *
+   * ★ **기존 사용자 보증이 여기서만 나온다.** 프로필을 안 채운 사람의 오늘 루틴은 이 PR로
+   *   한 톨도 바뀌면 안 된다 — 「profile을 안 넘긴 것과 null을 넘긴 것이 같다」는 자기 자신과의
+   *   비교라, 개인화가 프로필 유무와 무관하게 늘 켜져도 그대로 통과한다. 그래서 **바깥에서
+   *   구한 고정값**과 대조한다.
+   *
+   * ⚠️ 이 값이 깨지면 먼저 의심할 것은 테스트가 아니라 **선발 규칙이 조용히 바뀐 것**이다.
+   *   운동 데이터(`exercises.json`)를 다시 뽑았다면 그때는 고정값을 갱신하는 게 맞다.
+   */
+  const BASELINE: { seed: string; history: Unit[]; unit: Unit; ids: string[] }[] = [
+    {
+      seed: '2026-09-01',
+      history: [],
+      unit: 'lower',
+      ids: ['Otis-Up', 'Weighted_Squat', 'Seated_Leg_Tucks', 'Dumbbell_Seated_One-Leg_Calf_Raise'],
+    },
+    {
+      seed: '2026-09-02',
+      history: ['upper'],
+      unit: 'lower',
+      ids: ['Elbow_to_Knee', 'Glute_Kickback', 'Snatch_Pull', 'Barbell_Ab_Rollout'],
+    },
+    {
+      seed: '2026-09-03',
+      history: ['lower', 'upper'],
+      unit: 'upper',
+      ids: ['Dumbbell_Bench_Press', 'Standing_Dumbbell_Press', 'Dumbbell_Shrug', 'Barbell_Curl'],
+    },
+  ];
+
+  it('프로필이 없으면 2분할(PR 2)과 배열까지 같은 루틴이다', () => {
+    for (const { seed, history, unit, ids } of BASELINE) {
+      for (const r of [
+        pickRoutine(EXERCISES, OWNED, history, seed, 4),
+        pickRoutine(EXERCISES, OWNED, history, seed, 4, null),
+      ]) {
+        expect(r.unit, seed).toBe(unit);
+        expect(idsOf(r), seed).toEqual(ids);
+      }
+    }
+  });
+
+  it('프로필을 주면 그 고정값과 달라진다', () => {
+    // 위 고정값이 「아무것도 안 하는 코드」로도 통과하는 공허한 테스트가 아님을 여기서 못 박는다.
+    for (const { seed, history, ids } of BASELINE) {
+      const r = pickRoutine(EXERCISES, OWNED, history, seed, 4, {
+        experience: 'advanced',
+        avoid: ['knee', 'shoulder', 'lowerBack'],
+      });
+      expect(idsOf(r), seed).not.toEqual(ids);
+    }
+  });
+
+  it('같은 날 같은 프로필이면 같은 루틴이다', () => {
+    // 프로필은 순수 입력이라 날짜 시드 결정성이 그대로 남아야 한다(설계 §3.1).
+    const profile: Profile = { experience: 'intermediate', avoid: ['knee'] };
+    const a = pickRoutine(EXERCISES, OWNED, ['upper'], '2026-08-25', 4, profile);
+    const b = pickRoutine(EXERCISES, OWNED, ['upper'], '2026-08-25', 4, profile);
+    expect(idsOf(a)).toEqual(idsOf(b));
+    expect(a.unit).toBe(b.unit);
+  });
+
+  describe('부상 부위 하드 제외', () => {
+    it('한 부위가 전멸해도 유닛은 남은 부위로 성립한다', () => {
+      // 어깨를 빼면 상체의 네 부위 중 하나가 통째로 죽는다. 2단 라운드로빈이 남은 셋으로
+      // 알아서 채우므로 **추가 코드가 없다**(설계 §3.2).
+      const profile: Profile = { experience: 'beginner', avoid: ['shoulder'] };
+      for (let d = 1; d <= 20; d++) {
+        const r = pickRoutine(FULL, [], ['lower'], `2026-09-${d}`, 4, profile);
+        expect(r.unit).toBe('upper');
+        expect(groupsOf(r), `2026-09-${d}`).not.toContain('shoulders');
+        expect(r.exercises, `2026-09-${d}`).toHaveLength(4);
+      }
+    });
+
+    it('한 유닛이 통째로 전멸하면 남은 유닛이 반복된다', () => {
+      // 퇴화 케이스는 허용한다 — 어제 한 유닛이라도 대안이 없으면 그대로 다시 준다(설계 §3.3).
+      const upper = FULL.filter((e) => UNIT_GROUPS.upper.includes(GROUP_OF[e.primaryMuscles[0]]));
+      const list = [...upper, ...[1, 2, 3, 4].map((i) => ex(`무릎${i}`, 'quadriceps'))];
+      const profile: Profile = { experience: 'beginner', avoid: ['knee'] };
+      for (let d = 1; d <= 20; d++) {
+        expect(pickRoutine(list, [], ['upper'], `2026-09-${d}`, 4, profile).unit).toBe('upper');
+      }
+    });
+
+    it('전부 전멸하면 빈 루틴이다 — 폴백으로 되살리지 않는다', () => {
+      // ★ 기구 하한(MIN_POOL)·부위 하한과 결정적으로 다른 지점이다. 저건 「선호」라 전부
+      //   걸러지면 있는 것 중에서라도 주지만, 통증 부위는 **안전 문제**라 되살리면 안 된다.
+      //   빈 화면은 §6의 「불편 부위 설정 확인」 문구가 받는다.
+      const list = [1, 2, 3, 4].map((i) => ex(`무릎${i}`, 'quadriceps'));
+      const profile: Profile = { experience: 'beginner', avoid: ['knee'] };
+      expect(pickRoutine(list, [], [], '2026-08-25', 4, profile)).toEqual({ unit: null, exercises: [] });
+    });
+  });
+
+  describe('난이도 티어 선호', () => {
+    /** 같은 근육 안에 티어만 다른 종목을 깔아 두고, 첫 한 개가 어느 티어인지 본다. */
+    const twoTiers = (a: Exercise['level'], b: Exercise['level']) => [
+      ...[1, 2].map((i) => ex(`${a}${i}`, 'chest', { level: a })),
+      ...[1, 2].map((i) => ex(`${b}${i}`, 'chest', { level: b })),
+    ];
+
+    it('초급이면 초급이 상급보다 먼저다', () => {
+      const list = twoTiers('beginner', 'expert');
+      for (let d = 1; d <= 20; d++) {
+        const seed = `2026-09-${d}`;
+        expect(idsOf(pickRoutine(list, [], [], seed, 1, { experience: 'beginner', avoid: [] }))[0], seed).toMatch(
+          /^beginner/,
+        );
+      }
+    });
+
+    it('중급이면 중급이 상급보다 먼저다', () => {
+      const list = twoTiers('intermediate', 'expert');
+      for (let d = 1; d <= 20; d++) {
+        const seed = `2026-09-${d}`;
+        expect(
+          idsOf(pickRoutine(list, [], [], seed, 1, { experience: 'intermediate', avoid: [] }))[0],
+          seed,
+        ).toMatch(/^intermediate/);
+      }
+    });
+
+    it('상급이면 상급이 초급보다 먼저다', () => {
+      // 표의 마지막 줄(advanced = 중·상급 → 초급)은 순서가 **뒤집힌다** — 초급 우선을
+      // 그대로 둔 구현이면 여기서 죽는다.
+      const list = twoTiers('beginner', 'expert');
+      for (let d = 1; d <= 20; d++) {
+        const seed = `2026-09-${d}`;
+        expect(idsOf(pickRoutine(list, [], [], seed, 1, { experience: 'advanced', avoid: [] }))[0], seed).toMatch(
+          /^expert/,
+        );
+      }
+    });
+
+    it('초급 프로필이면 실데이터에서 상급 동작이 안 나온다', () => {
+      // ★ 실데이터 가드. 근육 버킷마다 초급이 하나 이상 있어서 첫 라운드가 전부 초급으로 찬다.
+      const owned: EquipKey[] = ['dumbbell', 'barbell', 'bench', 'pullupBar', 'kettlebell', 'band'];
+      for (let d = 1; d <= 30; d++) {
+        const seed = `2026-09-${d}`;
+        const r = pickRoutine(EXERCISES, owned, [], seed, 4, { experience: 'beginner', avoid: [] });
+        expect(r.exercises.map((e) => e.level), seed).not.toContain('expert');
+      }
+    });
+
+    it('초급 풀이 마르면 상위 티어로 자연히 넘어간다', () => {
+      // ★ **폴백이 규칙에 내장돼 있다**(설계 §3.4). 난이도를 하드 필터로 만들면 맨몸 어깨
+      //   (상급 1종뿐)처럼 풀이 비어 폴백 규칙을 따로 지어야 한다 — 선호 정렬은 그냥 넘어간다.
+      const list = [
+        ...[1, 2].map((i) => ex(`가슴상급${i}`, 'chest', { level: 'expert' })),
+        ...[1, 2].map((i) => ex(`삼두상급${i}`, 'triceps', { level: 'expert' })),
+      ];
+      const r = pickRoutine(list, [], [], '2026-08-25', 4, { experience: 'beginner', avoid: [] });
+      expect(r.exercises).toHaveLength(4);
+    });
   });
 });

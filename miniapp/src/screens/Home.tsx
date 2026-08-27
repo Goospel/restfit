@@ -3,6 +3,7 @@ import { Icon } from '../components/Icon';
 import { GROUP_KO, MUSCLE_KO } from '../data/labels';
 import { GOALS, type Goal } from '../logic/goal';
 import { restSecondsFor, SETS_PER_EXERCISE } from '../logic/session';
+import type { Profile } from '../logic/profile';
 import type { Routine } from '../logic/routine';
 import { lastSetOf, type WorkoutRecord } from '../storage';
 import { ui } from '../ui';
@@ -20,6 +21,7 @@ export function Home({
   routine,
   history,
   goal,
+  profile,
   doneToday,
   onStart,
   onOpenSettings,
@@ -28,6 +30,8 @@ export function Home({
   history: WorkoutRecord[];
   /** 반복·휴식·종목 수를 정한 목적. 화면에 계속 띄워야 왜 이 숫자인지가 설명된다. */
   goal: Goal;
+  /** `null`이면 이 화면이 생기기 전부터 쓰던 사람이다 — 개인화가 꺼진 채로 돈다. */
+  profile: Profile | null;
   doneToday: boolean;
   onStart: () => void;
   onOpenSettings: () => void;
@@ -38,10 +42,12 @@ export function Home({
         <h1 style={ui.h1}>오늘의 루틴</h1>
         <div style={ui.empty}>
           <p>할 수 있는 운동을 찾지 못했습니다.</p>
-          <p style={{ fontSize: 13 }}>보유 기구를 확인해 주세요.</p>
+          {/* 부상 제외는 **하드 필터**라 폴백으로 안 되살린다(설계 §3.2) — 전부 걸러진
+              병리적 조합에서 기구만 탓하면 사용자가 원인을 영영 못 찾는다. */}
+          <p style={{ fontSize: 13 }}>보유 기구와 불편 부위 설정을 확인해 주세요.</p>
         </div>
         <button style={ui.secondary} onClick={onOpenSettings}>
-          보유 기구 설정
+          설정 열기
         </button>
       </main>
     );
@@ -95,6 +101,22 @@ export function Home({
         {routine.exercises.length}개 운동 · 각 {SETS_PER_EXERCISE}세트 · 약 {Math.round(totalSec / 60)}분
         {doneToday && ' · 오늘 완료함'}
       </p>
+
+      {/*
+       * 이 화면이 생기기 전부터 쓰던 사람에게만 뜬다 — 신규 사용자는 온보딩에서 이미 답했고,
+       * 방금 답한 걸 또 조르면 안내가 아니라 잔소리다.
+       *
+       * **dismiss 상태를 두지 않는다**(설계 §6 · 결정 4). 프로필이 채워지는 순간 조건이
+       * 무너져 자연히 사라지므로, 「닫음」을 저장할 자리가 애초에 필요 없다.
+       */}
+      {!profile && history.length > 0 && (
+        <button
+          style={{ ...ui.chip, width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: 13, marginBottom: 16 }}
+          onClick={onOpenSettings}
+        >
+          경험을 알려주시면 난이도를 맞춰드려요
+        </button>
+      )}
 
       <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
         {routine.exercises.map((e, i) => {
