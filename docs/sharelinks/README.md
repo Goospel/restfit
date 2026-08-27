@@ -8,7 +8,7 @@ Open API를 안 쓰는 이유는 [plan.md](../../plan.md) Phase 4.
 |---|---|---|---|
 | 덤벨 | [dumbbell.md](dumbbell.md) | `dumbbell` | **29** ✅ 네 구간 다 찼다 |
 | 케틀벨 | [kettlebell.md](kettlebell.md) | `kettlebell` | **24** ✅ 네 구간 다 찼다 |
-| 벤치 | [bench.md](bench.md) | `bench` | 0 |
+| 벤치 | [bench.md](bench.md) | `bench` | **10** — 전부 각도 조절식 (보류 4건은 수집함에) |
 | 밴드 | [band.md](band.md) | `band` | 0 |
 | 풀업바 | [pullup-bar.md](pullup-bar.md) | `pullupBar` | 0 |
 
