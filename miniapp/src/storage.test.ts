@@ -9,8 +9,10 @@ import {
   loadGoal,
   loadHistory,
   loadOwned,
+  loadProfile,
   saveEquipSpec,
   saveGoal,
+  saveProfile,
   recentGroups,
   saveOwned,
   todayKey,
@@ -235,6 +237,15 @@ describe('clearOnboarding', () => {
     expect(loadEquipSpec(s)).toEqual({});
   });
 
+  it('운동 프로필도 함께 지운다', () => {
+    // 새로 생긴 온보딩 단계라, 이걸 안 지우면 온보딩을 다시 해도 경험·불편 부위 질문이
+    // 이미 답해진 상태로 뜬다 — 재현이 곧 이 함수의 존재 이유인데 그게 깨진다.
+    const s = fakeStorage();
+    saveProfile({ experience: 'intermediate', avoid: ['knee'] }, s);
+    clearOnboarding(s);
+    expect(loadProfile(s)).toBeNull();
+  });
+
   it('운동 기록은 건드리지 않는다', () => {
     // 온보딩을 다시 보려고 눌렀다가 그동안 쌓은 기록이 날아가면 안 된다.
     const s = fakeStorage();
@@ -246,6 +257,63 @@ describe('clearOnboarding', () => {
 
   it('저장소가 막혀도 죽지 않는다', () => {
     expect(() => clearOnboarding(fakeStorage({ throwOnRemove: true }))).not.toThrow();
+  });
+});
+
+describe('운동 프로필', () => {
+  it('저장한 적 없으면 null — 「아직 안 물어봤다」는 뜻이다', () => {
+    // 기존 사용자는 여기가 null이라 개인화 경로를 통째로 건너뛴다. 기본값을 대신
+    // 돌려주면 「안 고른 사람」과 「초급을 고른 사람」이 구별되지 않는다.
+    expect(loadProfile(fakeStorage())).toBeNull();
+  });
+
+  it('저장하고 다시 읽으면 같다', () => {
+    const s = fakeStorage();
+    saveProfile({ experience: 'intermediate', avoid: ['knee', 'lowerBack'] }, s);
+    expect(loadProfile(s)).toEqual({ experience: 'intermediate', avoid: ['knee', 'lowerBack'] });
+  });
+
+  it('experience가 어휘 밖이면 프로필 **전체**가 null이다', () => {
+    // 반쪽 프로필은 반쪽 개인화라 디버깅 지옥이다 — avoid만 살려 두면
+    // "불편 부위는 먹는데 난이도는 안 먹는" 상태가 조용히 생긴다.
+    const s = fakeStorage();
+    s.setItem('restfit.profile', JSON.stringify({ experience: 'pro', avoid: ['knee'] }));
+    expect(loadProfile(s)).toBeNull();
+  });
+
+  it('experience가 아예 없어도 null이다', () => {
+    const s = fakeStorage();
+    s.setItem('restfit.profile', JSON.stringify({ avoid: ['knee'] }));
+    expect(loadProfile(s)).toBeNull();
+  });
+
+  it('avoid는 어휘 밖 값만 걸러낸다 — 프로필은 살린다', () => {
+    // 부위 어휘가 늘거나 줄어도 경험까지 날릴 이유는 없다. 걸러낸 값은 필터가
+    // 영영 통과 못 하는 조건이 되므로 남겨 두면 안 된다.
+    const s = fakeStorage();
+    s.setItem('restfit.profile', JSON.stringify({ experience: 'beginner', avoid: ['knee', 'wrist', 7] }));
+    expect(loadProfile(s)).toEqual({ experience: 'beginner', avoid: ['knee'] });
+  });
+
+  it('avoid가 배열이 아니거나 없으면 빈 목록이다', () => {
+    const s = fakeStorage();
+    s.setItem('restfit.profile', JSON.stringify({ experience: 'advanced' }));
+    expect(loadProfile(s)).toEqual({ experience: 'advanced', avoid: [] });
+    s.setItem('restfit.profile', JSON.stringify({ experience: 'advanced', avoid: 'knee' }));
+    expect(loadProfile(s)).toEqual({ experience: 'advanced', avoid: [] });
+  });
+
+  it('객체가 아니거나 깨진 값이면 null이다', () => {
+    const s = fakeStorage();
+    s.setItem('restfit.profile', '{쓰레기');
+    expect(loadProfile(s)).toBeNull();
+    s.setItem('restfit.profile', JSON.stringify(['beginner']));
+    expect(loadProfile(s)).toBeNull();
+  });
+
+  it('저장소가 막혀도 죽지 않는다', () => {
+    expect(() => saveProfile({ experience: 'beginner', avoid: [] }, fakeStorage({ throwOnSet: true }))).not.toThrow();
+    expect(loadProfile(fakeStorage({ throwOnGet: true }))).toBeNull();
   });
 });
 

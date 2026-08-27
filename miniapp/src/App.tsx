@@ -4,6 +4,7 @@ import { Icon, type IconName } from './components/Icon';
 import { EXERCISES } from './data/exercises';
 import { effectiveOwned, type EquipSpec } from './logic/equipSpec';
 import { DEFAULT_GOAL, GOALS, type Goal } from './logic/goal';
+import type { Profile } from './logic/profile';
 import { pickRoutine } from './logic/routine';
 import { startSession, type Session } from './logic/session';
 import { History } from './screens/History';
@@ -19,10 +20,12 @@ import {
   loadGoal,
   loadHistory,
   loadOwned,
+  loadProfile,
   recentGroups,
   saveEquipSpec,
   saveGoal,
   saveOwned,
+  saveProfile,
   todayKey,
   type WorkoutRecord,
 } from './storage';
@@ -46,6 +49,11 @@ export function App() {
   const [settings, setSettings] = useState(false);
   /** `null`이면 온보딩을 아직 안 끝냈다는 뜻이다. 기본값을 여기서 대신 채우면 그 구분이 사라진다. */
   const [goal, setGoal] = useState<Goal | null>(loadGoal);
+  /**
+   * 훈련 수준·불편 부위. **아직 루틴에 안 먹인다** — 받아서 저장만 하는 단계라
+   * `pickRoutine`에 넘기지 않는다. 넘기는 순간 기존 사용자의 오늘 루틴이 바뀐다.
+   */
+  const [profile, setProfile] = useState<Profile | null>(loadProfile);
 
   const date = todayKey();
 
@@ -83,6 +91,11 @@ export function App() {
     saveGoal(next);
   }
 
+  function saveProfileAnd(next: Profile) {
+    setProfile(next);
+    saveProfile(next);
+  }
+
   /**
    * 온보딩을 다시 띄운다. **폰에서는 localStorage를 손댈 방법이 없어**
    * 온보딩 화면을 고쳐도 실기기에서 확인할 길이 없다 — 그 유일한 입구다.
@@ -92,6 +105,7 @@ export function App() {
     setOwned([]);
     setSpec({});
     setGoal(null);
+    setProfile(null);
     // 온보딩을 마치면 마지막으로 보던 기록 탭이 아니라 오늘 루틴으로 돌아오게 둔다.
     setTab('home');
   }
@@ -110,7 +124,11 @@ export function App() {
         spec={spec}
         onOwnedChange={saveOwnedAnd}
         onSpecChange={saveSpecAnd}
-        onDone={saveGoalAnd}
+        // 온보딩이 끝나는 조건은 여전히 goal 하나다 — profile은 같은 순간에 함께 채워진다.
+        onDone={(nextGoal, nextProfile) => {
+          saveProfileAnd(nextProfile);
+          saveGoalAnd(nextGoal);
+        }}
       />
     );
   }
@@ -124,6 +142,8 @@ export function App() {
         onSpecChange={saveSpecAnd}
         goal={goal}
         onGoalChange={saveGoalAnd}
+        profile={profile}
+        onProfileChange={saveProfileAnd}
         onBack={() => setSettings(false)}
       />
     );
