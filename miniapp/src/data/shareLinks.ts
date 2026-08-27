@@ -125,6 +125,25 @@ export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
     // ⚠️ 7개 한 세트의 **합이** 12kg이라 개당 무게를 모른다. 구간을 붙이면 거짓이 되므로 비운다.
     { name: '아리프 육각 덤벨 세트', url: 'https://toss.im/_m/DfUxzTcd', note: '여성용 7개 세트 · 거치대 포함' },
   ],
+  /**
+   * ⚠️ **각도 조절식만 담는다.** 평벤치로 열리는 운동은 165개, 조절식은 187개다 —
+   * 평벤치를 권하면 사용자가 산 물건이 **인클라인·디클라인 34개를 못 연다.**
+   * 무게 개념이 없어 `weight`·`kg`을 비우므로 **칩도 배지도 안 뜨고**, `note`가 유일한 구분 수단이다.
+   */
+  bench: [
+    { name: '접이식 각도조절 인클라인 디클라인 벤치', url: 'https://toss.im/_m/dwwJFk2q', note: '평벤치 자세까지 · 접이식' },
+    { name: '대한 접이식 만능 벤치', url: 'https://toss.im/_m/FQUqLmN9', note: '평벤치 자세까지 · 접이식 · 2대' },
+    { name: '트라히어 IB650 인클라인 접이식 벤치프레스', url: 'https://toss.im/_m/dhcqYJ2q', note: '접이식' },
+    { name: '이고웰 인디클라인 인디벤치', url: 'https://toss.im/_m/pShUuJvi', note: '프리처 컬 패드 · 다리 고정 롤러' },
+    { name: '14in1 벤치프레스', url: 'https://toss.im/_m/5PBx34KD', note: '접이식 · 다리 고정 롤러' },
+    { name: '로베라 각도조절 인클라인 벤치프레스', url: 'https://toss.im/_m/T0jjQ40b' },
+    { name: '올웨이트 각도조절 헬스벤치 AWBH001', url: 'https://toss.im/_m/dw53Vq1v' },
+    { name: '프로스펙스 멀티 인클라인 벤치', url: 'https://toss.im/_m/5Uhh3Rds' },
+    { name: '하칸 인클라인 벤치', url: 'https://toss.im/_m/RbNN4wHD' },
+    { name: '하칸 프로 인클라인 벤치', url: 'https://toss.im/_m/Hqgonvic' },
+    { name: '아리프 오릭스 인클라인 벤치', url: 'https://toss.im/_m/ZN0uWg1q' },
+    { name: '짐맨 인클라인 벤치', url: 'https://toss.im/_m/dOHjdzv3' },
+  ],
   kettlebell: [
     { name: '앳플리 소프트 케틀벨', url: 'https://toss.im/_m/Fs0BdFhh', weight: 'light', kg: 4, note: '소프트 · 바닥 보호' },
     { name: '아디다스 아이언 케틀벨', url: 'https://toss.im/_m/XdyRAek7', weight: 'light', kg: 4, note: '철제' },
