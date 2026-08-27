@@ -33,6 +33,54 @@ export type AvoidArea = 'knee' | 'shoulder' | 'lowerBack';
 
 export type Profile = { experience: Experience; avoid: AvoidArea[] };
 
+/**
+ * 세션 체감 난이도. **온보딩 체력 테스트를 대신하는 장치다**(설계 §3.5 상충 판단).
+ *
+ * 3지선다인 이유: 탭 1회로 끝나야 매 세션 답한다. 5단계 척도는 정밀해 보이지만
+ * 「어느 정도 쉬움」과 「쉬움」을 사람이 일관되게 못 가르고, 판정에 쓰는 것은 결국
+ * 「올려/그대로/내려」 셋뿐이다 — 안 쓰는 해상도는 마찰만 남는다.
+ */
+export type Feel = 'easy' | 'ok' | 'hard';
+
+export const FEEL_KEYS: readonly Feel[] = ['easy', 'ok', 'hard'];
+
+/** 완료 화면 버튼 문구. 왼쪽이 쉬움 — 왼→오른쪽이 가벼움→무거움이라 순서가 곧 의미다. */
+export const FEEL_LABEL: Record<Feel, string> = { easy: '쉬움', ok: '적당', hard: '힘듦' };
+
+export function isFeel(v: unknown): v is Feel {
+  return typeof v === 'string' && (FEEL_KEYS as readonly string[]).includes(v);
+}
+
+/** 승급 임계. 강등보다 **둔하다** — 아래 `nextExperience` 주석이 이유다. */
+const PROMOTE_STREAK = 3;
+/** 강등 임계. */
+const DEMOTE_STREAK = 2;
+
+/**
+ * 피드백 스트릭으로 훈련 수준을 옮긴다. **순수 함수 — 기록 저장 시점에 한 번 판정한다.**
+ *
+ * `recentFeels`는 **최근 것이 앞**이고, 건너뛴 세션은 `undefined`로 자리를 차지한다.
+ * 그 빈자리가 스트릭을 끊는 것이 이 함수의 핵심 안전장치다 — 무응답을 easy로 세거나
+ * 압축해서 건너뛰면 **아무 말도 안 한 사람을 오승급**시킨다. 승급은 되돌리는 데
+ * 2세션이 걸리니, 보수적인 쪽이 싸다.
+ *
+ * ⚠️ **강등(2연속)이 승급(3연속)보다 민감한 것은 의도다.** 대칭이 예뻐 보여도,
+ * 두 오류의 값이 다르다 — 너무 쉬운 루틴은 지루할 뿐이지만 너무 어려운 루틴은
+ * 이탈과 부상으로 간다(설계 §3.6).
+ *
+ * 쿨다운 상태는 두지 않는다. 계속 쉽다는 사람은 세션마다 한 단계씩 올라 beginner에서
+ * advanced까지 최속 4세션이다 — 계속 쉬우면 빨리 올리는 게 맞고, 상태 하나를 아낀다.
+ */
+export function nextExperience(current: Experience, recentFeels: (Feel | undefined)[]): Experience {
+  // 앞에서부터 n개가 전부 같은 답인가. 기록이 n개보다 적으면 스트릭이 아니다 —
+  // `every`는 짧은 배열에서 공허하게 참이라 길이를 먼저 본다.
+  const streak = (f: Feel, n: number) => recentFeels.length >= n && recentFeels.slice(0, n).every((x) => x === f);
+  const i = EXPERIENCE_KEYS.indexOf(current);
+  if (streak('hard', DEMOTE_STREAK)) return EXPERIENCE_KEYS[Math.max(0, i - 1)];
+  if (streak('easy', PROMOTE_STREAK)) return EXPERIENCE_KEYS[Math.min(EXPERIENCE_KEYS.length - 1, i + 1)];
+  return current;
+}
+
 export const EXPERIENCE_KEYS: readonly Experience[] = ['beginner', 'intermediate', 'advanced'];
 
 /** 화면에 그리는 순서이기도 하다 — 위에서 아래로 몸통을 훑는 순서가 아니라 흔한 순서다. */
