@@ -76,13 +76,21 @@ export const ui: S = {
   label: { fontSize: 12, color: 'var(--text-sub)', display: 'block', marginBottom: 6 },
 
   // ── 조각
+  /**
+   * ⚠️ 테두리를 **shorthand(`border`)로 쓰지 않는다.** 쓰는 쪽이 `borderColor`만 덮으면
+   * React가 리렌더에서 그 non-shorthand 값을 지워 버린다("Removing borderColor") —
+   * 클래스가 아니라 인라인 스타일을 합치는 구조라서 생기는 함정이고, **첫 렌더에는 멀쩡히
+   * 보이다가 리렌더에서만 색이 풀려서** 눈으로 잡기 어렵다. 쪼개 두면 덮어쓰기가 안전하다.
+   */
   chip: {
     padding: '5px 10px',
     fontSize: 12,
     fontWeight: 600,
     color: 'var(--text-sub)',
     background: 'var(--bg-sub)',
-    border: '1px solid var(--line)',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'var(--line)',
     borderRadius: 999,
   },
   empty: { padding: '48px 20px', textAlign: 'center', color: 'var(--text-weak)', fontSize: 14 },
