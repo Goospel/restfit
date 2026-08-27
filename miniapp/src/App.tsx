@@ -9,7 +9,6 @@ import { startSession, type Session } from './logic/session';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
-import { Probe } from './screens/Probe';
 import { Settings } from './screens/Settings';
 import { Shop } from './screens/Shop';
 import { Workout } from './screens/Workout';
@@ -43,7 +42,6 @@ export function App() {
   const [history, setHistory] = useState(loadHistory);
   const [tab, setTab] = useState<Tab>('home');
   const [session, setSession] = useState<Session | null>(null);
-  const [probe, setProbe] = useState(false);
   /** 「내 조건」(보유 기구·목적). 탭이 아니라 홈의 목적 칩에서 여는 전체화면이다. */
   const [settings, setSettings] = useState(false);
   /** `null`이면 온보딩을 아직 안 끝냈다는 뜻이다. 기본값을 여기서 대신 채우면 그 구분이 사라진다. */
@@ -117,8 +115,6 @@ export function App() {
     );
   }
 
-  if (probe) return <Probe onBack={() => setProbe(false)} />;
-
   if (settings) {
     return (
       <Settings
@@ -162,7 +158,7 @@ export function App() {
       )}
       {tab === 'shop' && <Shop owned={owned} spec={spec} />}
       {tab === 'history' && (
-        <History history={history} onProbe={() => setProbe(true)} onResetOnboarding={resetOnboarding} />
+        <History history={history} onResetOnboarding={resetOnboarding} />
       )}
 
       <nav style={navStyle}>
