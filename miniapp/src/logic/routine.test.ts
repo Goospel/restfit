@@ -411,6 +411,57 @@ describe('pickRoutine — 개인화(profile)', () => {
       ...[1, 2].map((i) => ex(`${b}${i}`, 'chest', { level: b })),
     ];
 
+    /**
+     * 세 티어를 2종씩. **1등 종목의 티어가 30일에 걸쳐 어느 집합을 그리는지**를 본다.
+     *
+     * ⚠️ 위의 2티어 테스트들은 표의 세 줄을 **구별하지 못한다** — 「초급 단독 1위」와
+     * 「초·중급 동률」이 2티어 리스트에서는 같은 답을 내기 때문이다. 세 티어를 깔고
+     * 집합으로 받아야 순위표의 **동률 여부**까지 관측된다.
+     */
+    const threeTiers = [
+      ...[1, 2].map((i) => ex(`beginner${i}`, 'chest', { level: 'beginner' })),
+      ...[1, 2].map((i) => ex(`intermediate${i}`, 'chest', { level: 'intermediate' })),
+      ...[1, 2].map((i) => ex(`expert${i}`, 'chest', { level: 'expert' })),
+    ];
+    const topTiers = (experience: Profile['experience']) => {
+      const seen = new Set<string>();
+      for (let d = 1; d <= 30; d++) {
+        seen.add(pickRoutine(threeTiers, [], [], `2026-09-${d}`, 1, { experience, avoid: [] }).exercises[0].level);
+      }
+      return [...seen].sort();
+    };
+
+    it('초급 프로필은 초급만 1등에 세운다', () => {
+      // 초급 줄이 「초·중급 동률」로 잘못 써지면 여기서 중급이 섞여 나온다 — 2티어
+      // 테스트는 그 오타를 통과시킨다(초급이 상급보다 먼저인 건 여전히 참이라서).
+      expect(topTiers('beginner')).toEqual(['beginner']);
+    });
+
+    it('중급 프로필은 초급과 중급을 동률로 섞는다', () => {
+      // ★ 두 가지를 한꺼번에 잡는다. ① 중급 줄이 초급 줄과 같아지면 집합이 ['beginner']로
+      //   쪼그라든다. ② **티어 안 셔플이 죽어도** 1등이 늘 같은 종목이라 집합이 하나로
+      //   쪼그라든다 — 동률인데 한쪽만 나오는 것은 섞이지 않았다는 뜻이다.
+      expect(topTiers('intermediate')).toEqual(['beginner', 'intermediate']);
+    });
+
+    it('상급 프로필은 중·상급을 동률로 섞고 초급을 꼴찌로 민다', () => {
+      expect(topTiers('advanced')).toEqual(['expert', 'intermediate']);
+    });
+
+    it('프로필이 있어도 30일이 같은 종목으로 굳지 않는다', () => {
+      // ★ **티어 정렬이 셔플을 잡아먹지 않았다는 증거.** 정렬을 셔플 **위에** 얹지 않고
+      //   셔플을 건너뛰면 티어 안 순서가 데이터 순서로 고정돼 매일 같은 종목이 배급된다 —
+      //   개인화가 「난이도를 맞춰 주는 것」에서 「같은 운동만 주는 것」으로 조용히 바뀐다.
+      //   실측 80종이라 하한 40은 절반 붕괴만 잡는 헐렁한 선이다(굳으면 17종으로 떨어진다).
+      const owned: EquipKey[] = ['dumbbell', 'barbell', 'bench', 'pullupBar', 'kettlebell', 'band'];
+      const seen = new Set<string>();
+      for (let d = 1; d <= 30; d++) {
+        const r = pickRoutine(EXERCISES, owned, [], `2026-09-${d}`, 4, { experience: 'beginner', avoid: [] });
+        for (const e of r.exercises) seen.add(e.id);
+      }
+      expect(seen.size).toBeGreaterThan(40);
+    });
+
     it('초급이면 초급이 상급보다 먼저다', () => {
       const list = twoTiers('beginner', 'expert');
       for (let d = 1; d <= 20; d++) {

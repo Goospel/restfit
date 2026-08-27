@@ -36,6 +36,9 @@ export function Home({
   onStart: () => void;
   onOpenSettings: () => void;
 }) {
+  // 이 이른 반환이 아래 안내 칩보다 앞이라 **빈 루틴 화면에는 칩이 안 뜬다 — 의도다.**
+  // 이 화면은 자체 「설정 열기」 버튼으로 같은 곳을 이미 가리키므로, 칩까지 붙이면
+  // 한 화면에 같은 목적지 버튼이 둘이 된다.
   if (!routine.unit || routine.exercises.length === 0) {
     return (
       <main style={ui.page}>
