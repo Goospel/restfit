@@ -93,7 +93,37 @@ export function filterByBand(products: readonly Product[], band: ProductBand | n
  */
 export const SHARE_LINKS: Partial<Record<EquipKey, readonly Product[]>> = {
   dumbbell: [
-    { name: '아이워너 육각 아령', url: 'https://toss.im/_m/jnf2rJC3', weight: 'light', kg: 5, note: '2개입' },
+    { name: '스케쳐스 와이드핏 육각 아령', url: 'https://toss.im/_m/5HC4HFK', weight: 'light', kg: 0.5, note: '2개입' },
+    { name: '아리프 네오프렌 미용 아령', url: 'https://toss.im/_m/jQzzdoH5', weight: 'light', kg: 1, note: '네오프렌 · 2개입' },
+    { name: '앳플리 홈트 미용 아령', url: 'https://toss.im/_m/h1WyOgEu', weight: 'light', kg: 2, note: '2개입' },
+    { name: '아이워너 뷰티 육각 덤벨', url: 'https://toss.im/_m/r98DATe8', weight: 'light', kg: 2, note: '컬러 · 2개입' },
+    { name: '아이워너 맨즈 육각 아령', url: 'https://toss.im/_m/hG718JX1', weight: 'light', kg: 3, note: '2개입' },
+    { name: '아이워너 네오프렌 사각 아령', url: 'https://toss.im/_m/reDrK7pt', weight: 'light', kg: 3, note: '네오프렌 · 1개' },
+    { name: '스포틀러 CPU 덤벨', url: 'https://toss.im/_m/59tgqnan', weight: 'light', kg: 3, note: '1개' },
+    { name: '아이워너 맨즈 육각 아령', url: 'https://toss.im/_m/pUTPzHqt', weight: 'light', kg: 4, note: '2개입' },
+    { name: '아이워너 PVC 뷰티 육각 아령', url: 'https://toss.im/_m/tjLNJOKk', weight: 'light', kg: 4, note: 'PVC · 2개입' },
+    { name: '아이워너 맨즈 육각 아령', url: 'https://toss.im/_m/jnf2rJC3', weight: 'light', kg: 5, note: '2개입' },
+    { name: '멜킨 육각덤벨', url: 'https://toss.im/_m/PmXcXdir', weight: 'light', kg: 5, note: '1개' },
+    { name: '아이워너 맨즈 육각 아령', url: 'https://toss.im/_m/tVlnkEa8', weight: 'medium', kg: 7, note: '2개입' },
+    { name: '아이워너 맨즈 육각 아령', url: 'https://toss.im/_m/rAq097Oo', weight: 'medium', kg: 8, note: '2개입' },
+    { name: 'PEV 육각 아령', url: 'https://toss.im/_m/PCy5obL', weight: 'medium', kg: 8, note: 'PEV · 2개입' },
+    { name: '아리프 PEV 육각 덤벨', url: 'https://toss.im/_m/1igqN1Xb', weight: 'medium', kg: 10, note: 'PEV · 냄새 적음 · 2개입' },
+    { name: '아이워너 맨즈 육각 아령', url: 'https://toss.im/_m/3XwAp4u4', weight: 'medium', kg: 10, note: '2개입' },
+    { name: '아이워너 PEV 육각 아령', url: 'https://toss.im/_m/Hzw9w5fi', weight: 'heavy', kg: 16, note: 'PEV · 냄새 적음' },
+    { name: '티에스 멀티 덤벨', url: 'https://toss.im/_m/3Up4kIc8', weight: 'heavy', kg: 28, note: '1개' },
+    { name: '베스코 ELITE 12각 PEV 아령', url: 'https://toss.im/_m/TJtMPzAi', weight: 'heavy', kg: 30, note: 'PEV · 1개' },
+    // 조절식은 이름에 최대 무게를 남긴다 — 배지가 「조절식」이라, 떼어 내면 같은 제품군이 구분되지 않는다.
+    { name: '바이줌 5단 무게조절 덤벨 5kg', url: 'https://toss.im/_m/NwRg9Fk7', weight: 'adjustable', note: '5단계' },
+    { name: '아디다스 무게조절 크롬 덤벨 5kg', url: 'https://toss.im/_m/BLUzy7Zg', weight: 'adjustable', note: '크롬 · 1개' },
+    { name: '타니 무게조절 덤벨 바벨 세트 10kg', url: 'https://toss.im/_m/JBOcKDHf', weight: 'adjustable', note: '덤벨·바벨 겸용' },
+    { name: '스포틀러 무게조절 덤벨 바벨 세트 15kg', url: 'https://toss.im/_m/3qUFQPVl', weight: 'adjustable', note: '덤벨·바벨 겸용' },
+    { name: '이고웰 무게조절 덤벨 바벨 세트 20kg', url: 'https://toss.im/_m/h23O6MG5', weight: 'adjustable', note: '덤벨·바벨 겸용' },
+    { name: '아나바 조절 덤벨 바벨 세트 20kg', url: 'https://toss.im/_m/fyM6wvnt', weight: 'adjustable', note: '덤벨·바벨 겸용' },
+    { name: '티에스 무게조절 덤벨 세트 20kg', url: 'https://toss.im/_m/xx8HuSWb', weight: 'adjustable', note: '덤벨만' },
+    { name: '트라히어 TY 무게조절 덤벨 바벨 세트 20kg', url: 'https://toss.im/_m/xNJszaen', weight: 'adjustable', note: '덤벨·바벨 겸용' },
+    { name: '롤튼 무게조절 덤벨 36kg', url: 'https://toss.im/_m/dFbLG9K', weight: 'adjustable', note: '16단계' },
+    // ⚠️ 7개 한 세트의 **합이** 12kg이라 개당 무게를 모른다. 구간을 붙이면 거짓이 되므로 비운다.
+    { name: '아리프 육각 덤벨 세트', url: 'https://toss.im/_m/DfUxzTcd', note: '여성용 7개 세트 · 거치대 포함' },
   ],
   kettlebell: [
     { name: '앳플리 소프트 케틀벨', url: 'https://toss.im/_m/Fs0BdFhh', weight: 'light', kg: 4, note: '소프트 · 바닥 보호' },
