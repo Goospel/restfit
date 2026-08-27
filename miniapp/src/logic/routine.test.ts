@@ -536,13 +536,24 @@ describe('졸업 프리필은 루틴 결정성에 영향이 없다 (§3.7)', () 
   const graduating = hist(12); // muscle 상단 도달 → 승급
   const stalling = hist(11); // 한 회 모자람 → 정체
 
-  it('프리필이 실제로 갈리는 두 기록이다 — 계측기부터 세운다', () => {
-    // 이 단언이 없으면 아래 테스트는 「둘 다 같으니 당연히 같다」로 공허해진다.
-    expect(suggestNext(lastSetsOf(graduating, 'chest1'), 'muscle', false, 0)).not.toEqual(
-      suggestNext(lastSetsOf(stalling, 'chest1'), 'muscle', false, 0),
-    );
+  it('두 기록의 프리필이 실제로 갈린다 — 한쪽은 졸업하고 한쪽은 정체다', () => {
+    /**
+     * ⚠️ **「둘이 다르다」로 쓰면 안 된다.** 두 기록은 마지막 세트부터가 12 vs 11이라, 졸업
+     * 규칙을 통째로 무력화해도(`if (hi > 0) return last;`) 프리필은 여전히 달라 `not.toEqual`이
+     * 통과한다 — 리뷰가 실측했다. **값을 못 박아야** 졸업이 일어난다는 사실이 관측된다.
+     */
+    expect(suggestNext(lastSetsOf(graduating, 'chest1'), 'muscle', false, 0)).toEqual({ weight: 22.5, reps: 6 });
+    expect(suggestNext(lastSetsOf(stalling, 'chest1'), 'muscle', false, 0)).toEqual({ weight: 20, reps: 11 });
   });
 
+  /**
+   * 아래 둘은 **구조적 보증의 회귀 트립와이어**다 — 값 비교로 무언가를 잡는 테스트가 아니다.
+   *
+   * 두 기록은 `group`이 같아 `recentUnits`가 같은 값을 내므로, 지금은 **같은 인자로 같은 함수를
+   * 두 번 부르는 항진명제**다. 그게 정확히 요점이다: `pickRoutine`·`startSession`의 인자에
+   * 세트 기록이 **아예 없다**는 것. 누군가 프리필을 근거로 선발 인자를 늘리면(예: 히스토리를
+   * 통째로 넘기면) 이 자리가 더 이상 항진명제가 아니게 되어 그때 깨진다.
+   */
   it('세트 기록이 달라도 오늘의 루틴은 한 글자도 안 바뀐다', () => {
     const pick = (h: WorkoutRecord[]) => pickRoutine(FULL, [], recentUnits(h), '2026-08-27', 4, null);
     expect(idsOf(pick(graduating))).toEqual(idsOf(pick(stalling)));
