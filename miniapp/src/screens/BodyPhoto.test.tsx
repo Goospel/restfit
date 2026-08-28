@@ -4,7 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { listPhotos, savePhoto, type BodyPhoto as Photo } from '../photoStore';
+import { captureJpeg } from '../logic/capture';
+import { listPhotos, openPhotoDb, savePhoto, type BodyPhoto as Photo } from '../photoStore';
 import { BodyPhoto } from './BodyPhoto';
 
 /**
@@ -29,6 +30,12 @@ vi.mock('../photoStore', async (orig) => ({
   savePhoto: vi.fn(),
 }));
 
+/** jsdom에는 2D 컨텍스트가 없다. **화면이 아니라 모듈을 갈아 끼운다** — 테스트 전용 prop을 두면 제품 표면이 하나 는다. */
+vi.mock('../logic/capture', async (orig) => ({
+  ...(await orig<typeof import('../logic/capture')>()),
+  captureJpeg: vi.fn(),
+}));
+
 afterEach(cleanup);
 
 const OK = (s: MediaStream) => async () => s;
@@ -46,16 +53,14 @@ const shot = { blob: new Blob(['jpeg'], { type: 'image/jpeg' }), width: 720, hei
 
 function setup(over: Partial<Parameters<typeof BodyPhoto>[0]> = {}) {
   const onClose = vi.fn();
-  const capture = vi.fn(async () => shot);
   const props = {
     onClose,
-    capture,
     media: { getUserMedia: OK(fakeStream().stream) },
     idb: new IDBFactory() as IDBFactory,
     ...over,
   };
   const view = render(<BodyPhoto {...props} />);
-  return { onClose, capture, ...view };
+  return { onClose, capture: vi.mocked(captureJpeg), ...view };
 }
 
 /**
@@ -76,7 +81,21 @@ function seed(dates: string[]) {
 
 const btn = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
 
+/**
+ * `IDBDatabase.close`를 지켜본다. **프로토타입에 건다** — 화면이 연 연결의 핸들은 밖에서
+ * 잡을 수 없다. `fake-indexeddb/lib/*`를 직접 import 하면 타입이 안 딸려 와서(패키지 exports가
+ * 타입을 안 내보낸다) 실제 인스턴스에서 프로토타입을 꺼낸다.
+ */
+async function spyOnDbClose() {
+  const db = await openPhotoDb(new IDBFactory() as IDBFactory);
+  return vi.spyOn(Object.getPrototypeOf(db!) as IDBDatabase, 'close');
+}
+
 beforeEach(() => {
+  // ⚠️ 목이 **모듈 수준**이라 호출 기록이 파일 전체에 누적된다 — 안 지우면 「몇 번 불렸나」를
+  // 재는 테스트가 앞선 테스트의 호출까지 세서 통과·실패가 실행 순서에 달린다.
+  vi.clearAllMocks();
+  vi.mocked(captureJpeg).mockResolvedValue(shot);
   vi.mocked(savePhoto).mockResolvedValue('ok');
   // 기본값은 「아직 한 장도 없음」 — 첫 촬영이 기본 상태다.
   vi.mocked(listPhotos).mockResolvedValue([]);
@@ -319,17 +338,81 @@ describe('촬영 화면 — 확인과 저장', () => {
 
   it('캡처가 실패하면 확인 화면으로 안 넘어가고 안내한다', async () => {
     // 2D 컨텍스트가 없거나 프레임이 아직 0×0인 경우다. 빈 사진을 저장하는 것보다 낫다.
-    setup({ capture: vi.fn(async () => null) });
+    vi.mocked(captureJpeg).mockResolvedValue(null);
+    setup();
     fireEvent.click(await screen.findByRole('button', { name: '촬영' }));
 
     expect(await screen.findByText('사진을 찍지 못했어요. 다시 시도해 주세요')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '저장' })).toBeNull();
   });
 
+  it('저장하는 동안에는 다시 찍기도 안 눌린다 — 눌러도 조용히 무시되는 창을 안 남긴다', async () => {
+    // 저장이 도는 중에 프리뷰로 돌아가면 방금 찍은 사진이 사라진 채로 저장이 끝난다.
+    // 버튼이 살아 있으면 사용자의 의도(취소)가 아무 데도 안 닿는다.
+    vi.mocked(savePhoto).mockReturnValue(new Promise(() => {}));
+    await shoot();
+
+    fireEvent.click(btn('저장'));
+
+    await waitFor(() => expect(btn('다시 찍기').disabled).toBe(true));
+  });
+
+  it('다시 찍기를 누르면 실패 문구가 프리뷰까지 따라오지 않는다', async () => {
+    // 남겨 두면 「저장하지 못했어요」가 아직 찍지도 않은 프리뷰 위에 떠 있게 된다.
+    vi.mocked(savePhoto).mockResolvedValue('fail');
+    await shoot();
+
+    fireEvent.click(btn('저장'));
+    await screen.findByText('저장하지 못했어요. 다시 시도해 주세요');
+    fireEvent.click(btn('다시 찍기'));
+
+    expect(screen.queryByText('저장하지 못했어요. 다시 시도해 주세요')).toBeNull();
+  });
+
   it('닫으면 방금 찍은 사진의 blob URL도 놓아준다', async () => {
     const { unmount } = await shoot();
     unmount();
     expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+});
+
+describe('촬영 화면 — 안내 문구는 어느 화면에나 있다', () => {
+  // 설계 §6.1은 **화면 안 상시 고지**를 요구한다. 심사자는 권한을 거부부터 눌러 보는데,
+  // 그 화면에 고지가 없으면 「카메라를 왜 쓰는가」에 답하는 문장이 심사자 눈에 안 띈다.
+  const NOTICE = '사진은 이 기기에만 저장되며 어디로도 전송되지 않습니다.';
+
+  it('권한 거부 화면에도 적는다', async () => {
+    setup({ media: { getUserMedia: DENIED } });
+    await screen.findByText('카메라 권한이 꺼져 있어요. 토스 앱 설정에서 허용해 주세요');
+
+    expect(screen.getByText(NOTICE)).toBeTruthy();
+  });
+
+  it('카메라를 켜는 중에도 적는다', () => {
+    setup({ media: { getUserMedia: () => new Promise<MediaStream>(() => {}) } });
+
+    expect(screen.getByText('카메라를 켜는 중이에요…')).toBeTruthy();
+    expect(screen.getByText(NOTICE)).toBeTruthy();
+  });
+
+  it('저장할 수 없는 기기 안내에도 적는다', async () => {
+    setup({ idb: undefined });
+    await screen.findByText('이 기기에서는 사진을 저장할 수 없어요');
+
+    expect(screen.getByText(NOTICE)).toBeTruthy();
+  });
+});
+
+describe('촬영 화면 — DB 수명', () => {
+  it('화면을 닫으면 DB 연결도 닫는다 — 안 닫으면 열어 둔 연결만 쌓인다', async () => {
+    const close = await spyOnDbClose();
+    const { unmount } = setup();
+    await screen.findByRole('button', { name: '촬영' });
+
+    unmount();
+
+    expect(close).toHaveBeenCalled();
+    close.mockRestore();
   });
 });
 

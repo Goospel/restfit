@@ -41,12 +41,14 @@ const feelRec = (date: string, feel?: WorkoutRecord['feel']): WorkoutRecord => (
 function setup(o: { profile?: Profile | null; history?: WorkoutRecord[]; session?: Session } = {}) {
   const onFinish = vi.fn();
   const onProfileChange = vi.fn();
+  const onBodyPhoto = vi.fn();
   render(
     <Workout
       session={o.session ?? finished()}
       group="upper"
       onChange={() => {}}
       onFinish={onFinish}
+      onBodyPhoto={onBodyPhoto}
       history={o.history ?? []}
       spec={{}}
       date="2026-08-27"
@@ -54,7 +56,7 @@ function setup(o: { profile?: Profile | null; history?: WorkoutRecord[]; session
       onProfileChange={onProfileChange}
     />,
   );
-  return { onFinish, onProfileChange };
+  return { onFinish, onProfileChange, onBodyPhoto };
 }
 
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
@@ -202,5 +204,29 @@ describe('세트 진행 — 졸업 프리필 (§3.7)', () => {
   it('기구 운동은 25회를 넘겨도 힌트가 없다 — 무게를 얹을 데가 있다', () => {
     setup({ session: running(ex('bench', ['barbell'])), history: did('bench', 20, [26, 26, 26]) });
     expect(screen.queryByText(/더 어려운 동작/)).toBeNull();
+  });
+});
+
+describe('운동 완료 — 눈바디 제안', () => {
+  it('기록을 먼저 저장한 뒤에 촬영을 연다 — 사진 때문에 기록이 뒤로 밀리지 않는다', () => {
+    // 순서가 스펙이다(설계 §3.1). 촬영을 먼저 열면 그 화면에서 앱이 죽거나 사용자가
+    // 뒤로 가는 순간 **방금 한 운동이 통째로 사라진다.** 기록은 사진보다 귀하다.
+    const { onFinish, onBodyPhoto } = setup();
+
+    click(/눈바디/);
+
+    expect(onFinish.mock.calls[0][0].entries).toHaveLength(1);
+    expect(onBodyPhoto).toHaveBeenCalled();
+    expect(onFinish.mock.invocationCallOrder[0]).toBeLessThan(onBodyPhoto.mock.invocationCallOrder[0]);
+  });
+
+  it('고른 체감도 함께 저장된다 — 저장 버튼과 같은 기록이다', () => {
+    // 두 버튼이 서로 다른 기록을 남기면, 눈바디를 누른 날만 피드백이 조용히 빠진다.
+    const { onFinish } = setup();
+    click('힘듦');
+
+    click(/눈바디/);
+
+    expect(onFinish.mock.calls[0][0].feel).toBe('hard');
   });
 });

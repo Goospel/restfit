@@ -1,6 +1,7 @@
 import { GROUP_KO } from '../data/labels';
-import type { WorkoutRecord } from '../storage';
+import { todayKey, type WorkoutRecord } from '../storage';
 import { ui } from '../ui';
+import { LOCAL_ONLY, useObjectUrl, usePhotos } from './usePhotos';
 
 /**
  * 개발용 입구를 배포 번들에서 **코드째** 뺀다.
@@ -20,9 +21,16 @@ const DEV_TOOLS = import.meta.env.MODE !== 'production';
 export function History({
   history,
   onResetOnboarding,
+  onShootPhoto,
+  onComparePhotos,
+  idb,
 }: {
   history: WorkoutRecord[];
   onResetOnboarding: () => void;
+  onShootPhoto: () => void;
+  onComparePhotos: () => void;
+  /** 테스트가 fake-indexeddb를 넣는 자리. 없으면 `globalThis.indexedDB`. */
+  idb?: IDBFactory;
 }) {
   // 저장은 오래된 것이 앞이고, 화면은 최근 것이 앞이다.
   const recent = [...history].reverse();
@@ -30,6 +38,8 @@ export function History({
   return (
     <main style={ui.page}>
       <h1 style={ui.h1}>기록</h1>
+
+      <BodyPhotoCard onShoot={onShootPhoto} onCompare={onComparePhotos} idb={idb} />
 
       {recent.length === 0 ? (
         <div style={ui.empty}>
@@ -78,5 +88,62 @@ export function History({
         </button>
       )}
     </main>
+  );
+}
+
+/**
+ * 눈바디 카드. **운동을 안 한 날에도 찍을 수 있는 유일한 입구**이고(완료 화면 제안은 운동한
+ * 날만 뜬다), 비교 화면으로 가는 유일한 문이다.
+ *
+ * 기록 리스트 **위**에 둔다 — 아래에 두면 기록이 쌓일수록 멀어져, 몇 달 뒤에는 스크롤 두
+ * 화면 밑에 있는 기능이 된다.
+ */
+function BodyPhotoCard({
+  onShoot,
+  onCompare,
+  idb,
+}: {
+  onShoot: () => void;
+  onCompare: () => void;
+  idb?: IDBFactory;
+}) {
+  const { photos } = usePhotos(idb);
+  // 카드에 거는 얼굴은 **최신**이다. 기준(가장 오래된 것)을 걸면 몇 달 전 몸이 계속 걸려 있다.
+  const latest = photos[photos.length - 1];
+  const thumbUrl = useObjectUrl(latest?.blob);
+
+  return (
+    <div style={{ ...ui.card, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {thumbUrl ? (
+          <img
+            src={thumbUrl}
+            alt="최근 눈바디 사진"
+            style={{ width: 56, height: 74, objectFit: 'cover', borderRadius: 8, background: 'var(--bg-sub)' }}
+          />
+        ) : null}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <b style={{ fontSize: 15 }}>눈바디</b>
+          <p style={{ ...ui.sub, margin: '4px 0 0' }}>
+            {latest ? latest.date : '아직 눈바디 사진이 없어요'}
+          </p>
+        </div>
+      </div>
+
+      <div style={{ ...ui.row, marginTop: 12 }}>
+        <button style={{ ...ui.secondary, flex: 1 }} onClick={onShoot}>
+          {/* 하루 1장이라 같은 날 찍으면 덮어쓴다 — 누르기 전에 알린다. */}
+          {latest?.date === todayKey() ? '오늘 다시 찍기' : '오늘 찍기'}
+        </button>
+        {/* 비교할 것이 없는데 문을 열어 두면 빈 화면으로 보내는 버튼이 된다. */}
+        {latest && (
+          <button style={{ ...ui.secondary, flex: 1 }} onClick={onCompare}>
+            비교
+          </button>
+        )}
+      </div>
+
+      <p style={{ ...ui.sub, margin: '10px 0 0' }}>{LOCAL_ONLY}</p>
+    </div>
   );
 }
