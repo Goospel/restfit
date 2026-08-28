@@ -16,7 +16,7 @@ import {
 } from '../logic/session';
 import { adPlan, AD_GROUP_ID, nextAdState, type AdState } from '../logic/adPlan';
 import { defaultWeightFor, type EquipSpec } from '../logic/equipSpec';
-import { BODYWEIGHT_LADDER_REPS, suggestNext } from '../logic/goal';
+import { BODYWEIGHT_LADDER_REPS, GOALS, suggestNext } from '../logic/goal';
 import { EXPERIENCE_KEYS, FEEL_KEYS, FEEL_LABEL, nextExperience, type Feel, type Profile } from '../logic/profile';
 import { lastSetOf, lastSetsOf, recentFeels, type WorkoutRecord } from '../storage';
 import { mmss, specChipStyle, ui } from '../ui';
@@ -299,6 +299,18 @@ export function Workout({
   const repsNum = Number(reps);
   const valid = Number.isFinite(repsNum) && repsNum > 0;
 
+  /**
+   * 목표 반복 범위 이탈 안내. **기구에만 뜬다** — 맨몸은 얹을 무게가 없어서
+   * 「무게를 올려볼 때예요」가 줄 수 없는 조언이다(그 자리는 25회 사다리 안내가 맡는다).
+   *
+   * 구간은 `GOALS[goal].reps`에서 읽는다. 숫자를 문구에 박으면 목적을 바꾼 사람에게
+   * 남의 목표가 뜬다 — 근비대 6~12, 감량 12~20, 건강 8~15로 다 다르다.
+   *
+   * 경계는 **포함**이다(`suggestNext`의 졸업 판정과 같은 규약). 안내일 뿐이라 저장은 안 막는다.
+   */
+  const [repLo, repHi] = GOALS[s.goal].reps;
+  const repOff = !bodyweight && valid ? (repsNum > repHi ? 'over' : repsNum < repLo ? 'under' : null) : null;
+
   return (
     <main style={ui.pageFull}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
@@ -354,7 +366,9 @@ export function Workout({
           <label style={{ flex: 1 }}>
             <span style={ui.label}>횟수</span>
             <input
-              style={ui.input}
+              // ⚠️ `border`가 shorthand라 `borderColor`만 덮으면 React가 리렌더에서 그 값을
+              //    지운다(ui.ts 주석) — shorthand를 통째로 갈아 끼운다.
+              style={repOff === 'over' ? { ...ui.input, border: '1px solid var(--blue)', color: 'var(--blue-dark)' } : ui.input}
               type="number"
               inputMode="numeric"
               min={1}
@@ -363,6 +377,26 @@ export function Workout({
             />
           </label>
         </div>
+
+        {/*
+          두 줄은 **일부러 나눈 것이다.** 한 줄로 흘리면 375px에서 어중간한 자리에 꺾여
+          「목표(6~12회)보다 많아 / 요」가 된다. `keep-all`은 그 위에 어절 중간 꺾임까지 막는다.
+        */}
+        {repOff && (
+          <div
+            style={{
+              fontSize: 13,
+              lineHeight: 1.5,
+              marginTop: 8,
+              textAlign: 'center',
+              wordBreak: 'keep-all',
+              color: repOff === 'over' ? 'var(--blue-dark)' : 'var(--text-sub)',
+            }}
+          >
+            <div>{`목표(${repLo}~${repHi}회)보다 ${repOff === 'over' ? '많아요' : '적어요'}`}</div>
+            <div>{repOff === 'over' ? '무게를 올려볼 때예요' : '무게를 조금 낮춰보세요'}</div>
+          </div>
+        )}
       </div>
 
       <button

@@ -207,6 +207,75 @@ describe('세트 진행 — 졸업 프리필 (§3.7)', () => {
   });
 });
 
+describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
+  const repsInput = () => screen.getByLabelText('횟수') as HTMLInputElement;
+  const typeReps = (v: string) => fireEvent.change(repsInput(), { target: { value: v } });
+  const gym = (goal: Parameters<typeof startSession>[1] = 'muscle') => startSession([ex('bench', ['barbell'])], goal);
+
+  it('상단을 넘기면 두 줄이 온전히 뜬다 — 어중간한 자리에서 꺾이지 않게 줄마다 별도 요소다', () => {
+    setup({ session: gym() }); // muscle 6~12
+    typeReps('15');
+    expect(screen.getByText('목표(6~12회)보다 많아요')).toBeTruthy();
+    expect(screen.getByText('무게를 올려볼 때예요')).toBeTruthy();
+    // ★ 색은 문구와 **따로** 잠근다 — 색상 삼항을 정반대로 뒤집어도 문구 단언은 전부 초록이다(리뷰 실측).
+    //   초과가 파랑인 것은 「무게를 올릴 때가 왔다」는 긍정 신호라서다. 회색이면 지적으로 읽힌다.
+    expect(screen.getByText('무게를 올려볼 때예요').parentElement!.style.color).toBe('var(--blue-dark)');
+  });
+
+  it('상단 초과면 횟수 입력칸 테두리가 파랑으로 바뀐다', () => {
+    // ★ `border`가 shorthand라 `borderColor`만 덮으면 리렌더에서 색이 풀린다(ui.ts 주석).
+    //   shorthand 전체를 갈아 끼웠는지를 여기서 잠근다.
+    setup({ session: gym() });
+    typeReps('15');
+    expect(repsInput().style.border).toBe('1px solid var(--blue)');
+  });
+
+  it('하단에 못 미치면 미달 문구 두 줄이 뜬다', () => {
+    setup({ session: gym() });
+    typeReps('4');
+    expect(screen.getByText('목표(6~12회)보다 적어요')).toBeTruthy();
+    expect(screen.getByText('무게를 조금 낮춰보세요')).toBeTruthy();
+    // 미달은 **회색이어야 한다.** 파랑은 「잘했다」로 읽혀서, 무게를 낮추라는 말과 신호가 어긋난다.
+    expect(screen.getByText('무게를 조금 낮춰보세요').parentElement!.style.color).toBe('var(--text-sub)');
+  });
+
+  it('범위 안이면 아무 안내도 없다 — 경계는 포함이다', () => {
+    setup({ session: gym() });
+    typeReps('12');
+    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+    typeReps('6');
+    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+    expect(repsInput().style.border).toBe('1px solid var(--line-strong)');
+  });
+
+  it('맨몸 운동에는 절대 안 뜬다 — 얹을 무게가 없다', () => {
+    // 맨몸의 진행 수단은 무게가 아니라 동작이라, 「무게를 올려볼 때」는 줄 수 없는 조언이다.
+    setup({ session: startSession([ex('push')], 'muscle') });
+    typeReps('40');
+    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+    typeReps('2');
+    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+  });
+
+  it('구간 숫자는 목적을 따라간다 — 하드코딩이 아니다', () => {
+    setup({ session: gym('fatLoss') }); // 12~20
+    typeReps('25');
+    expect(screen.getByText('목표(12~20회)보다 많아요')).toBeTruthy();
+  });
+
+  it('범위를 벗어나도 세트 완료는 막지 않는다 — 안내지 검문이 아니다', () => {
+    setup({ session: gym() });
+    typeReps('30');
+    expect((screen.getByRole('button', { name: '세트 완료' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('빈 입력에는 안내를 안 낸다 — 지우는 중인 사람을 나무라지 않는다', () => {
+    setup({ session: gym() });
+    typeReps('');
+    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+  });
+});
+
 describe('운동 완료 — 눈바디 제안', () => {
   it('기록을 먼저 저장한 뒤에 촬영을 연다 — 사진 때문에 기록이 뒤로 밀리지 않는다', () => {
     // 순서가 스펙이다(설계 §3.1). 촬영을 먼저 열면 그 화면에서 앱이 죽거나 사용자가
