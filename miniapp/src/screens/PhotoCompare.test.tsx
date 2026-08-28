@@ -41,7 +41,20 @@ vi.mock('../photoStore', async (orig) => {
 
 afterEach(cleanup);
 
-const photo = (date: string): Photo => ({ date, blob: new Blob([date]), capturedAt: 1, width: 720, height: 1280 });
+/**
+ * blob → URL 대응표. **한 장 한 장을 구별할 수 있어야 한다** — 모든 사진에 같은 가짜 URL을
+ * 주면 「어느 사진이 어느 자리에 걸렸는가」를 못 재고, 기준이 선택을 따라 움직여도 날짜
+ * 글씨만 보고 통과시킨다(돌연변이 실측으로 잡힌 공허함이다).
+ */
+const urls = new Map<Blob, string>();
+
+function photo(date: string): Photo {
+  const blob = new Blob([date]);
+  urls.set(blob, `blob:${date}`);
+  return { date, blob, capturedAt: 1, width: 720, height: 1280 };
+}
+
+const srcOf = (alt: string) => (screen.getByAltText(alt) as HTMLImageElement).src;
 
 /** `listPhotos`가 주는 순서 그대로(날짜 오름차순) 준다 — 이 화면이 그 중 무엇을 고르는지가 잴 것이다. */
 const seed = (dates: string[]) => vi.mocked(listPhotos).mockResolvedValue(dates.map(photo));
@@ -62,7 +75,7 @@ beforeEach(() => {
   vi.mocked(deletePhoto).mockResolvedValue(undefined);
   vi.mocked(clearPhotos).mockResolvedValue(undefined);
   // jsdom에는 없다. 만든 URL을 도로 놓아주는지(revoke)가 이 화면의 누수 검증점이다.
-  URL.createObjectURL = vi.fn(() => 'blob:photo');
+  URL.createObjectURL = vi.fn((b: Blob) => urls.get(b) ?? 'blob:모르는사진');
   URL.revokeObjectURL = vi.fn();
 });
 
@@ -88,8 +101,11 @@ describe('비교 화면 — 사진 수에 따른 분기', () => {
     setup();
 
     expect(await screen.findByAltText('기준 사진')).toBeTruthy();
+    // 날짜 글씨가 아니라 **걸린 사진**을 잰다 — 둘이 어긋나는 것이 이 화면의 실패 모드다.
+    expect(srcOf('기준 사진')).toBe('blob:2026-08-01');
     expect(screen.getByText('2026-08-01')).toBeTruthy();
     // 기본 오른쪽은 **최신**이다 — 열자마자 보고 싶은 것은 지금의 몸이다.
+    expect(srcOf('비교 사진')).toBe('blob:2026-08-20');
     expect(screen.getByText('2026-08-20')).toBeTruthy();
     expect(screen.queryByText('2026-08-10')).toBeNull();
   });
@@ -117,8 +133,11 @@ describe('비교 화면 — 날짜 이동', () => {
 
     fireEvent.click(btn('이전 날짜'));
 
+    expect(srcOf('비교 사진')).toBe('blob:2026-08-10');
     expect(screen.getByText('2026-08-10')).toBeTruthy();
-    // 왼쪽까지 움직이면 「무엇 대비 무엇인가」가 흐려진다.
+    // 왼쪽까지 움직이면 「무엇 대비 무엇인가」가 흐려진다. **날짜 글씨는 그대로인데 사진만
+    // 따라 움직이는** 어긋남이 실제로 가능하므로 둘 다 잰다.
+    expect(srcOf('기준 사진')).toBe('blob:2026-08-01');
     expect(screen.getByText('2026-08-01')).toBeTruthy();
     expect(screen.queryByText('2026-08-20')).toBeNull();
   });
