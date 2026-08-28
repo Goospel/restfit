@@ -35,7 +35,8 @@ function setup(
   routine: Routine,
   { history = [], profile = null }: { history?: WorkoutRecord[]; profile?: Profile | null } = {},
 ) {
-  const onOpenSettings = vi.fn();
+  const onOpenEquipment = vi.fn();
+  const onOpenGoal = vi.fn();
   render(
     <Home
       routine={routine}
@@ -44,10 +45,11 @@ function setup(
       profile={profile}
       doneToday={false}
       onStart={() => {}}
-      onOpenSettings={onOpenSettings}
+      onOpenEquipment={onOpenEquipment}
+      onOpenGoal={onOpenGoal}
     />,
   );
-  return onOpenSettings;
+  return { onOpenEquipment, onOpenGoal };
 }
 
 describe('홈 — 오늘의 유닛', () => {
@@ -74,6 +76,19 @@ describe('홈 — 오늘의 유닛', () => {
     expect(screen.getByText(/불편 부위/)).toBeTruthy();
   });
 
+  it('빈 루틴 화면의 두 버튼이 각각 제 페이지로 간다', () => {
+    // 짚어 준 원인이 둘인데 갈 곳이 하나면, 나머지 하나는 짚어만 주고 못 고치게 두는 셈이다.
+    const { onOpenEquipment, onOpenGoal } = setup({ unit: null, exercises: [] });
+
+    fireEvent.click(screen.getByRole('button', { name: '보유 기구 확인' }));
+    expect(onOpenEquipment).toHaveBeenCalled();
+    expect(onOpenGoal).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: '불편한 부위 확인' }));
+    expect(onOpenGoal).toHaveBeenCalled();
+    expect(onOpenEquipment).toHaveBeenCalledTimes(1);
+  });
+
   it('예상 시간이 4종목 기준으로 커진다', () => {
     // 종목 수가 3→4로 는 만큼 세션이 길어진다(설계 §3.8.4 · muscle 기준 ~32분).
     // 여기서 숫자가 안 움직이면 화면이 목록이 아니라 옛 상수를 읽고 있다는 뜻이다.
@@ -91,6 +106,23 @@ describe('홈 — 오늘의 유닛', () => {
   });
 });
 
+describe('홈 — 목적 칩', () => {
+  const routine: Routine = { unit: 'upper', exercises: [ex('a')] };
+
+  it('무엇을 여는 버튼인지 접두어가 말한다', () => {
+    // 목적 이름만 있으면 라벨이 내용의 4분의 1만 말한다 — 「목적 ·」이 정체를, ›가 눌림을 말한다.
+    setup(routine);
+    expect(screen.getByRole('button', { name: '목적 · 근육 키우기 ›' })).toBeTruthy();
+  });
+
+  it('칩은 운동 목적 페이지만 연다', () => {
+    const { onOpenEquipment, onOpenGoal } = setup(routine);
+    fireEvent.click(screen.getByRole('button', { name: /목적 · / }));
+    expect(onOpenGoal).toHaveBeenCalled();
+    expect(onOpenEquipment).not.toHaveBeenCalled();
+  });
+});
+
 describe('홈 — 프로필 안내 칩', () => {
   const CHIP = '경험을 알려주시면 난이도를 맞춰드려요';
   const routine: Routine = { unit: 'upper', exercises: [ex('a'), ex('b')] };
@@ -101,11 +133,13 @@ describe('홈 — 프로필 안내 칩', () => {
     expect(screen.getByText(CHIP)).toBeTruthy();
   });
 
-  it('칩을 누르면 설정이 열린다', () => {
+  it('칩을 누르면 운동 목적 페이지가 열린다', () => {
     // 안내만 하고 갈 곳을 안 주면 「그래서 어디서 하는데」로 끝난다.
-    const open = setup(routine, { history: DONE });
+    // 경험은 운동 목적 페이지에 있다 — 기구 페이지로 보내면 도착해서 답을 못 찾는다.
+    const { onOpenEquipment, onOpenGoal } = setup(routine, { history: DONE });
     fireEvent.click(screen.getByText(CHIP));
-    expect(open).toHaveBeenCalled();
+    expect(onOpenGoal).toHaveBeenCalled();
+    expect(onOpenEquipment).not.toHaveBeenCalled();
   });
 
   it('프로필을 채우면 칩이 사라진다', () => {
