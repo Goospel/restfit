@@ -9,7 +9,10 @@ import { defineConfig } from '@apps-in-toss/web-framework/config';
 export default defineConfig({
   appName: 'home-workout-hard',
   brand: { primaryColor: '#3182F6' },
-  permissions: [],
+  // 카메라는 **눈바디 사진 프로브용**이다 — 네이티브 권한 선언이 없으면 웹뷰의 `getUserMedia`가
+  // 무엇 때문에 막혔는지 알 수 없어(권한 미선언인지 웹뷰가 아예 지원을 안 하는지) 실측이 성립하지 않는다.
+  // 프로브가 실패로 판정되면 이 줄도 함께 걷는다.
+  permissions: [{ name: 'camera', access: 'access' }],
   // ⚠️ 당겨서 새로고침을 끈다 — 진행 중인 세션은 React state에만 있어서 **새로고침 한 번에 그날 기록이 통째로 날아간다.**
   // 운동 중에 화면을 위로 당기는 건 흔한 동작이다. 세션을 저장소에 넣기 전까지 이 한 줄이 유일한 방어다.
   webView: { pullToRefreshEnabled: false },

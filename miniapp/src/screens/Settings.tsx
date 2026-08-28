@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { probeCamera, stopStream, type CameraProbeResult } from '../cameraProbe';
 import { AvoidPicker } from '../components/AvoidPicker';
 import { EquipmentPicker } from '../components/EquipmentPicker';
 import { GoalPicker } from '../components/GoalPicker';
@@ -12,6 +13,13 @@ import { goalStyle, ui } from '../ui';
 
 /** 해금 수치는 **근력만** 센다. 스트레칭까지 넣으면 맨몸 기준이 부풀어 배수가 무너진다. */
 const STRENGTH = EXERCISES.filter((e) => e.category === 'strength');
+
+/**
+ * 개발용 입구를 배포 번들에서 **코드째** 뺀다 — `History.tsx`와 같은 장치다.
+ * 릴리스(`npm run release`)에서는 상수 `false`로 접혀 트리셰이킹으로 사라지고,
+ * 실기기 판정용 번들은 `npm run release:dev`로 뽑는다.
+ */
+const DEV_TOOLS = import.meta.env.MODE !== 'production';
 
 /**
  * 내 조건 — 보유 기구 + 운동 목적.
@@ -116,6 +124,73 @@ export function Settings({
         disabled={!profile}
         onChange={(avoid) => profile && onProfileChange({ ...profile, avoid })}
       />
+
+      {DEV_TOOLS && <CameraProbeSection />}
     </main>
+  );
+}
+
+/**
+ * ⚠️ **임시 프로브다 — 판정이 끝나면 지우거나 눈바디 사진 기능이 흡수한다.**
+ *
+ * 눈바디 사진(매일 같은 구도로 몸 사진)의 이상적 UX는 라이브 프리뷰 위에 어제 사진을
+ * 반투명으로 겹치는 것인데, **토스 웹뷰가 `getUserMedia`를 허용하는지 문서로 확답이 없다.**
+ * 기능을 다 만들고 나서 알게 되면 통째로 버리게 되니, 먼저 실기기에서 한 번 찔러 본다.
+ *
+ * 전면/후면 토글·사진 촬영·저장은 **일부러 없다.** 여기서 재는 것은 「프리뷰가 움직이는가」
+ * 하나뿐이고, 그 답이 UX 갈림길의 전부다(움직인다 → 고스트 오버레이 / 아니다 → 촬영 후 겹쳐보기).
+ */
+function CameraProbeSection() {
+  const [result, setResult] = useState<CameraProbeResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const video = useRef<HTMLVideoElement>(null);
+
+  // 스트림의 수명은 여기 한 곳에서만 끝난다 — 재시도로 결과가 갈릴 때도, 화면을 닫아
+  // 언마운트될 때도 같은 정리를 탄다. 안 끄면 **카메라가 켜진 채로 남아** 다음 시도가 막힌다.
+  useEffect(() => {
+    if (!result?.ok) return;
+    const { stream } = result;
+    if (video.current) video.current.srcObject = stream;
+    return () => stopStream(stream);
+  }, [result]);
+
+  async function run() {
+    setBusy(true);
+    setResult(null); // 앞선 스트림은 위 정리 함수가 끈다
+    // 10초 — 권한 프롬프트를 사람이 읽고 누를 시간은 주되, 웹뷰가 프롬프트를 삼킨 경우
+    // 화면이 「확인 중」에서 영영 굳지는 않게.
+    setResult(await probeCamera(navigator.mediaDevices, { timeoutMs: 10000 }));
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <h1 style={{ ...ui.h1, marginTop: 32 }}>카메라 프리뷰 테스트</h1>
+      <p style={ui.sub}>눈바디 사진 기능이 이 웹뷰에서 되는지 재는 임시 버튼입니다.</p>
+      <div style={ui.card}>
+        <button style={ui.secondary} onClick={run} disabled={busy}>
+          {busy ? '확인 중…' : '카메라 프리뷰 테스트'}
+        </button>
+
+        {result?.ok && (
+          <>
+            <video
+              ref={video}
+              autoPlay
+              playsInline
+              muted
+              style={{ width: '100%', marginTop: 12, borderRadius: 12, background: '#000' }}
+            />
+            <p style={{ ...ui.sub, margin: '8px 0 0' }}>성공 — 프리뷰가 움직이면 OK</p>
+          </>
+        )}
+
+        {/* 실패는 **원문 그대로** 보여준다. NotAllowedError(권한)와 NotFoundError(카메라 없음)와
+            timeout(프롬프트를 삼킴)은 다음 수가 각각 달라서, 뭉뚱그리면 판정이 안 된다. */}
+        {result && !result.ok && (
+          <p style={{ ...ui.sub, margin: '12px 0 0', wordBreak: 'break-all' }}>실패 — {result.detail}</p>
+        )}
+      </div>
+    </>
   );
 }
