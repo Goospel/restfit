@@ -186,7 +186,8 @@ export function History({
  * 하루치 플로팅 카드 — 딤 + 바텀시트.
  *
  * 시트는 화면 **밑변부터** 덮는다(`position: fixed`) — 탭바 위에 얹는 게 아니라 가린다.
- * 탭을 옮기면 화면이 통째로 바뀌므로 그 자체가 닫기와 같다.
+ * 딤이 탭바까지 덮으므로 탭을 누르면 **먼저 시트가 닫힌다**(모달 관례. 이동하려면 한 번 더
+ * 누른다). 탭바는 두 번 반려된 표면이라 z-index로 뚫는 대신 이 동작을 스펙으로 받는다.
  */
 function DayCard({
   date,
@@ -306,7 +307,8 @@ const arrow: React.CSSProperties = {
  *
  * ⚠️ 테두리는 **shorthand를 통째로 갈아 끼운다**(`ui.ts` 머리말) — 기본 스타일에 `border`를
  * 두고 `borderColor`만 덮으면 React가 리렌더에서 그 값을 지워, 첫 렌더에만 색이 보인다.
- * 투명 테두리를 늘 깔아 두는 이유는 오늘 칸만 1px씩 커지지 않게 하기 위해서다.
+ * 투명 테두리를 늘 깔아 두는 이유는 테두리 유무의 자리 차이를 2px에서 1px로 줄이기
+ * 위해서다 — 없애지는 못한다(오늘은 2px, 나머지는 1px).
  */
 const cell = (isToday: boolean): React.CSSProperties => ({
   display: 'flex',

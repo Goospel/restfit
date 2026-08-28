@@ -36,7 +36,17 @@ const key = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, '
 const day = (d: number) => key(THIS_Y, THIS_M, d);
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
-const weekdayOf = (k: string) => WEEKDAY[new Date(`${k}T00:00:00Z`).getUTCDay()];
+
+/**
+ * 달력을 특정 달로 몰고 간다. **요일 단언은 고정 날짜로만 할 수 있어서** 필요하다 —
+ * 오늘 기준으로 만든 날짜의 요일을 테스트가 다시 계산하면 구현과 같은 식을 베낀
+ * 자기참조가 되고, 그 단언은 무엇도 못 잡는다(리뷰 실측).
+ */
+function goTo(year: number, month: number) {
+  const steps = (THIS_Y - year) * 12 + (THIS_M - month);
+  const name = steps > 0 ? '지난달' : '다음달';
+  for (let i = 0; i < Math.abs(steps); i += 1) fireEvent.click(screen.getByRole('button', { name }));
+}
 
 const photo = (date: string): Photo => ({ date, blob: new Blob([date]), capturedAt: 1, width: 720, height: 1280 });
 const seed = (dates: string[]) => vi.mocked(listPhotos).mockResolvedValue(dates.map(photo));
@@ -106,6 +116,14 @@ describe('기록 탭 — 달력', () => {
     const other = todayKey() === day(1) ? day(2) : day(1);
     expect(cellOf(container, other).style.border).not.toBe('2px solid var(--blue)');
   });
+
+  it('오늘 운동했으면 — 버튼이 된 오늘 칸에도 테두리가 남는다', () => {
+    // 활성 칸은 스타일을 한 겹 더 덮는다(`background: none`). 기록 0건으로만 재면 그 분기는
+    // 어떤 테스트도 안 지나는데, 정작 **오늘 운동한 사람**에게는 그쪽이 항상 지나는 길이다.
+    const { container } = setup([rec(todayKey())]);
+    expect(cellOf(container, todayKey()).tagName).toBe('BUTTON');
+    expect(cellOf(container, todayKey()).style.border).toBe('2px solid var(--blue)');
+  });
 });
 
 describe('기록 탭 — 마커', () => {
@@ -174,11 +192,23 @@ describe('기록 탭 — 플로팅 카드', () => {
     open(container, day(10));
 
     const sheet = container.querySelector('[data-sheet]') as HTMLElement;
-    expect(within(sheet).getByText(`${THIS_M}월 10일 ${weekdayOf(day(10))}요일`)).toBeTruthy();
+    // 요일 값 자체는 아래 「2026년 8월 20일은 목요일이다」가 고정 날짜로 잠근다.
+    expect(within(sheet).getByText(new RegExp(`^${THIS_M}월 10일 [일월화수목금토]요일$`))).toBeTruthy();
     expect(within(sheet).getByText('상체')).toBeTruthy();
     expect(within(sheet).getByText('벤치프레스')).toBeTruthy();
     // 표기는 기존 리스트 그대로 — 맨몸이면 `10회`, 무게가 있으면 `20×10`.
     expect(within(sheet).getByText('20×10 · 20×10')).toBeTruthy();
+  });
+
+  it('2026년 8월 20일은 목요일이다 — 요일을 리터럴로 잠근다', () => {
+    const { container } = setup([rec('2026-08-20')]);
+
+    // 오늘이 언제든 그 달로 몰고 간다. 기대값은 계산하지 않고 박아 둔다 —
+    // 테스트가 구현과 같은 식으로 요일을 구하면 둘이 함께 틀려도 초록이다.
+    goTo(2026, 8);
+    fireEvent.click(cellOf(container, '2026-08-20'));
+
+    expect(screen.getByText('8월 20일 목요일')).toBeTruthy();
   });
 
   it('맨몸 세트는 회수로 적는다', () => {
@@ -293,10 +323,13 @@ describe('기록 탭 — 월 요약', () => {
     expect(await screen.findByText(`${THIS_M}월 · 2일 운동 · 눈바디 2장`)).toBeTruthy();
   });
 
-  it('보는 달만 센다 — 지난달 기록은 이번 달 요약에 안 들어간다', () => {
+  it('보는 달만 센다 — 지난달 기록·사진은 이번 달 요약에 안 들어간다', async () => {
+    // 사진 쪽도 지난달 것을 섞어 둔다. 안 섞으면 「이번 달 사진 수」를 「전체 사진 수」로
+    // 바꿔도 0 == 0이라 통과한다 — 범위가 아니라 우연을 재는 테스트가 된다.
+    seed([day(2), key(PREV.y, PREV.m, 20)]);
     setup([rec(day(1)), rec(key(PREV.y, PREV.m, 20))]);
 
-    expect(screen.getByText(`${THIS_M}월 · 1일 운동 · 눈바디 0장`)).toBeTruthy();
+    expect(await screen.findByText(`${THIS_M}월 · 1일 운동 · 눈바디 1장`)).toBeTruthy();
   });
 });
 
@@ -325,6 +358,13 @@ describe('기록 탭 — 눈바디 입구', () => {
 
     expect(screen.getByText(`눈바디 2장 · 최근 ${THIS_M}/2`)).toBeTruthy();
     expect(onComparePhotos).toHaveBeenCalled();
+  });
+
+  it('사진도 이 기기에만 남는다고 적는다 — 기록과 같은 문장', async () => {
+    seed([day(1)]);
+    setup([]);
+
+    expect(await screen.findByText('사진은 이 기기에만 저장되며 어디로도 전송되지 않습니다.')).toBeTruthy();
   });
 
   it('로우에 거는 얼굴은 최신이다', async () => {
