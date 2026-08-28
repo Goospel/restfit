@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ICONS } from '../components/Icon';
 import { MIN_REST_SECONDS } from './adPlan';
-import { DEFAULT_GOAL, GOAL_KEYS, GOALS, midReps, restSecondsForGoal, suggestNext } from './goal';
+import { BODYWEIGHT_LADDER_REPS, DEFAULT_GOAL, GOAL_KEYS, GOALS, midReps, restSecondsForGoal, suggestNext } from './goal';
 
 describe('GOALS', () => {
   it('모든 목적의 휴식이 광고 하한을 넘는다', () => {
@@ -27,6 +27,13 @@ describe('GOALS', () => {
       expect(lo, key).toBeGreaterThan(0);
       expect(hi, key).toBeGreaterThan(lo);
     }
+  });
+
+  it('모든 목적의 하단이 사다리 컷보다 낮다 — 두 안내가 같이 뜨지 않는 근거다', () => {
+    // 세트 진행 화면의 **맨몸 미달 안내**(하단 미만)와 **사다리 안내**(≥25)는 배타인데,
+    // 그 배타를 코드가 아니라 **이 관계 하나**가 떠받친다. 어떤 목적의 하단이 25 이상으로
+    // 오르는 날 둘이 동시에 뜬다 — 이 단언이 없으면 아무도 그 사실을 모른다.
+    for (const key of GOAL_KEYS) expect(GOALS[key].reps[0], key).toBeLessThan(BODYWEIGHT_LADDER_REPS);
   });
 
   it('루틴에 넣을 운동이 최소 1개는 된다', () => {
