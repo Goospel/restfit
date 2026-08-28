@@ -194,7 +194,8 @@ describe('세트 진행 — 졸업 프리필 (§3.7)', () => {
     //   둘 다 두면 같은 문구가 한 화면에 두 번 뜬다. 그 중복을 여기서 잠근다.
     setup({ session: running(ex('push')), history: did('push', 0, [25, 25, 25]) });
     expect(repsInput().value).toBe('26');
-    expect(screen.getAllByText(/더 어려운 동작/)).toHaveLength(1);
+    // 정규식으로 느슨하게 잡으면 완료 화면의 승급 문구(NOTE_UP)까지 걸린다 — 정확 문자열로 센다.
+    expect(screen.getAllByText('더 어려운 동작에 도전할 때예요')).toHaveLength(1);
   });
 
   it('맨몸 24회면 프리필이 25로 올라간다', () => {
@@ -212,10 +213,13 @@ describe('세트 진행 — 맨몸 사다리 안내', () => {
   const typeReps = (v: string) => fireEvent.change(repsInput(), { target: { value: v } });
   const hint = () => screen.queryByText('더 어려운 동작에 도전할 때예요');
 
-  it('25회를 넣으면 그 자리에서 뜬다 — 경계는 포함이다', () => {
+  it('25회를 넣으면 횟수칸 **바로 아래**에 뜬다 — 경계는 포함이다', () => {
     setup({ session: startSession([ex('push')], 'health') });
     typeReps('25');
     expect(hint()).toBeTruthy();
+    // ★ 존재만 보면 안내가 헤더 밑으로 이사해도 초록이다(리뷰가 심어 462건 통과를 실측).
+    //   제보가 「입력했는데 반응이 안 보인다」 계열이라 **입력칸에서 떨어지는 회귀**를 잡아야 한다.
+    expect(repsInput().compareDocumentPosition(hint()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('24회에는 안 뜬다 — 컷은 25다', () => {
@@ -233,11 +237,14 @@ describe('세트 진행 — 맨몸 사다리 안내', () => {
     expect(hint()).toBeNull();
   });
 
-  it('색은 파랑이다 — 지적이 아니라 진급 신호다', () => {
+  it('색은 파랑이고 어절 중간에서 안 꺾인다', () => {
     // ★ 색은 문구와 **따로** 잠근다(PR #56 리뷰 지적). 회색이면 나무라는 말로 읽힌다.
+    // ★ `keep-all`도 잠근다 — 기구와 스타일 상수(`GUIDE`)를 공유하게 되면서 오염 반경이
+    //   두 배가 됐는데, 375px 개행(사용자 명시 요청)을 지탱하는 게 이 속성이다.
     setup({ session: startSession([ex('push')], 'health') });
     typeReps('30');
     expect(hint()!.style.color).toBe('var(--blue-dark)');
+    expect(hint()!.style.wordBreak).toBe('keep-all');
   });
 
   it('25회를 넘겨도 세트 완료는 막지 않는다 — 안내지 검문이 아니다', () => {
@@ -272,6 +279,8 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     typeReps('15');
     expect(screen.getByText('목표(6~12회)보다 많아요')).toBeTruthy();
     expect(screen.getByText('무게를 올려볼 때예요')).toBeTruthy();
+    // 어절 중간 꺾임 방지는 맨몸 안내와 공유하는 `GUIDE` 상수가 쥐고 있다 — 양쪽에서 잠근다.
+    expect(screen.getByText('무게를 올려볼 때예요').parentElement!.style.wordBreak).toBe('keep-all');
     // ★ 색은 문구와 **따로** 잠근다 — 색상 삼항을 정반대로 뒤집어도 문구 단언은 전부 초록이다(리뷰 실측).
     //   초과가 파랑인 것은 「무게를 올릴 때가 왔다」는 긍정 신호라서다. 회색이면 지적으로 읽힌다.
     expect(screen.getByText('무게를 올려볼 때예요').parentElement!.style.color).toBe('var(--blue-dark)');

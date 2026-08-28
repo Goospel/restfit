@@ -327,11 +327,14 @@ export function Workout({
    * 경계는 **포함**이다(`BODYWEIGHT_LADDER_REPS`의 규약). 입력칸 색은 안 바꾼다 — 기구의
    * 파란 테두리는 「무게 칸을 봐라」와 묶인 신호인데 맨몸엔 무게 칸이 없다.
    *
-   * ⚠️ 형제인 `repOff`와 달리 **`valid`를 안 낀다.** 25 이상이면 그 자체로 유한한 양수라
-   * `valid`가 항상 참이다(빈 입력은 `Number('')`가 0이라 컷에 못 닿는다) — 어떤 테스트로도
-   * 죽지 않는 조건은 코드가 아니라 소음이다. `repOff`는 미달 판정이 있어서 진짜로 필요하다.
+   * ⚠️ `valid`는 **테스트로 죽지 않는 방어다**(리뷰 실측 — 빼도 462건 전부 통과). 그래도
+   * 남긴다: 지금 안전한 이유가 이 조건이 아니라 **`<input type="number">`의 value
+   * sanitization**이기 때문이다 — jsdom 실측에서 `'1e999'`·`'Infinity'`가 `''`로 비워져
+   * 컷에 못 닿지만, `type="text"`로 바꾸는 순간 `Number('1e999') === Infinity`가 컷을
+   * **통과한다**(`Infinity >= 25`는 참). 한 토큰짜리 가드로 그 전제를 안 사도 되고,
+   * 형제인 `repOff`와 조건 모양도 같아진다.
    */
-  const ladder = bodyweight && repsNum >= BODYWEIGHT_LADDER_REPS;
+  const ladder = bodyweight && valid && repsNum >= BODYWEIGHT_LADDER_REPS;
 
   return (
     <main style={ui.pageFull}>
