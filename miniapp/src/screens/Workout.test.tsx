@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
 // ⚠️ 전역으로 켜면 shareLinks 테스트가 죽는다 — 이유는 `Onboarding.test.tsx` 머리말 참조.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Exercise } from '../data/exercises';
 import type { Profile } from '../logic/profile';
+import { warnColors } from '../logic/restCue';
 import { startSession, type Session } from '../logic/session';
+import { playCue, primeSound } from '../restSound';
 import type { WorkoutRecord } from '../storage';
 import { Workout } from './Workout';
+
+// 소리는 스파이로만 본다 — 웹 오디오는 jsdom에 없고, 판정은 전부 `restCue.ts`에 있다(설계 §3.4).
+vi.mock('../restSound', () => ({ playCue: vi.fn(), primeSound: vi.fn() }));
 
 afterEach(cleanup);
 
@@ -423,6 +429,137 @@ describe('세트 진행 — 맨몸 미달 안내', () => {
     setup({ session: bw('fatLoss') }); // 12~20
     typeReps('5');
     expect(screen.getByText('목표(12~20회)보다 적어요')).toBeTruthy();
+  });
+});
+
+describe('휴식 — 마지막 10초 준비 신호', () => {
+  // 폰을 내려놓고 쉬는 사람이 다음 세트 시작을 놓치지 않게 하는 신호다(설계 2026-08-29).
+  // 시간은 fake timers로 민다 — `restEndsAt`이 절대 시각이라 시계만 옮기면 남은 초가 따라온다.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(playCue).mockClear();
+    vi.mocked(primeSound).mockClear();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** 휴식 길이는 40초 미만으로 둔다 — 40 이상이면 광고 effect가 깨어나 이 테스트가 광고까지 겸한다. */
+  function resting(seconds: number): Session {
+    const s = startSession([ex('push'), ex('pull')], 'health');
+    return { ...s, done: [[{ weight: 0, reps: 10 }], []], restEndsAt: Date.now() + seconds * 1000 };
+  }
+
+  /** 세션을 실제로 들고 도는 하네스 — `onChange`가 죽어 있으면 「건너뛰기」가 화면을 못 바꾼다. */
+  function Harness({ initial }: { initial: Session }) {
+    const [s, setS] = useState(initial);
+    return (
+      <Workout
+        session={s}
+        group="upper"
+        onChange={setS}
+        onFinish={() => {}}
+        onBodyPhoto={() => {}}
+        history={[]}
+        spec={{}}
+        date="2026-08-29"
+        profile={{ experience: 'beginner', avoid: [] }}
+        onProfileChange={() => {}}
+      />
+    );
+  }
+
+  const enterRest = (seconds: number) => render(<Harness initial={resting(seconds)} />);
+  /**
+   * 시계를 250ms **한 틱씩** 민다.
+   *
+   * ⚠️ 한 `act`에 12초를 통째로 밀면 React가 48번의 갱신을 하나로 합쳐, 12→0으로 **한 번에**
+   * 건너뛴 것이 된다(그건 백그라운드 복귀 시나리오다 — 아래에 따로 있다). 실제 앱의 시간
+   * 흐름은 틱마다 커밋되므로 여기서도 틱마다 민다.
+   */
+  const tick = (ms: number) => {
+    for (let i = 0; i < ms; i += 250) act(() => void vi.advanceTimersByTime(250));
+  };
+  /** 화면이 멈춰 있는 동안 시간만 흐른 경우(백그라운드 스로틀) — 갱신이 한 번에 몰린다. */
+  const jump = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+  const restMain = () => screen.getByText('휴식').closest('main')!;
+  const timer = (sec: number) => screen.getByText(`0:${String(sec).padStart(2, '0')}`);
+  const cues = () => vi.mocked(playCue).mock.calls.map((c) => c[0]);
+
+  it('10초 밖에서는 아무것도 달라지지 않는다 — 신호는 마지막 10초에만 산다', () => {
+    enterRest(30);
+    expect(screen.queryByText('다음 세트 준비')).toBeNull();
+    // ★ 트랜지션 걸린 속성이라 computed style은 못 믿는다(글로벌 원칙) — 인라인 목표값을 본다.
+    expect(restMain().style.background).toBe(warnColors(30).bg);
+    expect(cues()).toEqual([]);
+  });
+
+  it('8초에는 문구가 뜨고 배경이 그만큼 물든다', () => {
+    enterRest(12);
+    tick(4000);
+    expect(timer(8)).toBeTruthy();
+    expect(screen.getByText('다음 세트 준비')).toBeTruthy();
+    expect(restMain().style.background).toBe(warnColors(8).bg);
+    // 램프여야 눈에 계단이 안 보인다 — 1초 단위 갱신을 트랜지션이 메운다.
+    expect(restMain().style.transition).toBe('background 1s linear');
+  });
+
+  it('경계마다 한 번씩만 울린다 — 딩동 · 틱틱틱 · 시작음', () => {
+    // ★ 250ms 틱이 초당 네 번 도는데 반복 가드가 없으면 같은 신호가 네 번씩 겹친다.
+    //   순서와 개수를 통째로 단언해 「중복」과 「누락」을 한 줄에서 잠근다.
+    enterRest(12);
+    tick(12000);
+    expect(cues()).toEqual(['warn', 'tick', 'tick', 'tick', 'go']);
+  });
+
+  it('백그라운드에 다녀와 12초가 통째로 지났으면 시작음 하나만 낸다', () => {
+    // 결정 6 — 놓친 신호를 몰아서 내면 복귀하는 순간 소리가 폭발한다.
+    enterRest(12);
+    jump(12000);
+    expect(cues()).toEqual(['go']);
+  });
+
+  it('휴식을 건너뛰면 그 뒤로는 아무 신호도 없다', () => {
+    // 나간 화면의 타이머가 계속 울면 세트를 하는 도중에 시작음이 난다.
+    enterRest(12);
+    click('휴식 건너뛰기');
+    tick(12000);
+    expect(cues()).toEqual([]);
+  });
+
+  it('4초부터는 글자가 흰색으로 뒤집힌다 — 5초엔 아직 검정이다', () => {
+    // 배경이 어두워진 뒤에도 검정 글자면 숫자가 안 읽힌다. 문턱은 `warnColors`가 혼자 쥔다.
+    enterRest(12);
+    tick(7000);
+    expect(timer(5).style.color).toBe('var(--text)');
+    tick(1000);
+    expect(timer(4).style.color).toBe('rgb(255, 255, 255)'); // jsdom이 hex를 rgb로 정규화한다
+    // 건너뛰기 버튼도 함께 뒤집힌다 — 붉은 배경 위에 회색 버튼만 남으면 그것만 안 읽힌다.
+    // ⚠️ `border`는 shorthand라 통째로 갈아 끼워야 리렌더에서 안 풀린다(ui.ts 주석).
+    const skip = screen.getByRole('button', { name: '휴식 건너뛰기' });
+    expect(skip.style.color).toBe('rgb(255, 255, 255)'); // jsdom이 hex를 rgb로 정규화한다
+    expect(skip.style.border).toBe('1px solid rgba(255, 255, 255, 0.45)');
+  });
+
+  it('마지막 3초는 숫자가 초마다 한 번 뛴다 — 8초엔 안 뛴다', () => {
+    // 초당 1회다(결정 7 · 3Hz 이상 점멸 금지). `key`가 없으면 리마운트가 없어 첫 초만 뛴다.
+    enterRest(12);
+    tick(4000);
+    expect(timer(8).className).toBe('');
+    tick(5000);
+    expect(timer(3).className).toBe('cue-pulse');
+    // ★ 클래스만 보면 `key`를 지워도 초록이다(돌연변이 실측) — 클래스는 3·2·1 내내 붙어 있고,
+    //   CSS 애니메이션은 **리마운트될 때만** 다시 재생되기 때문이다. jsdom은 애니메이션을 안
+    //   돌리므로 관측 가능한 것은 **노드 교체**뿐이다: 초가 바뀌면 다른 DOM 노드여야 한다.
+    const at3 = timer(3);
+    tick(1000);
+    expect(timer(2).className).toBe('cue-pulse');
+    expect(timer(2)).not.toBe(at3);
+  });
+
+  it('「세트 완료」를 누르면 소리를 깨운다 — 브라우저 오디오는 제스처 뒤에만 열린다', () => {
+    // ★ 미배선이면 휴식 내내 소리가 통째로 안 난다. 화면은 멀쩡해서 눈으로는 절대 안 잡힌다.
+    setup({ session: startSession([ex('push')], 'health') });
+    click('세트 완료');
+    expect(primeSound).toHaveBeenCalled();
   });
 });
 

@@ -70,6 +70,23 @@ input[type='number']::-webkit-inner-spin-button {
   margin: 0;
 }
 
+/* 휴식 마지막 3초 심장박동. 초가 바뀔 때 리마운트로 1회 재생된다(`key={left}`) — 초당 1회다.
+   ⚠️ 3Hz 이상 점멸은 광과민성 위험이라 주기를 여기서 줄이지 않는다. */
+@keyframes cue-pulse {
+  50% {
+    transform: scale(1.07);
+  }
+}
+.cue-pulse {
+  animation: cue-pulse 160ms ease-out;
+}
+/* 움직임을 줄여 달라고 한 사람에겐 색 램프만 남는다 — 색은 모션이 아니라 그대로 둔다. */
+@media (prefers-reduced-motion: reduce) {
+  .cue-pulse {
+    animation: none;
+  }
+}
+
 input:focus,
 button:focus-visible {
   outline: 2px solid var(--blue);
