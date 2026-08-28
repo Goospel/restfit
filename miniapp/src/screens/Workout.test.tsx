@@ -217,6 +217,9 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     typeReps('15');
     expect(screen.getByText('목표(6~12회)보다 많아요')).toBeTruthy();
     expect(screen.getByText('무게를 올려볼 때예요')).toBeTruthy();
+    // ★ 색은 문구와 **따로** 잠근다 — 색상 삼항을 정반대로 뒤집어도 문구 단언은 전부 초록이다(리뷰 실측).
+    //   초과가 파랑인 것은 「무게를 올릴 때가 왔다」는 긍정 신호라서다. 회색이면 지적으로 읽힌다.
+    expect(screen.getByText('무게를 올려볼 때예요').parentElement!.style.color).toBe('var(--blue-dark)');
   });
 
   it('상단 초과면 횟수 입력칸 테두리가 파랑으로 바뀐다', () => {
@@ -232,6 +235,8 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     typeReps('4');
     expect(screen.getByText('목표(6~12회)보다 적어요')).toBeTruthy();
     expect(screen.getByText('무게를 조금 낮춰보세요')).toBeTruthy();
+    // 미달은 **회색이어야 한다.** 파랑은 「잘했다」로 읽혀서, 무게를 낮추라는 말과 신호가 어긋난다.
+    expect(screen.getByText('무게를 조금 낮춰보세요').parentElement!.style.color).toBe('var(--text-sub)');
   });
 
   it('범위 안이면 아무 안내도 없다 — 경계는 포함이다', () => {
