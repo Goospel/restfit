@@ -142,6 +142,24 @@ describe('비교 화면 — 날짜 이동', () => {
     expect(screen.queryByText('2026-08-20')).toBeNull();
   });
 
+  it('기준까지 되돌아와도 좌우에 같은 사진을 걸지 않는다', async () => {
+    // 같은 사진 두 장은 「변화가 없다」는 거짓말이다. 왼쪽이 접히고 라벨이 그 자리를 말한다.
+    seed(['2026-08-01', '2026-08-10', '2026-08-20']);
+    setup();
+    await screen.findByAltText('기준 사진');
+
+    fireEvent.click(btn('이전 날짜'));
+    fireEvent.click(btn('이전 날짜'));
+
+    expect(screen.queryByAltText('기준 사진')).toBeNull();
+    expect(srcOf('비교 사진')).toBe('blob:2026-08-01');
+    expect(screen.getByText('이 사진이 기준입니다')).toBeTruthy();
+    // ⚠️ **이 자리를 「이전 날짜 비활성」으로 막으면 안 된다** — 기준을 바꾸는 유일한 길이
+    // 기준을 골라 지우는 것이라(설계 §4.2), 못 오게 하면 기준이 영영 고정된다.
+    expect(btn('이 사진 삭제')).toBeTruthy();
+    expect(btn('다음 날짜').disabled).toBe(false);
+  });
+
   it('양 끝에서는 더 못 넘긴다', async () => {
     seed(['2026-08-01', '2026-08-10']);
     setup();

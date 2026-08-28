@@ -27,8 +27,15 @@ export function PhotoCompare({ onClose, idb }: { onClose: () => void; idb?: IDBF
 
   const baseline = photos[0];
   const right: Photo | undefined = photos[at];
-  // 한 장뿐이면 좌우가 같은 사진이 된다 — 그건 「변화가 없다」는 거짓말이라 왼쪽을 안 건다.
-  const baselineUrl = useObjectUrl(photos.length > 1 ? baseline?.blob : undefined);
+  /**
+   * ⚠️ **조건은 「사진이 여럿인가」가 아니라 「고른 것이 기준 자신이 아닌가」다.**
+   * 앞엣것으로 재면 3장에서 「이전 날짜」를 끝까지 넘겼을 때(`at === 0`) **좌우에 같은 사진이
+   * 걸린다** — 그건 「변화가 없다」는 거짓말이다(리뷰 실측).
+   *
+   * 그 자리를 「이전 날짜 비활성」으로 막지 않는 이유: 기준을 바꾸는 유일한 길이 **기준을
+   * 골라 지우는 것**이라(설계 §4.2), 거기 못 가게 하면 기준이 영영 고정된다.
+   */
+  const baselineUrl = useObjectUrl(at > 0 ? baseline?.blob : undefined);
   const rightUrl = useObjectUrl(right?.blob);
 
   async function removeOne() {
@@ -89,7 +96,8 @@ export function PhotoCompare({ onClose, idb }: { onClose: () => void; idb?: IDBF
             <img src={baselineUrl} alt="기준 사진" style={imgStyle} />
           </Pane>
         )}
-        <Pane label={photos.length > 1 ? '선택한 날' : ''} date={right!.date}>
+        {/* 한 칸으로 접히는 자리다. 라벨이 「지금 보는 것이 기준이다」를 대신 말한다. */}
+        <Pane label={at === 0 ? '이 사진이 기준입니다' : '선택한 날'} date={right!.date}>
           <img src={rightUrl ?? undefined} alt="비교 사진" style={imgStyle} />
         </Pane>
       </div>
