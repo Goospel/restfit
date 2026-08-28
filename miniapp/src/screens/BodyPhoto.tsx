@@ -37,6 +37,7 @@ const alive = (stream: MediaStream) => stream.getTracks().some((t) => t.readySta
 const DOWN_NOTICE = '카메라가 중단됐어요';
 const QUOTA_NOTICE = '공간이 부족해요 — 오래된 사진을 지워 주세요';
 const SAVE_NOTICE = '저장하지 못했어요. 다시 시도해 주세요';
+const SHOT_NOTICE = '사진을 찍지 못했어요. 다시 시도해 주세요';
 
 /** 사람이 프롬프트를 읽고 누를 시간은 주되, 웹뷰가 프롬프트를 삼켰을 때 화면이 굳지는 않게. */
 const OPEN_TIMEOUT_MS = 10000;
@@ -68,6 +69,8 @@ export function BodyPhoto({
 
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  /** 자동 재연결을 이미 한 번 썼는가. 살아 있는 스트림을 다시 잡으면 도로 풀린다. */
+  const autoTried = useRef(false);
 
   /**
    * 카메라를 연다. **스트림의 수명이 이 effect 하나에 갇힌다** — 화면을 닫으면 반드시 꺼진다.
@@ -126,7 +129,18 @@ export function BodyPhoto({
     const check = () => {
       if (document.visibilityState !== 'visible') return;
       // 첫 취득 실패(권한 거부 등)는 여기서 안 건드린다 — 안 그러면 영영 도는 재시도가 된다.
-      if (cam?.ok && !alive(cam.stream)) reconnect();
+      if (!cam?.ok) return;
+      if (alive(cam.stream)) return void (autoTried.current = false);
+      /*
+        ⚠️ **자동 재연결은 한 번뿐이다.** `reconnect()`가 `cam`을 바꾸고 이 effect의 deps가
+        `cam`이라, 다시 취득한 스트림**마저 죽어 있으면** 판정 → 재취득 → 판정으로 영영 돈다
+        (리뷰 실측: 5초에 `getUserMedia` 463회, `down`이 진동해 「다시 연결」 버튼조차 못 누른다).
+        iOS 녹화 중에는 재취득이 실제로 muted 트랙을 돌려주므로 **가정이 아니라 그 상황이다.**
+        두 번째부터는 사람에게 넘긴다 — 녹화를 끄는 것은 우리가 못 하는 일이다.
+      */
+      if (autoTried.current) return setDown(true);
+      autoTried.current = true;
+      reconnect();
     };
     check();
     document.addEventListener('visibilitychange', check);
@@ -176,12 +190,14 @@ export function BodyPhoto({
     if (!video.current || !canvas.current) return;
     const got = await captureJpeg(video.current, canvas.current);
     /*
-      프레임이 아직 0×0인 경우다. 빈 사진을 저장하는 것보다 낫고, **여기서 중단으로 넘긴다** —
-      실기기(iOS 화면 녹화)에서 얼어붙은 프리뷰가 정확히 이 경로로 나타났다. 「다시 시도해
-      주세요」 한 줄로 끝내면 **죽은 트랙에 대고 영영 셔터만 누르게 된다.** 트랙이 겉보기
-      live여도(mute) 프레임은 안 오므로 mute 리스너와 함께 이중 그물이다.
+      캡처가 빈손인 경로는 셋이고 **셋 중 둘은 카메라가 멀쩡하다**: 프레임이 아직 0×0(진입
+      직후·다시 찍기 직후의 좁은 창) · 2D 컨텍스트 없음 · `toBlob` 실패. 그래서 **트랙이
+      죽었을 때만** 중단으로 넘긴다 — 무조건 중단으로 보내면 한 번 삐끗한 캡처가 멀쩡한
+      카메라 세션을 통째로 철거하고 「다른 앱이 카메라를…」이라는 **틀린 안내**까지 띄운다.
+      죽은 트랙이면 반대로 「다시 시도해 주세요」가 거짓말이다(영영 안 되는 셔터를 권한다) —
+      실기기(iOS 화면 녹화)의 얼어붙은 프리뷰가 정확히 이 경로로 나왔다.
     */
-    if (!got) return interrupt();
+    if (!got) return cam?.ok && !alive(cam.stream) ? interrupt() : setNotice(SHOT_NOTICE);
     setNotice(null);
     setShot(got);
   }
@@ -220,7 +236,14 @@ export function BodyPhoto({
         <p style={{ ...ui.h2, margin: '0 0 6px' }}>{cam ? DOWN_NOTICE : '카메라를 다시 여는 중이에요…'}</p>
         {cam && (
           <>
-            <p style={ui.sub}>다른 앱이 카메라를 쓰고 있으면 그 앱을 닫고 다시 연결해 주세요.</p>
+            {/*
+              재취득이 **왜** 실패했는지 아는 경우가 있다(세션 중에 권한이 회수되거나 웹뷰가
+              카메라를 아예 못 여는 상태). 그때까지 「다른 앱이 쓰고 있나 봐요」로 뭉개면
+              사용자는 고칠 수 있는 일(설정에서 허용)을 영영 모른 채 재시도만 반복한다.
+            */}
+            <p style={ui.sub}>
+              {cam.ok ? '다른 앱이 카메라를 쓰고 있으면 그 앱을 닫고 다시 연결해 주세요.' : cameraNotice(cam.detail)}
+            </p>
             <button style={ui.primary} onClick={reconnect}>
               다시 연결
             </button>

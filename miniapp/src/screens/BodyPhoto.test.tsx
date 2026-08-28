@@ -76,7 +76,9 @@ function fakeStream() {
     else track.muted = true;
     (on[type] ?? []).forEach((f) => f());
   };
-  return { stream: { getTracks: () => [track] } as unknown as MediaStream, stop, kill };
+  /** 이벤트 없이 죽는다. 백그라운드에서 끊기면 신호를 못 받고 지나가는 경우가 실제로 있다. */
+  const silentlyDie = () => void (track.readyState = 'ended');
+  return { stream: { getTracks: () => [track] } as unknown as MediaStream, stop, kill, silentlyDie };
 }
 
 const shot = { blob: new Blob(['jpeg'], { type: 'image/jpeg' }), width: 720, height: 1280 };
@@ -286,13 +288,14 @@ describe('촬영 화면 — 카메라 수명', () => {
 });
 
 /**
- * 실기기에서 실제로 터진 구멍이다(안드로이드 토스 앱, 촬영 화면을 연 채 **화면 녹화 시작**→
+ * 실기기에서 실제로 터진 구멍이다(아이폰 · 토스 iOS 앱, 촬영 화면을 연 채 **화면 녹화 시작**→
  * 프리뷰가 얼어붙는다). 녹화 앱이 카메라를 물거나 앱이 잠깐 백그라운드로 밀리면 트랙이
  * `ended`/`mute`가 되는데, 화면을 닫았다 다시 열기 전에는 살아나지 않았다.
  */
 describe('촬영 화면 — 카메라 중단과 복구', () => {
   const DOWN = '카메라가 중단됐어요';
   const BUSY = Object.assign(new Error('camera in use'), { name: 'NotReadableError' });
+  const DENIED_ERR = Object.assign(new Error('Permission denied'), { name: 'NotAllowedError' });
 
   /** 순서대로 답하는 카메라. **여러 번 열리는** 경로를 재려면 취득이 매번 같은 답이면 안 된다. */
   function opens(...results: (MediaStream | Error)[]) {
@@ -361,6 +364,76 @@ describe('촬영 화면 — 카메라 중단과 복구', () => {
 
     expect(screen.queryByText(DOWN)).toBeNull();
     expect(btn('촬영')).toBeTruthy();
+  });
+
+  it('죽은 트랙에서 캡처가 빈손이면 그때는 중단으로 넘긴다', async () => {
+    // 여기서 「다시 시도해 주세요」는 거짓말이다 — 영영 안 되는 셔터를 권하는 셈이다.
+    vi.mocked(captureJpeg).mockResolvedValue(null);
+    const a = fakeStream();
+    setup({ media: opens(a.stream) });
+    await screen.findByRole('button', { name: '촬영' });
+    // 트랙만 조용히 죽인다(이벤트 없이) — 캡처 실패가 유일한 신호인 상황을 만든다.
+    a.silentlyDie();
+
+    fireEvent.click(btn('촬영'));
+
+    expect(await screen.findByText(DOWN)).toBeTruthy();
+    expect(screen.queryByText('사진을 찍지 못했어요. 다시 시도해 주세요')).toBeNull();
+  });
+
+  it('재취득한 스트림마저 죽어 있어도 무한히 다시 열지 않는다 — 수동 폴백에 안착한다', async () => {
+    /*
+      ⚠️ `reconnect()`가 `cam`을 바꾸고 이 effect의 deps가 `cam`이라, 가드가 없으면
+      판정 → 재취득 → 판정으로 영영 돈다(리뷰 실측 5초에 463회). 그동안 `down`이 진동해
+      **「다시 연결」 버튼조차 못 누른다** — 수동 폴백이 있으나 마나가 된다.
+      iOS 녹화 중에는 재취득이 실제로 muted 트랙을 돌려주므로 가정이 아니라 그 상황이다.
+    */
+    const a = fakeStream();
+    const stillDead = fakeStream();
+    stillDead.kill('mute');
+    const gum = vi.fn(async () => (gum.mock.calls.length === 1 ? a.stream : stillDead.stream));
+    setup({ media: { getUserMedia: gum } });
+    await screen.findByRole('button', { name: '촬영' });
+    act(() => a.kill('mute'));
+
+    comeBack();
+    expect(await screen.findByRole('button', { name: '다시 연결' })).toBeTruthy();
+    await act(async () => {});
+
+    // 자동은 딱 한 번(최초 1 + 재취득 1). 녹화를 끄는 것은 우리가 못 하는 일이라 사람에게 넘긴다.
+    expect(gum).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(DOWN)).toBeTruthy();
+  });
+
+  it('살아 있는 스트림을 다시 잡으면 자동 재연결이 다시 쓸 수 있게 풀린다', async () => {
+    // 한 세션에서 녹화를 두 번 켜는 사람이 있다. 첫 복구 뒤 자동이 영영 잠기면 두 번째는 수동뿐이다.
+    const a = fakeStream();
+    const b = fakeStream();
+    const c = fakeStream();
+    const { container } = setup({ media: opens(a.stream, b.stream, c.stream) });
+    await screen.findByRole('button', { name: '촬영' });
+
+    act(() => a.kill('mute'));
+    comeBack();
+    await waitFor(() => expect(container.querySelector('video')!.srcObject).toBe(b.stream));
+
+    act(() => b.kill('mute'));
+    comeBack();
+
+    await waitFor(() => expect(container.querySelector('video')!.srcObject).toBe(c.stream));
+  });
+
+  it('재연결이 권한 거부로 실패하면 그 원인을 말한다 — 사용자가 고칠 수 있는 유일한 실패다', async () => {
+    // 세션 중에 권한이 회수될 수 있다. 「다른 앱이 쓰고 있나 봐요」로 뭉개면 설정으로 갈 생각을 못 한다.
+    const a = fakeStream();
+    setup({ media: opens(a.stream, DENIED_ERR) });
+    await screen.findByRole('button', { name: '촬영' });
+    act(() => a.kill('ended'));
+
+    comeBack();
+
+    expect(await screen.findByText('카메라 권한이 꺼져 있어요. 토스 앱 설정에서 허용해 주세요')).toBeTruthy();
+    expect(screen.getByText(DOWN)).toBeTruthy();
   });
 
   it('숨어 있는 동안에는 다시 열지 않는다 — 보이지도 않는 화면에 카메라만 켜는 셈이다', async () => {
@@ -547,19 +620,21 @@ describe('촬영 화면 — 확인과 저장', () => {
     expect(screen.queryByText('공간이 부족해요 — 오래된 사진을 지워 주세요')).toBeNull();
   });
 
-  it('캡처가 실패하면 확인 화면으로 안 넘어가고 중단으로 넘긴다 — 실기기에서 나온 경로다', async () => {
+  it('캡처가 실패해도 카메라가 멀쩡하면 안내만 하고 프리뷰를 지킨다', async () => {
     /*
-      프레임이 0×0으로 돌아오는 경우다. 실기기(iOS 화면 녹화 뒤 얼어붙은 프리뷰)에서
-      실제로 이 경로가 나왔다 — 「다시 시도해 주세요」 한 줄로 끝내면 사용자는 **죽은
-      트랙에 대고 영영 셔터만 누른다.** 재연결 흐름에 태우는 것이 유일하게 되는 길이다.
+      빈손인 경로 셋 중 둘은 **트랙이 살아 있다**(0×0 프레임 · 2D 컨텍스트 없음 · toBlob 실패).
+      한 번 삐끗한 캡처로 멀쩡한 카메라 세션을 철거하면, 진입 직후 촬영을 빠르게 누른
+      사용자에게 「다른 앱이 카메라를 쓰고 있어요」라는 **틀린 안내**까지 얹게 된다.
     */
     vi.mocked(captureJpeg).mockResolvedValue(null);
     setup();
     fireEvent.click(await screen.findByRole('button', { name: '촬영' }));
 
-    expect(await screen.findByRole('button', { name: '다시 연결' })).toBeTruthy();
-    expect(screen.getByText('카메라가 중단됐어요')).toBeTruthy();
+    expect(await screen.findByText('사진을 찍지 못했어요. 다시 시도해 주세요')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '저장' })).toBeNull();
+    // 프리뷰는 그대로 서 있어야 한다 — 다음 셔터가 바로 눌린다.
+    expect(btn('촬영')).toBeTruthy();
+    expect(screen.queryByText('카메라가 중단됐어요')).toBeNull();
   });
 
   it('저장하는 동안에는 다시 찍기도 안 눌린다 — 눌러도 조용히 무시되는 창을 안 남긴다', async () => {
