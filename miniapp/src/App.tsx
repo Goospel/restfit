@@ -11,6 +11,7 @@ import { BodyPhoto } from './screens/BodyPhoto';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
+import { PhotoCompare } from './screens/PhotoCompare';
 import { Settings } from './screens/Settings';
 import { Shop } from './screens/Shop';
 import { Workout } from './screens/Workout';
@@ -49,13 +50,11 @@ export function App() {
   /** 「내 조건」(보유 기구·목적). 탭이 아니라 홈의 목적 칩에서 여는 전체화면이다. */
   const [settings, setSettings] = useState(false);
   /**
-   * 눈바디 촬영. `settings`와 같은 boolean 하나짜리 전체화면이다 — 라우터·컨텍스트는 안 들인다.
-   *
-   * ⚠️ **아직 여는 곳이 없다.** 진입점(완료 화면 한 줄 · 기록 탭 눈바디 카드)은 다음 PR
-   * 몫이라 지금은 화면과 배선만 서 있다 — 임시 버튼을 달면 그건 다음 PR에서 도로 지울
-   * 코드다(프로브 UI를 방금 그렇게 지웠다).
+   * 눈바디 화면. `settings`와 같은 전체화면이고, 값 하나가 「촬영이냐 비교냐 아니냐」를 다 말한다 —
+   * boolean 둘로 두면 **둘 다 켜진 상태**가 생기고 그때 무엇을 그릴지 화면이 정해야 한다.
+   * 라우터·컨텍스트는 안 들인다.
    */
-  const [bodyPhoto, setBodyPhoto] = useState(false);
+  const [photoView, setPhotoView] = useState<'shoot' | 'compare' | null>(null);
   /** `null`이면 온보딩을 아직 안 끝냈다는 뜻이다. 기본값을 여기서 대신 채우면 그 구분이 사라진다. */
   const [goal, setGoal] = useState<Goal | null>(loadGoal);
   /**
@@ -148,7 +147,8 @@ export function App() {
   }
 
   // 촬영 중에는 탭도 루틴도 안 보인다 — 카메라를 켜 놓고 딴 화면으로 샐 이유가 없다.
-  if (bodyPhoto) return <BodyPhoto onClose={() => setBodyPhoto(false)} />;
+  if (photoView === 'shoot') return <BodyPhoto onClose={() => setPhotoView(null)} />;
+  if (photoView === 'compare') return <PhotoCompare onClose={() => setPhotoView(null)} />;
 
   if (settings) {
     return (
@@ -174,6 +174,9 @@ export function App() {
         group={routine.unit}
         onChange={setSession}
         onFinish={finish}
+        // 완료 화면의 눈바디 제안. `finish`가 먼저 돌고 나서 촬영이 열린다 — 사진 때문에
+        // 기록 저장이 뒤로 밀리는 경로를 만들지 않는다(설계 §3.1).
+        onBodyPhoto={() => setPhotoView('shoot')}
         history={history}
         spec={spec}
         date={date}
@@ -199,7 +202,13 @@ export function App() {
       )}
       {tab === 'shop' && <Shop owned={owned} spec={spec} />}
       {tab === 'history' && (
-        <History history={history} onResetOnboarding={resetOnboarding} />
+        <History
+          history={history}
+          onResetOnboarding={resetOnboarding}
+          // 운동을 안 한 날에도 찍을 수 있는 유일한 입구다.
+          onShootPhoto={() => setPhotoView('shoot')}
+          onComparePhotos={() => setPhotoView('compare')}
+        />
       )}
 
       <nav style={navStyle}>

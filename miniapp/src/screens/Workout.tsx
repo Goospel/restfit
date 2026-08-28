@@ -46,6 +46,7 @@ export function Workout({
   group,
   onChange,
   onFinish,
+  onBodyPhoto,
   history,
   spec,
   date,
@@ -57,6 +58,8 @@ export function Workout({
   group: Unit;
   onChange: (s: Session) => void;
   onFinish: (rec: WorkoutRecord | null) => void;
+  /** 완료 화면의 눈바디 제안. **기록 저장이 끝난 뒤에** 불린다 — 순서가 스펙이다(설계 §3.1). */
+  onBodyPhoto: () => void;
   history: WorkoutRecord[];
   /** 보유 기구 상세. 처음 하는 운동의 무게를 0 대신 여기서 채운다. */
   spec: EquipSpec;
@@ -237,6 +240,22 @@ export function Workout({
           )}
         </div>
 
+        {/*
+          눈바디 제안. **선택 사항이라 체감 1문항과 같은 자리에 얹는다** — 기록 저장 버튼과
+          경쟁하지 않게 ghost다(설계 §3.1).
+
+          ⚠️ **저장이 먼저다.** 촬영을 먼저 열면 그 화면에서 사용자가 뒤로 가거나 앱이 죽는
+          순간 방금 한 운동이 통째로 사라진다. 기록은 광고보다 귀하고, 사진보다도 귀하다.
+        */}
+        <button
+          style={{ ...ui.ghost, width: '100%', marginBottom: 4 }}
+          onClick={() => {
+            save();
+            onBodyPhoto();
+          }}
+        >
+          📷 오늘의 눈바디 남기기
+        </button>
         <button style={ui.primary} onClick={save}>
           기록 저장하고 끝내기
         </button>
