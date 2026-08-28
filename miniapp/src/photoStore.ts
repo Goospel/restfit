@@ -8,7 +8,8 @@
  *
  * ⚠️ **딱 하나 다른 것: 저장 실패를 삼키지 않는다.** `storage.ts`의 `write`는 실패해도 화면이
  * 돌게 조용히 넘어가지만, 방금 찍은 사진이 소리 없이 증발하면 사용자는 **한 달 뒤에야** 안다.
- * `savePhoto`는 성공 여부를 boolean으로 돌려주고, 화면이 그걸 받아 안내를 띄운다(설계 §5.1).
+ * `savePhoto`는 결과를 세 상(`ok`/`quota`/`fail`)으로 돌려주고, 화면이 그걸 받아 안내를
+ * 띄운다(설계 §5.1·§5.3).
  *
  * ⚠️ 기기를 바꾸면 사진이 날아간다. 클라우드 백업은 기록과 같은 의도적 보류다.
  */
@@ -91,16 +92,26 @@ export function openPhotoDb(idb: IDBFactory | undefined = globalThis.indexedDB):
 }
 
 /**
- * 한 장 저장 + 상한 프루닝. **`false`는 「저장 못 했다」이고, 호출자가 반드시 화면에 드러낸다.**
+ * 저장 결과. **`quota`를 따로 두는 이유는 그 경우에만 사용자가 할 수 있는 일이 있어서다** —
+ * 「공간이 부족해요, 오래된 사진을 지워 주세요」와 「잠시 후 다시 시도해 주세요」는
+ * 서로에게 거짓말이다(설계 §5.3).
+ *
+ * ⚠️ **입력 검증 실패도 `fail`로 묶는다.** 그건 사용자가 아니라 우리 버그 신호인데, 별도 상을
+ * 주면 화면이 보여 줄 문구가 없는 상태만 하나 는다.
+ */
+export type SaveResult = 'ok' | 'quota' | 'fail';
+
+/**
+ * 한 장 저장 + 상한 프루닝. **`ok`가 아니면 호출자가 반드시 화면에 드러낸다.**
  *
  * `add`가 아니라 `put`인 것이 「하루 1장」의 구현 전부다 — 같은 날짜면 조용히 교체된다.
  */
-export function savePhoto(db: PhotoDb, photo: BodyPhoto): Promise<boolean> {
+export function savePhoto(db: PhotoDb, photo: BodyPhoto): Promise<SaveResult> {
   // ⚠️ **쓰기 경계에서 막는다.** 깨진 레코드가 들어가면 저장은 `true`로 보고되는데 목록에는
   // 안 뜬다 — 읽기 쪽 어휘 검증이 걸러 내기 때문이다. 그런데 프루닝은 **원시 키를 세므로**
   // 그 유령이 정원 한 자리를 차지하고, 상한에 닿는 날 **기준 사진(가장 오래된 유효 사진)이
   // 대신 밀려난다.** 여기서 한 줄로 막으면 프루닝은 손댈 것이 없다.
-  if (!isPhoto(photo)) return Promise.resolve(false);
+  if (!isPhoto(photo)) return Promise.resolve('fail');
 
   return new Promise((resolve) => {
     let tx: IDBTransaction;
@@ -108,8 +119,10 @@ export function savePhoto(db: PhotoDb, photo: BodyPhoto): Promise<boolean> {
     try {
       tx = db.transaction(STORE, 'readwrite');
     } catch {
-      return resolve(false);
+      return resolve('fail');
     }
+    // 핸들러가 닫아 잡을 별칭. `let`을 그대로 잡으면 「할당 전 사용」으로 읽힐 수 있다.
+    const opened = tx;
     const store = tx.objectStore(STORE);
     store.put(photo);
 
@@ -121,10 +134,19 @@ export function savePhoto(db: PhotoDb, photo: BodyPhoto): Promise<boolean> {
       for (let i = 0; i < over; i++) store.delete(keys.result[i]);
     };
 
-    tx.oncomplete = () => resolve(true);
+    /**
+     * 실패 상은 **트랜잭션의 `error`가 정한다** — 여기서 이름을 안 읽으면 「공간이 부족해요」와
+     * 「잠시 후 다시」가 한 문구로 뭉개져, 공간이 멀쩡한 사람에게 사진을 지우라고 시키거나
+     * 정말 꽉 찬 사람에게 영영 되는 일 없는 재시도를 권하게 된다.
+     *
+     * ⚠️ `error`가 비는 경로(요청 에러 없이 끊긴 abort)가 있어서 `fail`이 기본값이다.
+     */
+    const failed = () => resolve(opened.error?.name === 'QuotaExceededError' ? 'quota' : 'fail');
+
+    tx.oncomplete = () => resolve('ok');
     // 쿼터 초과(QuotaExceededError)가 여기로 온다. 삼키면 사진이 소리 없이 증발한다.
-    tx.onerror = () => resolve(false);
-    tx.onabort = () => resolve(false);
+    tx.onerror = failed;
+    tx.onabort = failed;
   });
 }
 
