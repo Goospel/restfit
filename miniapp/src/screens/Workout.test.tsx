@@ -240,6 +240,10 @@ describe('세트 진행 — 맨몸 사다리 안내', () => {
     typeReps('24');
     expect(why()).toBeNull();
     expect(what()).toBeNull();
+    // ★ 이 한 줄은 **두 가지를 동시에** 잠근다. 24는 health 상단(15) 초과이자 하단(8) 이상이라
+    //   ① 맨몸엔 초과 안내가 없다(hi+1~24 회색지대 — 「맨몸 초과 부재」 단언이 40회뿐이면
+    //      사다리 구간 위에서만 잠겨서, 회색지대에만 열리는 변조가 살아남는다) ②미달도 아니다.
+    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
   });
 
   it('30을 넣었다가 10으로 고치면 사라진다', () => {
@@ -396,6 +400,9 @@ describe('세트 진행 — 맨몸 미달 안내', () => {
     typeReps('5');
     expect(what()!.parentElement!.style.color).toBe('var(--text-sub)');
     expect(repsInput().compareDocumentPosition(what()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // ★ 입력칸은 **안 건드린다.** 파란 테두리는 「무게 칸을 봐라」와 묶인 초과 전용 신호인데,
+    //   맨몸엔 무게 칸이 없다. 강조 조건이 `repOff === 'over'`에서 `repOff`로 느슨해지면 여기서 죽는다.
+    expect(repsInput().style.border).toBe('1px solid var(--line-strong)');
   });
 
   it('미달이어도 세트 완료는 막지 않는다 — 안내지 검문이 아니다', () => {
