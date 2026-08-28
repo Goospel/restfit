@@ -43,6 +43,28 @@ describe('photoStore', () => {
     return db;
   }
 
+  /**
+   * `savePhoto`를 우회한 날것 쓰기. 「옛 버전이 남긴 손상 레코드」는 정의상 오늘의 쓰기 검증을
+   * 안 거쳤으므로, 읽기 쪽 방어를 재려면 이 경로가 필요하다.
+   *
+   * ⚠️ 스토어 이름 리터럴이 구현과 이중 기재다 — 바뀌면 여기서 요란하게 깨진다(그게 낫다).
+   */
+  function putRaw(db: PhotoDb, record: unknown): Promise<void> {
+    return new Promise((resolve) => {
+      const tx = db.transaction('photos', 'readwrite');
+      tx.objectStore('photos').put(record as never);
+      tx.oncomplete = () => resolve();
+    });
+  }
+
+  /** 어휘 검증을 안 거친 **원시 레코드 수**. 프루닝이 세는 것과 같은 수라서 이걸로 재야 한다. */
+  function countRaw(db: PhotoDb): Promise<number> {
+    return new Promise((resolve) => {
+      const req = db.transaction('photos', 'readonly').objectStore('photos').count();
+      req.onsuccess = () => resolve(req.result);
+    });
+  }
+
   describe('openPhotoDb', () => {
     it('IDB가 없는 환경은 null로 끝난다 — 화면이 안내로 빠지는 유일한 신호다', async () => {
       // 던지지 않는다. 프라이빗 모드·구형 웹뷰에서 앱이 죽는 대신 사진 기능만 접힌다.
@@ -106,12 +128,27 @@ describe('photoStore', () => {
     it('깨진 값은 목록에서 빠진다 — 어휘 밖 레코드가 화면까지 가지 않는다', async () => {
       const db = await open();
       await savePhoto(db, photo('2025-01-05'));
-      // 옛 버전이 남겼거나 손상된 형태. blob이 Blob이 아니면 createObjectURL에서 화면이 죽는다.
-      await savePhoto(db, { date: '2025-01-06', blob: 'not-a-blob', capturedAt: 1, width: 1, height: 1 } as unknown as BodyPhoto);
+      // ⚠️ **`savePhoto`를 우회해 밀어 넣는다.** 이제 쓰기 경계가 막으므로, savePhoto로 넣으면
+      // 애초에 저장이 안 돼 「읽기 쪽 방어」가 관측되지 않는다(테스트가 공허해진다). 실제로도
+      // 손상 레코드는 옛 버전이 남긴 것이라 **오늘의 검증을 안 거친 채** DB에 있다.
+      await putRaw(db, { date: '2025-01-06', blob: 'not-a-blob', capturedAt: 1, width: 1, height: 1 });
       // 날짜 어휘(YYYY-MM-DD) 밖. 정렬도 비교 화면의 날짜 표시도 이 형태를 전제한다.
-      await savePhoto(db, photo('nope' as string));
+      await putRaw(db, { ...photo('2025-01-07'), date: 'nope' });
 
       expect((await listPhotos(db)).map((p) => p.date)).toEqual(['2025-01-05']);
+    });
+
+    it('깨진 값은 저장 자체를 거부한다 — 유령이 정원을 차지하면 기준 사진이 밀려난다', async () => {
+      const db = await open();
+      await savePhoto(db, photo('2025-01-05'));
+
+      // 읽기 쪽이 걸러 주니 저장은 통과시켜도 된다고 보기 쉬운데, **프루닝은 원시 키를 센다** —
+      // 목록에 안 보이는 레코드가 상한 한 자리를 먹고, 정원이 찬 날 가장 오래된 유효 사진이
+      // 대신 지워진다. 그래서 읽기 방어가 있어도 쓰기에서 막아야 한다.
+      expect(await savePhoto(db, { ...photo('2025-01-06'), blob: 'not-a-blob' } as unknown as BodyPhoto)).toBe(false);
+
+      // 레코드 수 불변 — 걸러진 게 아니라 **애초에 안 들어갔다**는 뜻이다.
+      await expect(countRaw(db)).resolves.toBe(1);
     });
   });
 
@@ -132,22 +169,35 @@ describe('photoStore', () => {
   });
 
   describe('저장 실패는 삼키지 않는다', () => {
-    /** 쿼터 초과의 실제 모습 — put 요청이 실패하면서 트랜잭션이 abort된다. */
-    function quotaDb(): PhotoDb {
+    /**
+     * 실패한 트랜잭션 흉내. **어떤 이벤트가 발화하는지가 이 목의 전부다** — 실패 경로마다
+     * 발화 조합이 달라서, 하나로 뭉치면 안 걸리는 핸들러가 생긴다(리뷰 실측으로 걸렸다).
+     */
+    function failingDb(fire: ('error' | 'abort')[]): PhotoDb {
       const store = { put: () => ({}), getAllKeys: () => ({}), delete: () => ({}) };
-      const tx = {
-        objectStore: () => store,
-        oncomplete: null as null | (() => void),
-        onerror: null as null | (() => void),
-        onabort: null as null | (() => void),
-      };
-      setTimeout(() => tx.onabort?.(), 0);
+      const tx: Record<string, unknown> = { objectStore: () => store, oncomplete: null, onerror: null, onabort: null };
+      setTimeout(() => {
+        for (const e of fire) (tx[`on${e}`] as (() => void) | null)?.();
+      }, 0);
       return { transaction: () => tx } as unknown as PhotoDb;
     }
 
-    it('트랜잭션이 abort되면 false다 — 확인 화면이 "저장하지 못했어요"를 띄울 근거', async () => {
+    it('쿼터 초과면 false다 — 확인 화면이 "저장하지 못했어요"를 띄울 근거', async () => {
       // storage.ts의 write는 실패를 삼키지만 여기서만은 다르다(설계 §5.1의 유일한 이탈).
-      await expect(savePhoto(quotaDb(), photo('2025-01-05'))).resolves.toBe(false);
+      // 발화 순서 `error → abort`는 fake-indexeddb 실측값이다 — 실전에서 반환값을 정하는 것은
+      // **먼저 오는 onerror**다.
+      await expect(savePhoto(failingDb(['error', 'abort']), photo('2025-01-05'))).resolves.toBe(false);
+    });
+
+    it('onerror만 와도 false다 — 요청 실패가 트랜잭션으로 올라오는 실전 경로', async () => {
+      await expect(savePhoto(failingDb(['error']), photo('2025-01-05'))).resolves.toBe(false);
+    });
+
+    it('onabort만 와도 false다 — 요청 에러 없이 끊기면 이쪽만 발화한다', async () => {
+      // 강제 close·version change처럼 **요청 에러 없이** 트랜잭션이 끊기는 경로가 있다.
+      // 이 핸들러가 없으면 promise가 영영 pending이라 확인 화면이 「저장 중」에서 굳는다 —
+      // false보다 나쁘다.
+      await expect(savePhoto(failingDb(['abort']), photo('2025-01-05'))).resolves.toBe(false);
     });
 
     it('DB가 닫혀 있어도 던지지 않고 false다', async () => {

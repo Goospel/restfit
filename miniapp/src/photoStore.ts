@@ -96,6 +96,12 @@ export function openPhotoDb(idb: IDBFactory | undefined = globalThis.indexedDB):
  * `add`가 아니라 `put`인 것이 「하루 1장」의 구현 전부다 — 같은 날짜면 조용히 교체된다.
  */
 export function savePhoto(db: PhotoDb, photo: BodyPhoto): Promise<boolean> {
+  // ⚠️ **쓰기 경계에서 막는다.** 깨진 레코드가 들어가면 저장은 `true`로 보고되는데 목록에는
+  // 안 뜬다 — 읽기 쪽 어휘 검증이 걸러 내기 때문이다. 그런데 프루닝은 **원시 키를 세므로**
+  // 그 유령이 정원 한 자리를 차지하고, 상한에 닿는 날 **기준 사진(가장 오래된 유효 사진)이
+  // 대신 밀려난다.** 여기서 한 줄로 막으면 프루닝은 손댈 것이 없다.
+  if (!isPhoto(photo)) return Promise.resolve(false);
+
   return new Promise((resolve) => {
     let tx: IDBTransaction;
     // DB가 닫혔거나 스토어가 없으면 여기서 던진다.
