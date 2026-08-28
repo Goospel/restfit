@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { probeCamera } from './cameraProbe';
+import { probeCamera } from './camera';
 
 /**
- * 눈바디 사진의 이상적 UX(라이브 프리뷰 위에 이전 사진을 겹치기)는 **토스 웹뷰가
- * `getUserMedia`를 허용하는가**에 통째로 달려 있는데 문서로는 확답이 없다. 그래서 실기기에
- * 찔러 볼 프로브를 먼저 넣는다 — 여기서 잠그는 것은 그 프로브의 **실패 모드**다.
+ * 카메라를 여는 유일한 입구. 여기서 잠그는 것은 성공 경로가 아니라 **실패 모드**다 —
+ * 촬영 화면이 그 셋을 각각 다른 안내로 옮긴다(설계 §4.5).
  *
  * 셋이 다 다른 답을 요구한다: mediaDevices가 아예 없는 웹뷰 · 권한 거절 · 프롬프트를
  * 삼켜 영영 pending. 마지막 것이 특히 고약해서, 늦게 도착한 stream을 안 끄면 **카메라가

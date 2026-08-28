@@ -9,9 +9,10 @@ import { defineConfig } from '@apps-in-toss/web-framework/config';
 export default defineConfig({
   appName: 'home-workout-hard',
   brand: { primaryColor: '#3182F6' },
-  // 카메라는 **눈바디 사진 프로브용**이다 — 네이티브 권한 선언이 없으면 웹뷰의 `getUserMedia`가
-  // 무엇 때문에 막혔는지 알 수 없어(권한 미선언인지 웹뷰가 아예 지원을 안 하는지) 실측이 성립하지 않는다.
-  // 프로브가 실패로 판정되면 이 줄도 함께 걷는다.
+  // 카메라는 **눈바디 사진(매일 같은 구도로 찍는 몸 사진) 촬영 화면**이 쓴다 — 라이브 프리뷰
+  // 위에 기준 사진을 반투명으로 겹쳐 사용자가 구도를 맞춘다. 네이티브 선언이 없으면 웹뷰의
+  // `getUserMedia`가 열리지 않는다(프로브로 실측해 확인했다 — PR #49).
+  // ⚠️ 심사 릴리즈 노트에 사용 목적을 함께 적는다 — 사진은 기기에만 저장되고 전송되지 않는다.
   permissions: [{ name: 'camera', access: 'access' }],
   // ⚠️ 당겨서 새로고침을 끈다 — 진행 중인 세션은 React state에만 있어서 **새로고침 한 번에 그날 기록이 통째로 날아간다.**
   // 운동 중에 화면을 위로 당기는 건 흔한 동작이다. 세션을 저장소에 넣기 전까지 이 한 줄이 유일한 방어다.
