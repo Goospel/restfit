@@ -1,5 +1,4 @@
 import { ExerciseImage } from '../components/ExerciseImage';
-import { Icon } from '../components/Icon';
 import { GROUP_KO, MUSCLE_KO } from '../data/labels';
 import { GOALS, type Goal } from '../logic/goal';
 import { restSecondsFor, SETS_PER_EXERCISE } from '../logic/session';
@@ -24,7 +23,8 @@ export function Home({
   profile,
   doneToday,
   onStart,
-  onOpenSettings,
+  onOpenEquipment,
+  onOpenGoal,
 }: {
   routine: Routine;
   history: WorkoutRecord[];
@@ -34,11 +34,11 @@ export function Home({
   profile: Profile | null;
   doneToday: boolean;
   onStart: () => void;
-  onOpenSettings: () => void;
+  onOpenEquipment: () => void;
+  onOpenGoal: () => void;
 }) {
-  // 이 이른 반환이 아래 안내 칩보다 앞이라 **빈 루틴 화면에는 칩이 안 뜬다 — 의도다.**
-  // 이 화면은 자체 「설정 열기」 버튼으로 같은 곳을 이미 가리키므로, 칩까지 붙이면
-  // 한 화면에 같은 목적지 버튼이 둘이 된다.
+  // 이 이른 반환이 아래 안내 칩보다 앞이라 **빈 루틴 화면에는 목적 칩이 안 뜬다 — 의도다.**
+  // 이 화면은 아래 버튼으로 갈 곳을 이미 가리키므로, 칩까지 붙이면 목적지가 겹친다.
   if (!routine.unit || routine.exercises.length === 0) {
     return (
       <main style={ui.page}>
@@ -49,9 +49,16 @@ export function Home({
               병리적 조합에서 기구만 탓하면 사용자가 원인을 영영 못 찾는다. */}
           <p style={{ fontSize: 13 }}>보유 기구와 불편 부위 설정을 확인해 주세요.</p>
         </div>
-        <button style={ui.secondary} onClick={onOpenSettings}>
-          설정 열기
-        </button>
+        {/* 짚어 준 원인이 둘이라 버튼도 둘이다 — 「설정 열기」 하나로 묶으면 도착한 페이지에
+            둘 중 하나가 없어서, 짚어만 주고 못 고치게 두는 셈이 된다. */}
+        <div style={{ display: 'grid', gap: 10 }}>
+          <button style={ui.secondary} onClick={onOpenEquipment}>
+            보유 기구 확인
+          </button>
+          <button style={ui.secondary} onClick={onOpenGoal}>
+            불편한 부위 확인
+          </button>
+        </div>
       </main>
     );
   }
@@ -83,21 +90,21 @@ export function Home({
           오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.unit]}</span>
         </h1>
         <span style={ui.spacer} />
-        {/* 목적을 계속 띄운다 — 왜 15회·45초인지가 이 칩으로 설명된다. */}
+        {/* 목적을 계속 띄운다 — 왜 15회·45초인지가 이 칩으로 설명된다.
+            라벨은 접두어까지 붙여 **무엇을 여는 버튼인지**도 말한다. 목적 이름만 있던 옛
+            라벨은 정체를 안 말해서, 기구를 바꾸려는 사람이 이 칩을 누를 이유를 못 찾았다.
+            아이콘은 뺐다 — 접두어가 정체를 말하므로, 아이콘까지 있으면 칩이 두 줄로 밀린다. */}
         <button
           style={{
             ...ui.chip,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
             color: 'var(--blue-dark)',
             background: '#eff6ff',
             borderColor: 'var(--blue)',
+            whiteSpace: 'nowrap',
           }}
-          onClick={onOpenSettings}
+          onClick={onOpenGoal}
         >
-          <Icon name={GOALS[goal].icon} size={14} />
-          {GOALS[goal].label}
+          목적 · {GOALS[goal].label} ›
         </button>
       </div>
       <p style={ui.sub}>
@@ -115,7 +122,8 @@ export function Home({
       {!profile && history.length > 0 && (
         <button
           style={{ ...ui.chip, width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: 13, marginBottom: 16 }}
-          onClick={onOpenSettings}
+          // 경험은 운동 목적 페이지에 있다 — 다른 데로 보내면 도착해서 답할 자리를 못 찾는다.
+          onClick={onOpenGoal}
         >
           경험을 알려주시면 난이도를 맞춰드려요
         </button>

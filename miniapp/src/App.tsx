@@ -8,11 +8,12 @@ import type { Profile } from './logic/profile';
 import { pickRoutine } from './logic/routine';
 import { startSession, type Session } from './logic/session';
 import { BodyPhoto } from './screens/BodyPhoto';
+import { EquipmentSettings } from './screens/EquipmentSettings';
+import { GoalSettings } from './screens/GoalSettings';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
 import { PhotoCompare } from './screens/PhotoCompare';
-import { Settings } from './screens/Settings';
 import { Shop } from './screens/Shop';
 import { Workout } from './screens/Workout';
 import {
@@ -47,10 +48,16 @@ export function App() {
   const [history, setHistory] = useState(loadHistory);
   const [tab, setTab] = useState<Tab>('home');
   const [session, setSession] = useState<Session | null>(null);
-  /** 「내 조건」(보유 기구·목적). 탭이 아니라 홈의 목적 칩에서 여는 전체화면이다. */
-  const [settings, setSettings] = useState(false);
   /**
-   * 눈바디 화면. `settings`와 같은 전체화면이고, 값 하나가 「촬영이냐 비교냐 아니냐」를 다 말한다 —
+   * 설정 전체화면. **입구가 자리마다 나뉜다** — 기구는 기구 탭의 요약 카드에서, 목적·경험·부위는
+   * 홈의 목적 칩에서 연다. 값 하나가 「어느 페이지냐 아니냐」를 다 말해서 둘이 동시에 켜질 상태가 없다.
+   *
+   * 닫으면 `null`로 돌아갈 뿐이라 **보던 탭이 그대로 복원된다**(`tab`을 안 건드린다) —
+   * 기구 탭에서 열면 기구 탭으로, 홈에서 열면 홈으로.
+   */
+  const [config, setConfig] = useState<'equipment' | 'goal' | null>(null);
+  /**
+   * 눈바디 화면. `config`와 같은 전체화면이고, 값 하나가 「촬영이냐 비교냐 아니냐」를 다 말한다 —
    * boolean 둘로 두면 **둘 다 켜진 상태**가 생기고 그때 무엇을 그릴지 화면이 정해야 한다.
    * 라우터·컨텍스트는 안 들인다.
    */
@@ -150,18 +157,26 @@ export function App() {
   if (photoView === 'shoot') return <BodyPhoto onClose={() => setPhotoView(null)} />;
   if (photoView === 'compare') return <PhotoCompare onClose={() => setPhotoView(null)} />;
 
-  if (settings) {
+  if (config === 'equipment') {
     return (
-      <Settings
+      <EquipmentSettings
         owned={owned}
         spec={spec}
         onChange={saveOwnedAnd}
         onSpecChange={saveSpecAnd}
+        onBack={() => setConfig(null)}
+      />
+    );
+  }
+
+  if (config === 'goal') {
+    return (
+      <GoalSettings
         goal={goal}
         onGoalChange={saveGoalAnd}
         profile={profile}
         onProfileChange={saveProfileAnd}
-        onBack={() => setSettings(false)}
+        onBack={() => setConfig(null)}
       />
     );
   }
@@ -197,10 +212,11 @@ export function App() {
           profile={profile}
           doneToday={history.some((r) => r.date === date)}
           onStart={() => setSession(startSession(routine.exercises, goal))}
-          onOpenSettings={() => setSettings(true)}
+          onOpenEquipment={() => setConfig('equipment')}
+          onOpenGoal={() => setConfig('goal')}
         />
       )}
-      {tab === 'shop' && <Shop owned={owned} spec={spec} />}
+      {tab === 'shop' && <Shop owned={owned} spec={spec} onEditEquipment={() => setConfig('equipment')} />}
       {tab === 'history' && (
         <History
           history={history}

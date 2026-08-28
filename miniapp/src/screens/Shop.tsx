@@ -31,7 +31,15 @@ import { ui } from '../ui';
  * ⚠️ 링크는 **외부 브라우저로 열린다.** 미니앱 안에 토스쇼핑을 띄우는 SDK·딥링크가
  * 플랫폼에 없다(앱인토스 개발자 커뮤니티 공식 답변). 우리 구현의 한계가 아니다.
  */
-export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
+export function Shop({
+  owned,
+  spec,
+  onEditEquipment,
+}: {
+  owned: EquipKey[];
+  spec: EquipSpec;
+  onEditEquipment: () => void;
+}) {
   const picks = useMemo(() => recommend(EXERCISES, owned, spec), [owned, spec]);
   /** 펼쳐진 기구. 하나만 열어 둔다 — 다 열면 다시 「쫘라락」이 되어 2단으로 나눈 뜻이 없다. */
   const [expanded, setExpanded] = useState<EquipKey | null>(null);
@@ -52,6 +60,49 @@ export function Shop({ owned, spec }: { owned: EquipKey[]; spec: EquipSpec }) {
       <p style={ui.sub}>
         지금 <b>못 하는</b> 운동을 많이 열어주는 것부터 보여드려요. 이미 가진 기구와 별 차이가 없는 것은 넣지 않습니다.
       </p>
+
+      {/*
+       * 내 보유 기구. **추천보다 위**에 둔다 — 아래 목록이 무엇을 기준으로 뽑혔는지가
+       * 이 한 줄이고, 기구를 바꾸는 유일한 입구이기도 하다.
+       *
+       * 추천이 소진돼 빈 상태여도 이 카드는 남는다. 기구를 **줄이는** 정리도 여기로 한다.
+       */}
+      <div style={{ ...ui.card, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, padding: 14 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>
+            {owned.length > 0 ? `내 보유 기구 ${owned.length}개` : '내 보유 기구 없음'}
+          </div>
+          {/*
+           * 이름은 **한 줄 말줄임**이다. 정확한 개수는 윗줄의 n이 이미 말하므로,
+           * 이름이 잘려도 사라지는 정보가 없다 — 줄바꿈을 허용하면 카드 높이가 기구 수에
+           * 따라 널뛰어 추천 목록이 화면 밖으로 밀린다.
+           *
+           * 기구가 없으면 「0개」 대신 지금 무엇으로 돌고 있는지를 말한다 — 0은 고장으로 읽힌다.
+           */}
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 13,
+              color: 'var(--text-sub)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {owned.length > 0
+              ? owned.map((k) => EQUIPMENT_KO[k]).join(' · ')
+              : '맨몸 운동만으로 루틴을 만들고 있어요'}
+          </div>
+        </div>
+        <span style={ui.spacer} />
+        <button
+          // `ui.chip`은 원래 **누르지 않는 라벨**이라 세로 여백이 얇다. 버튼으로 쓰니 손가락 몫을 더한다.
+          style={{ ...ui.chip, flexShrink: 0, padding: '9px 12px', fontSize: 13 }}
+          onClick={onEditEquipment}
+        >
+          바꾸기
+        </button>
+      </div>
 
       {picks.length === 0 ? (
         <div style={ui.empty}>

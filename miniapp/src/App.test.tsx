@@ -92,3 +92,40 @@ describe('App — 눈바디 진입 배선', () => {
     expect(screen.queryByText(COMPARE)).toBeNull();
   });
 });
+
+/**
+ * 설정 두 페이지의 배선. 입구가 자리마다 나뉜 개편이라 **어느 입구가 어느 페이지를 여는가**가
+ * 곧 개편의 내용이다 — 두 콜백이 타입까지 같아서(`() => void`) 뒤바꿔도 화면 테스트와
+ * `tsc`가 전부 초록이다. 그 스왑을 잡는 것은 이 파일뿐이다.
+ */
+describe('App — 설정 진입 배선', () => {
+  const heading = (name: string) => screen.queryByRole('heading', { name });
+
+  it('홈의 목적 칩은 운동 목적 페이지를 연다', () => {
+    render(<App />);
+    click('목적 · 건강 유지 ›');
+
+    expect(heading('운동 목적')).toBeTruthy();
+    expect(heading('보유 기구')).toBeNull();
+  });
+
+  it('기구 탭의 바꾸기는 보유 기구 페이지를 연다', () => {
+    render(<App />);
+    click('기구');
+    click('바꾸기');
+
+    expect(heading('보유 기구')).toBeTruthy();
+    expect(heading('운동 목적')).toBeNull();
+  });
+
+  it('기구 탭에서 열고 닫으면 기구 탭으로 돌아온다 — 홈이 아니다', () => {
+    // 닫기가 홈으로 뱉으면 기구를 고치러 들어간 사람이 매번 탭을 다시 찾아야 한다.
+    render(<App />);
+    click('기구');
+    click('바꾸기');
+    click('닫기');
+
+    expect(heading('기구 추천')).toBeTruthy();
+    expect(heading('보유 기구')).toBeNull();
+  });
+});
