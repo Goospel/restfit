@@ -188,22 +188,84 @@ describe('세트 진행 — 졸업 프리필 (§3.7)', () => {
     expect(repsInput().value).toBe('15');
   });
 
-  it('맨몸 25회면 다음 동작 힌트가 뜬다', () => {
-    // 반복 25~30회를 넘기면 근비대 효율이 급락한다 — 무게를 못 얹으니 동작을 바꿀 때다.
+  it('지난 기록이 25회여도 사다리 안내는 화면에 하나뿐이다', () => {
+    // ★ 옛 「지난번 기록 기준」 상단 안내는 없앴다(실시간 안내로 통합). 프리필이 지난 기록에서
+    //   오므로 지난 기록이 25 이상이면 입력값도 25 이상이라 실시간 안내가 그 경우를 덮는다 —
+    //   둘 다 두면 같은 문구가 한 화면에 두 번 뜬다. 그 중복을 여기서 잠근다.
     setup({ session: running(ex('push')), history: did('push', 0, [25, 25, 25]) });
-    expect(screen.getByText(/더 어려운 동작/)).toBeTruthy();
+    expect(repsInput().value).toBe('26');
+    // 정규식으로 느슨하게 잡으면 완료 화면의 승급 문구(NOTE_UP)까지 걸린다 — 정확 문자열로 센다.
+    expect(screen.getAllByText('더 어려운 동작에 도전할 때예요')).toHaveLength(1);
   });
 
-  it('맨몸 24회면 아직 안 뜬다 — 경계는 25다', () => {
+  it('맨몸 24회면 프리필이 25로 올라간다', () => {
+    // 24회는 health 상단(15)을 전 세트가 넘긴 것이라 졸업이다 — 맨몸은 무게 대신 횟수를 +1 한다.
+    // (사다리 안내의 경계 판정은 이제 **입력값** 기준이라 「맨몸 사다리 안내」 describe로 옮겼다.)
     setup({ session: running(ex('push')), history: did('push', 0, [24, 24, 24]) });
-    expect(screen.queryByText(/더 어려운 동작/)).toBeNull();
-    // 힌트는 없어도 프리필은 진행한다 — 둘은 다른 규칙이다.
     expect(repsInput().value).toBe('25');
   });
+});
 
-  it('기구 운동은 25회를 넘겨도 힌트가 없다 — 무게를 얹을 데가 있다', () => {
-    setup({ session: running(ex('bench', ['barbell'])), history: did('bench', 20, [26, 26, 26]) });
-    expect(screen.queryByText(/더 어려운 동작/)).toBeNull();
+describe('세트 진행 — 맨몸 사다리 안내', () => {
+  // 지난번 기록이 아니라 **지금 타이핑한 값**에 반응한다. 실기기에서 맨몸 런지에 30을 넣고도
+  // 아무 문구가 안 떴던 것이 이 describe가 생긴 이유다 — 기록 기준이면 오늘 넘긴 사람은 못 본다.
+  const repsInput = () => screen.getByLabelText('횟수') as HTMLInputElement;
+  const typeReps = (v: string) => fireEvent.change(repsInput(), { target: { value: v } });
+  const hint = () => screen.queryByText('더 어려운 동작에 도전할 때예요');
+
+  it('25회를 넣으면 횟수칸 **바로 아래**에 뜬다 — 경계는 포함이다', () => {
+    setup({ session: startSession([ex('push')], 'health') });
+    typeReps('25');
+    expect(hint()).toBeTruthy();
+    // ★ 존재만 보면 안내가 헤더 밑으로 이사해도 초록이다(리뷰가 심어 462건 통과를 실측).
+    //   제보가 「입력했는데 반응이 안 보인다」 계열이라 **입력칸에서 떨어지는 회귀**를 잡아야 한다.
+    expect(repsInput().compareDocumentPosition(hint()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('24회에는 안 뜬다 — 컷은 25다', () => {
+    setup({ session: startSession([ex('push')], 'health') });
+    typeReps('24');
+    expect(hint()).toBeNull();
+  });
+
+  it('30을 넣었다가 10으로 고치면 사라진다', () => {
+    // 뜨는 것만 잠그면 「한 번 뜨면 안 사라지는」 구현이 통과한다.
+    setup({ session: startSession([ex('push')], 'health') });
+    typeReps('30');
+    expect(hint()).toBeTruthy();
+    typeReps('10');
+    expect(hint()).toBeNull();
+  });
+
+  it('색은 파랑이고 어절 중간에서 안 꺾인다', () => {
+    // ★ 색은 문구와 **따로** 잠근다(PR #56 리뷰 지적). 회색이면 나무라는 말로 읽힌다.
+    // ★ `keep-all`도 잠근다 — 기구와 스타일 상수(`GUIDE`)를 공유하게 되면서 오염 반경이
+    //   두 배가 됐는데, 375px 개행(사용자 명시 요청)을 지탱하는 게 이 속성이다.
+    setup({ session: startSession([ex('push')], 'health') });
+    typeReps('30');
+    expect(hint()!.style.color).toBe('var(--blue-dark)');
+    expect(hint()!.style.wordBreak).toBe('keep-all');
+  });
+
+  it('25회를 넘겨도 세트 완료는 막지 않는다 — 안내지 검문이 아니다', () => {
+    setup({ session: startSession([ex('push')], 'health') });
+    typeReps('30');
+    expect((screen.getByRole('button', { name: '세트 완료' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('빈 입력에는 안 뜬다 — 지우는 중인 사람에게 말을 걸지 않는다', () => {
+    setup({ session: startSession([ex('push')], 'health') });
+    typeReps('30');
+    typeReps('');
+    expect(hint()).toBeNull();
+  });
+
+  it('기구 운동에는 안 뜬다 — 무게를 얹을 데가 있다', () => {
+    setup({ session: startSession([ex('bench', ['barbell'])], 'health') });
+    typeReps('30');
+    expect(hint()).toBeNull();
+    // 기구는 이 자리를 범위 이탈 안내가 쓴다.
+    expect(screen.getByText('무게를 올려볼 때예요')).toBeTruthy();
   });
 });
 
@@ -217,6 +279,8 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     typeReps('15');
     expect(screen.getByText('목표(6~12회)보다 많아요')).toBeTruthy();
     expect(screen.getByText('무게를 올려볼 때예요')).toBeTruthy();
+    // 어절 중간 꺾임 방지는 맨몸 안내와 공유하는 `GUIDE` 상수가 쥐고 있다 — 양쪽에서 잠근다.
+    expect(screen.getByText('무게를 올려볼 때예요').parentElement!.style.wordBreak).toBe('keep-all');
     // ★ 색은 문구와 **따로** 잠근다 — 색상 삼항을 정반대로 뒤집어도 문구 단언은 전부 초록이다(리뷰 실측).
     //   초과가 파랑인 것은 「무게를 올릴 때가 왔다」는 긍정 신호라서다. 회색이면 지적으로 읽힌다.
     expect(screen.getByText('무게를 올려볼 때예요').parentElement!.style.color).toBe('var(--blue-dark)');

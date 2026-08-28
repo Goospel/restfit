@@ -33,6 +33,12 @@ const NOTE_UP = '다음부터 조금 더 어려운 동작을 드릴게요.';
 const NOTE_DOWN = '다음부터 조금 가볍게 드릴게요.';
 
 /**
+ * 횟수 입력칸 바로 아래 안내 한 자리 — 기구(목표 범위 이탈)와 맨몸(사다리)이 나눠 쓴다.
+ * 색만 각자 얹는다. `keep-all`은 375px에서 어절 중간이 꺾이는 것을 막는다.
+ */
+const GUIDE: React.CSSProperties = { fontSize: 13, lineHeight: 1.5, marginTop: 8, textAlign: 'center', wordBreak: 'keep-all' };
+
+/**
  * 운동 진행. **제품의 심장이다.**
  *
  * Phase 3에서 휴식 구간에 광고가 붙는다. 지금은 **일부러 광고 없이** 완성한다 —
@@ -311,6 +317,25 @@ export function Workout({
   const [repLo, repHi] = GOALS[s.goal].reps;
   const repOff = !bodyweight && valid ? (repsNum > repHi ? 'over' : repsNum < repLo ? 'under' : null) : null;
 
+  /**
+   * 맨몸 사다리 안내. **지난 기록이 아니라 지금 입력한 값**을 본다 — 기록 기준이면 오늘
+   * 처음 25회를 넘긴 사람은 다음 세션까지 아무 말도 못 듣는다(실기기 제보: 30을 넣어도 무반응).
+   *
+   * 프리필이 지난 기록에서 오므로(`suggestNext`) 「지난 기록이 25 이상」인 경우는 첫 렌더의
+   * 입력값도 25 이상이라 이 조건이 그대로 덮는다 — 그래서 옛 상단 안내는 지웠다(중복 표시).
+   *
+   * 경계는 **포함**이다(`BODYWEIGHT_LADDER_REPS`의 규약). 입력칸 색은 안 바꾼다 — 기구의
+   * 파란 테두리는 「무게 칸을 봐라」와 묶인 신호인데 맨몸엔 무게 칸이 없다.
+   *
+   * ⚠️ `valid`는 **테스트로 죽지 않는 방어다**(리뷰 실측 — 빼도 462건 전부 통과). 그래도
+   * 남긴다: 지금 안전한 이유가 이 조건이 아니라 **`<input type="number">`의 value
+   * sanitization**이기 때문이다 — jsdom 실측에서 `'1e999'`·`'Infinity'`가 `''`로 비워져
+   * 컷에 못 닿지만, `type="text"`로 바꾸는 순간 `Number('1e999') === Infinity`가 컷을
+   * **통과한다**(`Infinity >= 25`는 참). 한 토큰짜리 가드로 그 전제를 안 사도 되고,
+   * 형제인 `repOff`와 조건 모양도 같아진다.
+   */
+  const ladder = bodyweight && valid && repsNum >= BODYWEIGHT_LADDER_REPS;
+
   return (
     <main style={ui.pageFull}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
@@ -342,10 +367,6 @@ export function Workout({
               지난번 {last.weight > 0 ? `${last.weight}kg × ` : ''}
               {last.reps}회
             </div>
-          )}
-          {/* 맨몸에만 뜬다 — 기구는 무게를 얹으면 되니 동작을 바꿀 이유가 없다(설계 §3.7). */}
-          {bodyweight && last && last.reps >= BODYWEIGHT_LADDER_REPS && (
-            <div style={{ fontSize: 13, color: 'var(--blue-dark)', marginTop: 4 }}>더 어려운 동작에 도전할 때예요</div>
           )}
         </div>
 
@@ -383,20 +404,14 @@ export function Workout({
           「목표(6~12회)보다 많아 / 요」가 된다. `keep-all`은 그 위에 어절 중간 꺾임까지 막는다.
         */}
         {repOff && (
-          <div
-            style={{
-              fontSize: 13,
-              lineHeight: 1.5,
-              marginTop: 8,
-              textAlign: 'center',
-              wordBreak: 'keep-all',
-              color: repOff === 'over' ? 'var(--blue-dark)' : 'var(--text-sub)',
-            }}
-          >
+          <div style={{ ...GUIDE, color: repOff === 'over' ? 'var(--blue-dark)' : 'var(--text-sub)' }}>
             <div>{`목표(${repLo}~${repHi}회)보다 ${repOff === 'over' ? '많아요' : '적어요'}`}</div>
             <div>{repOff === 'over' ? '무게를 올려볼 때예요' : '무게를 조금 낮춰보세요'}</div>
           </div>
         )}
+
+        {/* 파랑인 것은 진급 신호라서다 — 회색이면 「너무 많이 했다」는 지적으로 읽힌다. */}
+        {ladder && <div style={{ ...GUIDE, color: 'var(--blue-dark)' }}>더 어려운 동작에 도전할 때예요</div>}
       </div>
 
       <button
