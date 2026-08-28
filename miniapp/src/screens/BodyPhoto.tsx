@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 
 import { probeCamera, stopStream, type CameraProbeResult, type MediaDevicesLike } from '../camera';
 import { captureJpeg, PREVIEW_TRANSFORM, type Captured } from '../logic/capture';
-import { listPhotos, openPhotoDb, savePhoto, type BodyPhoto as Photo, type PhotoDb } from '../photoStore';
+import { savePhoto } from '../photoStore';
 import { todayKey } from '../storage';
 import { ui } from '../ui';
+import { LOCAL_ONLY, useObjectUrl, usePhotos } from './usePhotos';
 
 /**
  * 눈바디 촬영. **매일 같은 구도로 찍는 것이 이 화면의 전부다.**
@@ -38,21 +39,17 @@ export function BodyPhoto({
   onClose,
   media = navigator.mediaDevices,
   idb,
-  capture = captureJpeg,
 }: {
   onClose: () => void;
   /** 테스트가 가짜 카메라를 넣는 자리. 실사용에서는 `navigator.mediaDevices`다. */
   media?: MediaDevicesLike;
   /** 테스트가 fake-indexeddb를 넣는 자리. 없으면 `globalThis.indexedDB`. */
   idb?: IDBFactory;
-  /** jsdom에는 2D 컨텍스트가 없어 캡처만 목으로 갈아 끼운다. */
-  capture?: typeof captureJpeg;
 }) {
   /** `null`은 「아직 여는 중」이다 — 실패와 구별돼야 화면이 「켜는 중」과 안내로 갈린다. */
   const [cam, setCam] = useState<CameraProbeResult | null>(null);
-  /** `undefined`는 로딩, `null`은 「이 기기에서는 못 쓴다」. */
-  const [db, setDb] = useState<PhotoDb | null | undefined>(undefined);
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  // 기준 사진은 목록의 **첫 장**(가장 오래된 것)이다 — `listPhotos`가 날짜 오름차순이라 그렇다.
+  const { db, photos } = usePhotos(idb);
   const [ghostOn, setGhostOn] = useState(true);
   const [count, setCount] = useState<number | null>(null);
   const [shot, setShot] = useState<Captured | null>(null);
@@ -94,25 +91,8 @@ export function BodyPhoto({
     if (cam?.ok && video.current) video.current.srcObject = cam.stream;
   }, [cam, shot]);
 
-  // 기준 사진은 목록의 **첫 장**(가장 오래된 것)이다 — `listPhotos`가 날짜 오름차순이라 그렇다.
-  useEffect(() => {
-    let dead = false;
-    void openPhotoDb(idb).then(async (opened) => {
-      const list = opened ? await listPhotos(opened) : [];
-      if (dead) return;
-      setDb(opened);
-      setPhotos(list);
-    });
-    return () => {
-      dead = true;
-    };
-  }, [idb]);
-
   const baseline = photos[0];
 
-  /**
-   * blob URL은 **만든 곳이 놓아준다.** 안 놓으면 사진을 넘길 때마다 새고, 조용히 메모리만 자란다.
-   */
   const ghostUrl = useObjectUrl(ghostOn ? baseline?.blob : undefined);
   const shotUrl = useObjectUrl(shot?.blob);
 
@@ -130,7 +110,7 @@ export function BodyPhoto({
 
   async function shoot() {
     if (!video.current || !canvas.current) return;
-    const got = await capture(video.current, canvas.current);
+    const got = await captureJpeg(video.current, canvas.current);
     // 프레임이 아직 0×0이거나 2D 컨텍스트가 없는 경우다. 빈 사진을 저장하는 것보다 낫다.
     if (!got) return setNotice(SHOT_NOTICE);
     setNotice(null);
@@ -222,7 +202,20 @@ export function BodyPhoto({
 
       {shot ? (
         <div style={{ ...ui.row, marginTop: 12 }}>
-          <button style={{ ...ui.secondary, flex: 1 }} onClick={() => setShot(null)}>
+          {/*
+            ⚠️ **저장 중에는 같이 잠근다.** 여기만 살아 있으면 저장이 도는 사이에 프리뷰로
+            돌아갈 수 있는데, 그 클릭은 이미 날아간 저장을 되돌리지 못한다 — 사용자의 의도가
+            조용히 무시되는 창이다. 실패 문구도 여기서 걷는다(프리뷰까지 따라가면 아직 찍지도
+            않은 사진에 대한 「저장하지 못했어요」가 떠 있는 꼴이 된다).
+          */}
+          <button
+            style={{ ...ui.secondary, flex: 1, ...(saving ? ui.disabled : null) }}
+            disabled={saving}
+            onClick={() => {
+              setShot(null);
+              setNotice(null);
+            }}
+          >
             다시 찍기
           </button>
           <button style={{ ...ui.primary, flex: 1, ...(saving ? ui.disabled : null) }} disabled={saving} onClick={save}>
@@ -254,9 +247,7 @@ export function BodyPhoto({
       )}
 
       {/* 검수·사용자 양쪽에 같은 문장으로 답한다. 사실이다 — 서버는 0대다(설계 §6.1). */}
-      <p style={{ ...ui.sub, color: '#8b95a1', textAlign: 'center', margin: '10px 0 0' }}>
-        사진은 이 기기에만 저장되며 어디로도 전송되지 않습니다.
-      </p>
+      <p style={{ ...ui.sub, color: '#8b95a1', textAlign: 'center', margin: '10px 0 0' }}>{LOCAL_ONLY}</p>
 
       {/* 캡처용. 화면에는 안 보인다. */}
       <canvas ref={canvas} style={{ display: 'none' }} />
@@ -265,28 +256,17 @@ export function BodyPhoto({
 }
 
 /**
- * blob URL 하나의 수명. **만든 곳이 revoke까지 책임진다**(설계 §4.6) — 화면을 닫거나
- * 원본이 바뀌면 즉시 놓아준다.
+ * 실패·로딩 화면. 문구만 다르고 형태는 같다.
+ *
+ * ⚠️ **고지가 여기 있어야 어느 화면에나 있다**(설계 §6.1은 화면 안 상시 고지를 요구한다).
+ * 정상 프리뷰에만 달면, 심사자가 가장 먼저 눌러 보는 **권한 거부 화면**에는 카메라를 왜 쓰는지
+ * 답하는 문장이 없다.
  */
-function useObjectUrl(blob: Blob | undefined): string | null {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!blob) return setUrl(null);
-    const made = URL.createObjectURL(blob);
-    setUrl(made);
-    return () => {
-      URL.revokeObjectURL(made);
-      setUrl(null);
-    };
-  }, [blob]);
-  return url;
-}
-
-/** 실패·로딩 화면. 문구만 다르고 형태는 같다. */
 function Center({ children }: { children: React.ReactNode }) {
   return (
     <main style={{ ...ui.pageFull, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
       {children}
+      <p style={{ ...ui.sub, margin: '16px 0 0' }}>{LOCAL_ONLY}</p>
     </main>
   );
 }
