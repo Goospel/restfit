@@ -28,9 +28,15 @@ function cameraNotice(detail: string): string {
   return '카메라를 여는 데 실패했어요. 잠시 후 다시 시도해 주세요';
 }
 
+/**
+ * 트랙이 아직 살아 있는가. **`mute`는 `readyState`를 'live'로 남긴다** — 그래서 둘 다 본다.
+ * 실기기 버그가 정확히 이 갈래였다(화면 녹화가 카메라를 물면 죽지 않고 얼어붙기만 한다).
+ */
+const alive = (stream: MediaStream) => stream.getTracks().some((t) => t.readyState === 'live' && !t.muted);
+
+const DOWN_NOTICE = '카메라가 중단됐어요';
 const QUOTA_NOTICE = '공간이 부족해요 — 오래된 사진을 지워 주세요';
 const SAVE_NOTICE = '저장하지 못했어요. 다시 시도해 주세요';
-const SHOT_NOTICE = '사진을 찍지 못했어요. 다시 시도해 주세요';
 
 /** 사람이 프롬프트를 읽고 누를 시간은 주되, 웹뷰가 프롬프트를 삼켰을 때 화면이 굳지는 않게. */
 const OPEN_TIMEOUT_MS = 10000;
@@ -55,6 +61,10 @@ export function BodyPhoto({
   const [shot, setShot] = useState<Captured | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  /** 스트림이 끊겼다. 실기기(iOS 화면 녹화)에서 실제로 터진 상태다. */
+  const [down, setDown] = useState(false);
+  /** 재취득 세대. 늘리면 여는 effect가 다시 도는데, **cleanup이 옛 스트림을 놓아주는 것도 그대로다.** */
+  const [gen, setGen] = useState(0);
 
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -73,14 +83,68 @@ export function BodyPhoto({
         if (r.ok) stopStream(r.stream);
         return;
       }
-      if (r.ok) live = r.stream;
+      if (r.ok) {
+        live = r.stream;
+        setDown(false);
+      }
       setCam(r);
     });
     return () => {
       dead = true;
       if (live) stopStream(live);
     };
-  }, [media]);
+  }, [media, gen]);
+
+  /**
+   * 끊김 감지. 다른 앱이 카메라를 가져가면(화면 녹화의 셀피 오버레이 등) 트랙이 `ended`거나
+   * `mute`가 되는데, **`<video>`는 붙어 있어서 마지막 프레임이 그대로 얼어붙는다** — 사용자
+   * 눈에는 살아 있는 프리뷰다. 그 거짓말을 여기서 끊는다.
+   */
+  useEffect(() => {
+    if (!cam?.ok) return;
+    const tracks = cam.stream.getTracks();
+    tracks.forEach((t) => {
+      t.addEventListener('ended', interrupt);
+      t.addEventListener('mute', interrupt);
+    });
+    return () =>
+      tracks.forEach((t) => {
+        t.removeEventListener('ended', interrupt);
+        t.removeEventListener('mute', interrupt);
+      });
+  }, [cam]);
+
+  /**
+   * 자동 재연결. 앱을 벗어난 사이에 끊기면 **이벤트를 못 받고 지나갈 수 있어**, 돌아온 시점에
+   * 트랙 상태를 직접 본다(`alive`를 핸들러 안에서 재는 이유 — 등록 시점 값은 이미 낡았다).
+   *
+   * ⚠️ 확인 화면에서는 손대지 않는다. 사진은 이미 손에 있고, 저장을 방해할 이유가 없다 —
+   * **프리뷰로 돌아갈 때**(`shot`이 비는 순간) 비로소 다시 연다.
+   */
+  useEffect(() => {
+    if (shot) return;
+    const check = () => {
+      if (document.visibilityState !== 'visible') return;
+      // 첫 취득 실패(권한 거부 등)는 여기서 안 건드린다 — 안 그러면 영영 도는 재시도가 된다.
+      if (cam?.ok && !alive(cam.stream)) reconnect();
+    };
+    check();
+    document.addEventListener('visibilitychange', check);
+    return () => document.removeEventListener('visibilitychange', check);
+  }, [cam, shot]);
+
+  /** 카운트다운은 여기서 죽는다 — 얼어붙은 마지막 프레임을 셔터가 찍어 저장하는 사고를 막는다. */
+  function interrupt() {
+    setDown(true);
+    setCount(null);
+  }
+
+  /** 재연결. **같은 취득 경로를 다시 탄다** — 옛 스트림 정리는 여는 effect의 cleanup 몫이다. */
+  function reconnect() {
+    interrupt();
+    setCam(null);
+    setGen((g) => g + 1);
+  }
 
   /**
    * ⚠️ **`shot`이 deps에 있어야 한다.** 확인 화면으로 갈 때 `<video>`가 통째로 사라졌다가
@@ -111,8 +175,13 @@ export function BodyPhoto({
   async function shoot() {
     if (!video.current || !canvas.current) return;
     const got = await captureJpeg(video.current, canvas.current);
-    // 프레임이 아직 0×0이거나 2D 컨텍스트가 없는 경우다. 빈 사진을 저장하는 것보다 낫다.
-    if (!got) return setNotice(SHOT_NOTICE);
+    /*
+      프레임이 아직 0×0인 경우다. 빈 사진을 저장하는 것보다 낫고, **여기서 중단으로 넘긴다** —
+      실기기(iOS 화면 녹화)에서 얼어붙은 프리뷰가 정확히 이 경로로 나타났다. 「다시 시도해
+      주세요」 한 줄로 끝내면 **죽은 트랙에 대고 영영 셔터만 누르게 된다.** 트랙이 겉보기
+      live여도(mute) 프레임은 안 오므로 mute 리스너와 함께 이중 그물이다.
+    */
+    if (!got) return interrupt();
     setNotice(null);
     setShot(got);
   }
@@ -139,6 +208,28 @@ export function BodyPhoto({
       닫기
     </button>
   );
+
+  /**
+   * 중단 화면. **확인 화면(`shot`)에서는 안 낀다** — 방금 찍은 사진을 밀어내고 안내를 띄우면
+   * 그 사진이 그대로 증발한다. 재취득이 도는 동안(`cam`이 다시 `null`)에는 버튼을 안 그린다:
+   * 누를 수 없는 버튼을 보여 주느니 무엇을 하는 중인지 문장으로 말한다.
+   */
+  if (down && !shot) {
+    return (
+      <Center>
+        <p style={{ ...ui.h2, margin: '0 0 6px' }}>{cam ? DOWN_NOTICE : '카메라를 다시 여는 중이에요…'}</p>
+        {cam && (
+          <>
+            <p style={ui.sub}>다른 앱이 카메라를 쓰고 있으면 그 앱을 닫고 다시 연결해 주세요.</p>
+            <button style={ui.primary} onClick={reconnect}>
+              다시 연결
+            </button>
+          </>
+        )}
+        {close}
+      </Center>
+    );
+  }
 
   if (!cam) return <Center>카메라를 켜는 중이에요…{close}</Center>;
 
