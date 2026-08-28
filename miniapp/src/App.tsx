@@ -7,6 +7,7 @@ import { DEFAULT_GOAL, GOALS, type Goal } from './logic/goal';
 import type { Profile } from './logic/profile';
 import { pickRoutine } from './logic/routine';
 import { startSession, type Session } from './logic/session';
+import { BodyPhoto } from './screens/BodyPhoto';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/Onboarding';
@@ -47,6 +48,14 @@ export function App() {
   const [session, setSession] = useState<Session | null>(null);
   /** 「내 조건」(보유 기구·목적). 탭이 아니라 홈의 목적 칩에서 여는 전체화면이다. */
   const [settings, setSettings] = useState(false);
+  /**
+   * 눈바디 촬영. `settings`와 같은 boolean 하나짜리 전체화면이다 — 라우터·컨텍스트는 안 들인다.
+   *
+   * ⚠️ **아직 여는 곳이 없다.** 진입점(완료 화면 한 줄 · 기록 탭 눈바디 카드)은 다음 PR
+   * 몫이라 지금은 화면과 배선만 서 있다 — 임시 버튼을 달면 그건 다음 PR에서 도로 지울
+   * 코드다(프로브 UI를 방금 그렇게 지웠다).
+   */
+  const [bodyPhoto, setBodyPhoto] = useState(false);
   /** `null`이면 온보딩을 아직 안 끝냈다는 뜻이다. 기본값을 여기서 대신 채우면 그 구분이 사라진다. */
   const [goal, setGoal] = useState<Goal | null>(loadGoal);
   /**
@@ -137,6 +146,9 @@ export function App() {
       />
     );
   }
+
+  // 촬영 중에는 탭도 루틴도 안 보인다 — 카메라를 켜 놓고 딴 화면으로 샐 이유가 없다.
+  if (bodyPhoto) return <BodyPhoto onClose={() => setBodyPhoto(false)} />;
 
   if (settings) {
     return (
