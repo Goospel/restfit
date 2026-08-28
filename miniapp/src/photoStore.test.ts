@@ -19,7 +19,7 @@ import {
  * 여기서 잠그는 것은 넷이다: **날짜가 키라서 하루 1장이 저절로 된다** · 상한을 넘으면
  * **오래된 것부터** 빠진다 · 깨진 값은 목록에서 조용히 빠진다 · 그리고 `storage.ts`와
  * 정반대로 **저장 실패는 호출자에게 드러난다**(방금 찍은 사진이 소리 없이 증발하면
- * 사용자는 한 달 뒤에야 안다).
+ * 사용자는 한 달 뒤에야 안다) — 그것도 **쿼터 초과와 그 외를 갈라서**(화면 문구가 다르다).
  */
 describe('photoStore', () => {
   /** 팩토리를 새로 만들면 DB도 새것이다 — 테스트끼리 사진이 새지 않는다. */
@@ -82,9 +82,9 @@ describe('photoStore', () => {
       const db = await open();
 
       // 일부러 뒤죽박죽 넣는다. 순서가 넣은 순서가 아니라 날짜순이어야 고스트가 기준을 짚는다.
-      expect(await savePhoto(db, photo('2025-03-02'))).toBe(true);
-      expect(await savePhoto(db, photo('2025-01-05'))).toBe(true);
-      expect(await savePhoto(db, photo('2025-02-01'))).toBe(true);
+      expect(await savePhoto(db, photo('2025-03-02'))).toBe('ok');
+      expect(await savePhoto(db, photo('2025-01-05'))).toBe('ok');
+      expect(await savePhoto(db, photo('2025-02-01'))).toBe('ok');
 
       expect((await listPhotos(db)).map((p) => p.date)).toEqual(['2025-01-05', '2025-02-01', '2025-03-02']);
     });
@@ -108,7 +108,7 @@ describe('photoStore', () => {
       const db = await open();
       await savePhoto(db, photo('2025-01-05', { capturedAt: 1 }));
 
-      expect(await savePhoto(db, photo('2025-01-05', { capturedAt: 2, width: 111 }))).toBe(true);
+      expect(await savePhoto(db, photo('2025-01-05', { capturedAt: 2, width: 111 }))).toBe('ok');
 
       const list = await listPhotos(db);
       expect(list).toHaveLength(1);
@@ -145,7 +145,9 @@ describe('photoStore', () => {
       // 읽기 쪽이 걸러 주니 저장은 통과시켜도 된다고 보기 쉬운데, **프루닝은 원시 키를 센다** —
       // 목록에 안 보이는 레코드가 상한 한 자리를 먹고, 정원이 찬 날 가장 오래된 유효 사진이
       // 대신 지워진다. 그래서 읽기 방어가 있어도 쓰기에서 막아야 한다.
-      expect(await savePhoto(db, { ...photo('2025-01-06'), blob: 'not-a-blob' } as unknown as BodyPhoto)).toBe(false);
+      // 입력 검증 실패는 쿼터가 아니라 **버그 신호**라 `'fail'`로 묶는다 — 별도 상을 주면
+      // 화면이 사용자에게 보여 줄 문구가 없는 상태가 하나 더 는다.
+      expect(await savePhoto(db, { ...photo('2025-01-06'), blob: 'not-a-blob' } as unknown as BodyPhoto)).toBe('fail');
 
       // 레코드 수 불변 — 걸러진 게 아니라 **애초에 안 들어갔다**는 뜻이다.
       await expect(countRaw(db)).resolves.toBe(1);
@@ -158,7 +160,7 @@ describe('photoStore', () => {
       for (let i = 0; i < PHOTO_MAX; i++) await savePhoto(db, photo(dayKey(i)));
       expect(await listPhotos(db)).toHaveLength(PHOTO_MAX);
 
-      expect(await savePhoto(db, photo(dayKey(PHOTO_MAX)))).toBe(true);
+      expect(await savePhoto(db, photo(dayKey(PHOTO_MAX)))).toBe('ok');
 
       const list = await listPhotos(db);
       expect(list).toHaveLength(PHOTO_MAX);
@@ -173,38 +175,59 @@ describe('photoStore', () => {
      * 실패한 트랜잭션 흉내. **어떤 이벤트가 발화하는지가 이 목의 전부다** — 실패 경로마다
      * 발화 조합이 달라서, 하나로 뭉치면 안 걸리는 핸들러가 생긴다(리뷰 실측으로 걸렸다).
      */
-    function failingDb(fire: ('error' | 'abort')[]): PhotoDb {
+    function failingDb(fire: ('error' | 'abort')[], error: DOMException | null = null): PhotoDb {
       const store = { put: () => ({}), getAllKeys: () => ({}), delete: () => ({}) };
-      const tx: Record<string, unknown> = { objectStore: () => store, oncomplete: null, onerror: null, onabort: null };
+      const tx: Record<string, unknown> = {
+        objectStore: () => store,
+        // 실패 원인은 **트랜잭션의 `error`에만** 남는다 — 이걸 안 읽으면 쿼터 초과와
+        // 그 밖의 실패가 화면에서 같은 문구가 된다(「다시 시도」는 쿼터엔 거짓말이다).
+        error,
+        oncomplete: null,
+        onerror: null,
+        onabort: null,
+      };
       setTimeout(() => {
         for (const e of fire) (tx[`on${e}`] as (() => void) | null)?.();
       }, 0);
       return { transaction: () => tx } as unknown as PhotoDb;
     }
 
-    it('쿼터 초과면 false다 — 확인 화면이 "저장하지 못했어요"를 띄울 근거', async () => {
+    const quota = () => new DOMException('quota', 'QuotaExceededError');
+
+    it('쿼터 초과는 quota다 — "공간이 부족해요"를 띄울 유일한 근거', async () => {
       // storage.ts의 write는 실패를 삼키지만 여기서만은 다르다(설계 §5.1의 유일한 이탈).
       // 발화 순서 `error → abort`는 fake-indexeddb 실측값이다 — 실전에서 반환값을 정하는 것은
       // **먼저 오는 onerror**다.
-      await expect(savePhoto(failingDb(['error', 'abort']), photo('2025-01-05'))).resolves.toBe(false);
+      await expect(savePhoto(failingDb(['error', 'abort'], quota()), photo('2025-01-05'))).resolves.toBe('quota');
     });
 
-    it('onerror만 와도 false다 — 요청 실패가 트랜잭션으로 올라오는 실전 경로', async () => {
-      await expect(savePhoto(failingDb(['error']), photo('2025-01-05'))).resolves.toBe(false);
+    it('쿼터 초과가 abort로만 와도 quota다 — 브라우저마다 발화 조합이 다르다', async () => {
+      await expect(savePhoto(failingDb(['abort'], quota()), photo('2025-01-05'))).resolves.toBe('quota');
     });
 
-    it('onabort만 와도 false다 — 요청 에러 없이 끊기면 이쪽만 발화한다', async () => {
+    it('쿼터가 아닌 실패는 fail이다 — 문구가 갈린다', async () => {
+      // 「공간이 부족해요 — 오래된 사진을 지워 주세요」를 아무 실패에나 띄우면, 공간이
+      // 멀쩡한 사람에게 사진을 지우라고 시키는 꼴이 된다.
+      const other = new DOMException('gone', 'InvalidStateError');
+      await expect(savePhoto(failingDb(['error'], other), photo('2025-01-05'))).resolves.toBe('fail');
+    });
+
+    it('원인을 모르는 실패도 fail이다 — tx.error가 비어 있는 경로', async () => {
+      await expect(savePhoto(failingDb(['error']), photo('2025-01-05'))).resolves.toBe('fail');
+    });
+
+    it('onabort만 와도 끝난다 — 요청 에러 없이 끊기면 이쪽만 발화한다', async () => {
       // 강제 close·version change처럼 **요청 에러 없이** 트랜잭션이 끊기는 경로가 있다.
       // 이 핸들러가 없으면 promise가 영영 pending이라 확인 화면이 「저장 중」에서 굳는다 —
-      // false보다 나쁘다.
-      await expect(savePhoto(failingDb(['abort']), photo('2025-01-05'))).resolves.toBe(false);
+      // 실패를 돌려주는 것보다 나쁘다.
+      await expect(savePhoto(failingDb(['abort']), photo('2025-01-05'))).resolves.toBe('fail');
     });
 
-    it('DB가 닫혀 있어도 던지지 않고 false다', async () => {
+    it('DB가 닫혀 있어도 던지지 않고 fail이다', async () => {
       const db = await open();
       db.close();
 
-      await expect(savePhoto(db, photo('2025-01-05'))).resolves.toBe(false);
+      await expect(savePhoto(db, photo('2025-01-05'))).resolves.toBe('fail');
     });
   });
 
