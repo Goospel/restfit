@@ -22,6 +22,7 @@
      각 항목의 frontmatter(summary)에서 재생성합니다. 내용을 바꾸려면 그 항목의
      summary를 고치세요(단일 출처). 최신 항목이 위. -->
 
+- [T-238](troubleshooting/T-238.md) · 토스 iOS 웹뷰는 `allowsInlineMediaPlayback`이 기본 꺼짐 — 카메라 프리뷰가 네이티브 전체화면으로 강탈되고 인라인 `<video>`는 정지 프레임이 된다. 캡처(drawImage)는 성공하므로 「사진은 찍히는데 프리뷰만 죽은」 비대칭이 감별 신호
 - [T-237](troubleshooting/T-237.md) · 복구용 effect가 자기 deps(cam)를 바꾸면 자기 자신을 다시 부른다 — 재취득한 자원마저 나쁜 상태면 판정→재취득→판정으로 영영 돌고(3초에 getUserMedia 3951회), 그 사이 상태가 진동해 수동 폴백 버튼조차 못 누른다
 - [T-236](troubleshooting/T-236.md) · vitest 4가 `--reporter=basic`을 없앴는데 하네스는 그 실패를 「테스트 0건 실패」로 읽어 돌연변이 18종 전부를 「생존 = 공허한 테스트」로 보고했다 — 계측기가 죽으면 판정이 사라지는 게 아니라 **정반대 결론**이 나온다
 - [T-235](troubleshooting/T-235.md) · 가짜 타이머를 쓰는 테스트가 실패하면 복구 줄(`vi.useRealTimers()`)까지 못 가고, 그 뒤 파일 전체가 5초 타임아웃으로 무너진다 — 빨간불 1개가 24개로 보여 새 테스트가 아니라 멀쩡한 기존 코드를 의심하게 된다

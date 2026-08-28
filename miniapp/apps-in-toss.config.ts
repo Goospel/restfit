@@ -14,8 +14,19 @@ export default defineConfig({
   // `getUserMedia`가 열리지 않는다(프로브로 실측해 확인했다 — PR #49).
   // ⚠️ 심사 릴리즈 노트에 사용 목적을 함께 적는다 — 사진은 기기에만 저장되고 전송되지 않는다.
   permissions: [{ name: 'camera', access: 'access' }],
-  // ⚠️ 당겨서 새로고침을 끈다 — 진행 중인 세션은 React state에만 있어서 **새로고침 한 번에 그날 기록이 통째로 날아간다.**
-  // 운동 중에 화면을 위로 당기는 건 흔한 동작이다. 세션을 저장소에 넣기 전까지 이 한 줄이 유일한 방어다.
-  webView: { pullToRefreshEnabled: false },
+  webView: {
+    // ⚠️ 당겨서 새로고침을 끈다 — 진행 중인 세션은 React state에만 있어서 **새로고침 한 번에 그날 기록이 통째로 날아간다.**
+    // 운동 중에 화면을 위로 당기는 건 흔한 동작이다. 세션을 저장소에 넣기 전까지 이 한 줄이 유일한 방어다.
+    pullToRefreshEnabled: false,
+    // ⚠️ **없으면 iOS 웹뷰가 카메라 프리뷰를 전체화면으로 강탈한다**(WKWebView 기본값이 false다).
+    // 실기기 증상: 촬영 화면에서 카메라를 켜면 버튼·고스트가 없는 네이티브 전체화면 플레이어가 뜨고,
+    // 그걸 닫으면 앱의 인라인 `<video>`는 정지 프레임만 남는다 — **고스트 오버레이로 구도를 맞추는
+    // 눈바디 촬영이 통째로 무용지물이 된다**(촬영 자체는 성공해서 더 눈에 안 띈다). 화면 코드의
+    // `<video autoPlay playsInline muted>`는 이미 맞다 — 막은 것은 컨테이너 쪽이다.
+    allowsInlineMediaPlayback: true,
+    // ⚠️ 음소거된 카메라 프리뷰가 **제스처 없이** 재생을 시작하게 한다. 위 한 줄만으로는 인라인으로
+    // 그릴 자리만 생기고, 이쪽이 막혀 있으면 `video.play()`가 사용자 조작을 기다리다 정지 프레임에 머문다.
+    mediaPlaybackRequiresUserAction: false,
+  },
   webBundleDir: 'dist',
 });
