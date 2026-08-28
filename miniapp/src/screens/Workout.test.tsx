@@ -330,13 +330,20 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     expect(repsInput().style.border).toBe('1px solid var(--line-strong)');
   });
 
-  it('맨몸 운동에는 절대 안 뜬다 — 얹을 무게가 없다', () => {
+  it('맨몸 운동에는 상단 초과 안내가 안 뜬다 — 얹을 무게가 없다', () => {
     // 맨몸의 진행 수단은 무게가 아니라 동작이라, 「무게를 올려볼 때」는 줄 수 없는 조언이다.
+    // (하단 미달은 다르다 — 맨몸에도 나눠서 채우는 길이 있어서 뜬다. 「맨몸 미달 안내」 describe.)
     setup({ session: startSession([ex('push')], 'muscle') });
     typeReps('40');
     expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
-    typeReps('2');
-    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+  });
+
+  it('기구 미달에는 맨몸 줄2가 섞이지 않는다 — 두 문구는 남남이다', () => {
+    // 맨몸 미달 안내가 줄1을 공유하면서 줄2까지 딸려 오면 「무게를 낮추라」가 사라진다.
+    setup({ session: gym() });
+    typeReps('4');
+    expect(screen.getByText('힘들면 무게를 낮춰서 횟수를 채워보세요')).toBeTruthy();
+    expect(screen.queryByText('힘들면 조금 쉬었다가 나눠서 채워보세요')).toBeNull();
   });
 
   it('구간 숫자는 목적을 따라간다 — 하드코딩이 아니다', () => {
@@ -355,6 +362,60 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     setup({ session: gym() });
     typeReps('');
     expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+  });
+});
+
+describe('세트 진행 — 맨몸 미달 안내', () => {
+  // 사다리(≥25)는 「너무 많이 했다」 쪽이라 맨몸에서 모자란 사람에겐 아무 말도 안 걸렸다.
+  // 경계 규칙은 기구 미달과 같다(목표 하단 미만) — 다른 건 줄2뿐이다: 맨몸엔 낮출 무게가 없다.
+  const repsInput = () => screen.getByLabelText('횟수') as HTMLInputElement;
+  const typeReps = (v: string) => fireEvent.change(repsInput(), { target: { value: v } });
+  const bw = (goal: Parameters<typeof startSession>[1] = 'health') => startSession([ex('push')], goal);
+  const why = () => screen.queryByText('목표(8~15회)보다 적어요');
+  const what = () => screen.queryByText('힘들면 조금 쉬었다가 나눠서 채워보세요');
+
+  it('하단에 못 미치면 두 줄이 온전히 뜬다', () => {
+    setup({ session: bw() }); // health 8~15
+    typeReps('5');
+    // 줄마다 별도 요소다(기구·사다리 안내와 같은 규율) — 375px에서 어중간한 자리에 꺾이지 않게.
+    expect(why()).toBeTruthy();
+    expect(what()).toBeTruthy();
+  });
+
+  it('하단 경계에는 안 뜬다 — 경계는 범위 안이다', () => {
+    setup({ session: bw() });
+    typeReps('8');
+    expect(why()).toBeNull();
+    expect(what()).toBeNull();
+  });
+
+  it('색은 회색이고 자리는 입력칸 아래다', () => {
+    // ★ 색은 문구와 **따로** 잠근다 — 파랑이면 「잘했다」로 읽혀서 더 채우라는 말과 신호가 어긋난다.
+    // ★ 위치도 잠근다 — 존재만 보면 안내가 헤더 밑으로 이사해도 초록이다(맨몸 사다리 describe의 교훈).
+    setup({ session: bw() });
+    typeReps('5');
+    expect(what()!.parentElement!.style.color).toBe('var(--text-sub)');
+    expect(repsInput().compareDocumentPosition(what()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('미달이어도 세트 완료는 막지 않는다 — 안내지 검문이 아니다', () => {
+    setup({ session: bw() });
+    typeReps('5');
+    expect((screen.getByRole('button', { name: '세트 완료' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('25회 이상이면 미달이 아니라 사다리 안내다 — 화면의 안내는 하나뿐이다', () => {
+    setup({ session: bw() });
+    typeReps('30');
+    expect(screen.getByText('다음엔 더 어려운 동작으로 바꿔보세요')).toBeTruthy();
+    expect(screen.queryByText(/목표\(.*\)보다/)).toBeNull();
+    expect(what()).toBeNull();
+  });
+
+  it('구간 숫자는 목적을 따라간다 — 하드코딩이 아니다', () => {
+    setup({ session: bw('fatLoss') }); // 12~20
+    typeReps('5');
+    expect(screen.getByText('목표(12~20회)보다 적어요')).toBeTruthy();
   });
 });
 

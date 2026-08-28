@@ -306,16 +306,18 @@ export function Workout({
   const valid = Number.isFinite(repsNum) && repsNum > 0;
 
   /**
-   * 목표 반복 범위 이탈 안내. **기구에만 뜬다** — 맨몸은 얹을 무게가 없어서
+   * 목표 반복 범위 이탈 안내. **초과는 기구에만 뜬다** — 맨몸은 얹을 무게가 없어서
    * 「무게를 올려야 효과가 계속 늘어요」가 줄 수 없는 조언이다(그 자리는 25회 사다리 안내가 맡는다).
+   * **미달은 양쪽 다 뜬다** — 모자란 사람에게 할 말은 맨몸에도 있다(줄2는 다르다, 아래 렌더 참조).
    *
    * 구간은 `GOALS[goal].reps`에서 읽는다. 숫자를 문구에 박으면 목적을 바꾼 사람에게
    * 남의 목표가 뜬다 — 근비대 6~12, 감량 12~20, 건강 8~15로 다 다르다.
    *
    * 경계는 **포함**이다(`suggestNext`의 졸업 판정과 같은 규약). 안내일 뿐이라 저장은 안 막는다.
+   * 맨몸 사다리(≥25)와는 저절로 배타다 — 모든 목적의 하단이 12 이하라 겹칠 값이 없다.
    */
   const [repLo, repHi] = GOALS[s.goal].reps;
-  const repOff = !bodyweight && valid ? (repsNum > repHi ? 'over' : repsNum < repLo ? 'under' : null) : null;
+  const repOff = valid ? (repsNum < repLo ? 'under' : !bodyweight && repsNum > repHi ? 'over' : null) : null;
 
   /**
    * 맨몸 사다리 안내. **지난 기록이 아니라 지금 입력한 값**을 본다 — 기록 기준이면 오늘
@@ -406,7 +408,15 @@ export function Workout({
         {repOff && (
           <div style={{ ...GUIDE, color: repOff === 'over' ? 'var(--blue-dark)' : 'var(--text-sub)' }}>
             <div>{`목표(${repLo}~${repHi}회)보다 ${repOff === 'over' ? '많아요' : '적어요'}`}</div>
-            <div>{repOff === 'over' ? '무게를 올려야 효과가 계속 늘어요' : '힘들면 무게를 낮춰서 횟수를 채워보세요'}</div>
+            {/* 미달 줄2가 기구·맨몸으로 갈리는 이유: 맨몸엔 낮출 무게가 없어서 할 수 있는 행동이
+                「쉬었다 나눠 채우기」뿐이다 — 공용 문구로 묶으면 한쪽엔 못 할 조언이 뜬다. */}
+            <div>
+              {repOff === 'over'
+                ? '무게를 올려야 효과가 계속 늘어요'
+                : bodyweight
+                  ? '힘들면 조금 쉬었다가 나눠서 채워보세요'
+                  : '힘들면 무게를 낮춰서 횟수를 채워보세요'}
+            </div>
           </div>
         )}
 
