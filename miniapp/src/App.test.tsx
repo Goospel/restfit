@@ -11,9 +11,9 @@ import { saveGoal } from './storage';
  * 화면 **배선**만 잰다. 각 화면이 무엇을 그리는지는 그 화면의 테스트가 이미 잰다 —
  * 여기서 잠그는 것은 **어느 버튼이 어느 화면을 여는가** 하나다.
  *
- * ⚠️ **이 파일이 없으면 배선은 무보증이다**(리뷰 실측). `onShootPhoto`를 비교 화면에,
- * `onBodyPhoto`를 비교 화면에 잘못 이어도 **화면 테스트 430건이 전부 초록이고 `tsc`도
- * 안 걸린다**(둘 다 `() => void`라 타입이 같다). 진입점이 이 PR의 주제인데 그 연결만
+ * ⚠️ **이 파일이 없으면 배선은 무보증이다**(리뷰 실측). `onComparePhotos`를 촬영 화면에,
+ * `onBodyPhoto`를 비교 화면에 잘못 이어도 **화면 테스트가 전부 초록이고 `tsc`도 안 걸린다**
+ * (둘 다 `() => void`라 타입이 같다). 눈바디 PR C에서 진입점이 주제였는데 그 연결만
  * 아무도 안 보고 있었다.
  */
 vi.mock('./photoStore', async (orig) => ({
@@ -62,14 +62,14 @@ const SHOOT = '이 환경에서는 카메라를 쓸 수 없어요';
 const COMPARE = '눈바디 비교';
 
 describe('App — 눈바디 진입 배선', () => {
-  it('기록 탭의 찍기는 촬영 화면을 연다', async () => {
+  it('기록 탭에는 촬영 입구가 없다 — 완료 화면이 유일한 문이다', async () => {
     render(<App />);
     click('기록');
 
-    fireEvent.click(await screen.findByRole('button', { name: '오늘 찍기' }));
-
-    expect(await screen.findByText(SHOOT)).toBeTruthy();
-    expect(screen.queryByText(COMPARE)).toBeNull();
+    // 사진이 있는 상태로 열어도(비교 로우가 뜨는 상태) 촬영으로 가는 버튼은 없다.
+    await screen.findByRole('button', { name: '비교' });
+    expect(screen.queryByRole('button', { name: '오늘 찍기' })).toBeNull();
+    expect(screen.queryByText(SHOOT)).toBeNull();
   });
 
   it('기록 탭의 비교는 비교 화면을 연다', async () => {

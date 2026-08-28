@@ -11,6 +11,8 @@
   --blue-dark: #1b64da;
   --gray: #8b95a1;
   --red: #f04452;
+  /* 기록 달력의 눈바디 마커. 운동(파랑) 옆에 서는 색이라 명도가 비슷해야 한 줄로 읽힌다. */
+  --green: #12b76a;
 
   --tab-h: 56px;
   --safe-b: env(safe-area-inset-bottom, 0px);

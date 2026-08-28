@@ -205,8 +205,7 @@ export function App() {
         <History
           history={history}
           onResetOnboarding={resetOnboarding}
-          // 운동을 안 한 날에도 찍을 수 있는 유일한 입구다.
-          onShootPhoto={() => setPhotoView('shoot')}
+          // 촬영 입구는 완료 화면 하나다 — 기록 탭에서는 비교로만 나간다(운동한 날만 찍는다).
           onComparePhotos={() => setPhotoView('compare')}
         />
       )}
