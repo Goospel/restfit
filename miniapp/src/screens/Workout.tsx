@@ -15,6 +15,8 @@ import {
   type Session,
 } from '../logic/session';
 import { adPlan, AD_GROUP_ID, nextAdState, type AdState } from '../logic/adPlan';
+import { cueAt, warnColors } from '../logic/restCue';
+import { playCue, primeSound } from '../restSound';
 import { defaultWeightFor, type EquipSpec } from '../logic/equipSpec';
 import { BODYWEIGHT_LADDER_REPS, GOALS, suggestNext } from '../logic/goal';
 import { EXPERIENCE_KEYS, FEEL_KEYS, FEEL_LABEL, nextExperience, type Feel, type Profile } from '../logic/profile';
@@ -166,6 +168,25 @@ export function Workout({
   }, [resting, left]);
 
   /**
+   * 준비 신호. **판정은 `cueAt`이 혼자 한다** — 여기서 조건을 덧붙이면 규칙이 두 곳으로 갈라진다.
+   *
+   * ref에 직전 남은 초를 들고 비교한다: 시계는 250ms마다 도는데 남은 초는 1초에 한 번만
+   * 바뀌므로, 「같은 초면 침묵」이 `cueAt` 안에 있어야 초당 네 번 울리지 않는다.
+   * 휴식이 아니면 ref를 비워 다음 휴식의 첫 비교가 「휴식 길이 → …」로 시작하게 한다.
+   */
+  const prevLeft = useRef<number | null>(null);
+  useEffect(() => {
+    if (!resting) {
+      prevLeft.current = null;
+      return;
+    }
+    const prev = prevLeft.current;
+    prevLeft.current = left;
+    const cue = prev === null ? null : cueAt(prev, left);
+    if (cue) playCue(cue);
+  }, [resting, left]);
+
+  /**
    * 지금까지 한 것을 기록으로 만든다. 한 세트도 안 했으면 남기지 않는다.
    *
    * `feel`은 **고른 경우에만** 넣는다 — 키를 `undefined`로 박아 두면 저장된 JSON에
@@ -277,22 +298,51 @@ export function Workout({
     const next = nextIsNewExercise ? s.exercises[s.index + 1] : current;
     const nextSetNo = nextIsNewExercise ? 1 : s.done[s.index].length + 1;
 
+    /**
+     * 준비 신호의 색. **여기서 한 번 정해 재사용한다** — 화면에 if를 흩뿌리면
+     * 「배경은 물들었는데 글자는 검정」 같은 반쪽 상태가 난다.
+     */
+    const { bg, inverted, text: fg, phrase } = warnColors(left);
+    const fgSub = inverted ? 'rgba(255, 255, 255, 0.82)' : 'var(--text-sub)';
+    /** 마지막 3초 심장박동. 초당 1회다 — 그 이상은 광과민성 위험이다(결정 7). */
+    const pulsing = left <= 3 && left > 0;
+
     return (
-      <main style={{ ...ui.pageFull, background: 'var(--bg-sub)' }}>
+      // 1초 단위 계단을 트랜지션이 메워 눈에는 연속 램프로 보인다.
+      <main style={{ ...ui.pageFull, background: bg, transition: 'background 1s linear' }}>
         <div style={{ ...ui.spacer, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--text-sub)', marginBottom: 4 }}>휴식</div>
-            <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: -3, fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ fontSize: 13, color: fgSub, marginBottom: 4 }}>휴식</div>
+            {/* `key`가 초마다 바뀌어야 리마운트로 펄스가 **매초** 다시 재생된다 — 없으면 첫 초만 뛴다. */}
+            <div
+              key={left}
+              className={pulsing ? 'cue-pulse' : undefined}
+              style={{ fontSize: 72, fontWeight: 800, letterSpacing: -3, fontVariantNumeric: 'tabular-nums', color: fg }}
+            >
               {mmss(left)}
             </div>
+            {/* 소리가 안 나는 기기에서도 같은 정보가 닿아야 한다(결정 4) — 색·펄스와 함께 셋이 같은 말을 한다. */}
+            {left <= 10 && left > 0 && (
+              <div style={{ marginTop: 10, fontSize: 15, fontWeight: 700, color: phrase }}>
+                다음 세트 준비
+              </div>
+            )}
             {next && (
-              <div style={{ marginTop: 20, fontSize: 15, color: 'var(--text-sub)' }}>
-                다음 · <b style={{ color: 'var(--text)' }}>{next.name}</b> {nextSetNo}세트
+              <div style={{ marginTop: 20, fontSize: 15, color: fgSub }}>
+                다음 · <b style={{ color: fg }}>{next.name}</b> {nextSetNo}세트
               </div>
             )}
           </div>
         </div>
-        <button style={ui.secondary} onClick={() => onChange(endRest(s))}>
+        {/* ⚠️ `border`가 shorthand라 `borderColor`만 덮으면 리렌더에서 풀린다(ui.ts 주석). */}
+        <button
+          style={
+            inverted
+              ? { ...ui.secondary, color: '#ffffff', background: 'transparent', border: '1px solid rgba(255, 255, 255, 0.45)' }
+              : ui.secondary
+          }
+          onClick={() => onChange(endRest(s))}
+        >
           휴식 건너뛰기
         </button>
       </main>
@@ -436,7 +486,12 @@ export function Workout({
       <button
         style={{ ...ui.primary, ...(valid ? null : ui.disabled) }}
         disabled={!valid}
-        onClick={() => onChange(completeSet(s, { weight: bodyweight ? 0 : Number(weight) || 0, reps: repsNum }, Date.now()))}
+        onClick={() => {
+          // 브라우저 오디오는 **사용자 제스처 뒤에만** 열린다. 휴식은 항상 이 탭 직후라
+          // 여기서 깨우면 조건이 저절로 맞는다 — 빠뜨리면 휴식 내내 소리가 통째로 안 난다.
+          primeSound();
+          onChange(completeSet(s, { weight: bodyweight ? 0 : Number(weight) || 0, reps: repsNum }, Date.now()));
+        }}
       >
         세트 완료
       </button>
