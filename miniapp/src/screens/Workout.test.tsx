@@ -492,6 +492,16 @@ describe('휴식 — 마지막 10초 준비 신호', () => {
     expect(cues()).toEqual([]);
   });
 
+  it('문구는 정확히 10초부터다 — 11초엔 아직 없다', () => {
+    // ★ 「30초에 없다」만으로는 조건이 10→12로 느슨해져도 안 죽는다(변이 실측). 경계 바로
+    //   바깥에서 부재를, 안에서 존재를 잠근다.
+    enterRest(12);
+    tick(1000);
+    expect(screen.queryByText('다음 세트 준비')).toBeNull(); // 11초
+    tick(1000);
+    expect(screen.getByText('다음 세트 준비')).toBeTruthy(); // 10초
+  });
+
   it('8초에는 문구가 뜨고 배경이 그만큼 물든다', () => {
     enterRest(12);
     tick(4000);
@@ -529,7 +539,8 @@ describe('휴식 — 마지막 10초 준비 신호', () => {
     // 배경이 어두워진 뒤에도 검정 글자면 숫자가 안 읽힌다. 문턱은 `warnColors`가 혼자 쥔다.
     enterRest(12);
     tick(7000);
-    expect(timer(5).style.color).toBe('var(--text)');
+    // 색 값은 `warnColors`가 혼자 쥔다 — 대비를 계산하려면 CSS 변수가 아니라 실값이어야 한다.
+    expect(timer(5).style.color).toBe('rgb(25, 31, 40)');
     tick(1000);
     expect(timer(4).style.color).toBe('rgb(255, 255, 255)'); // jsdom이 hex를 rgb로 정규화한다
     // 건너뛰기 버튼도 함께 뒤집힌다 — 붉은 배경 위에 회색 버튼만 남으면 그것만 안 읽힌다.
@@ -544,7 +555,10 @@ describe('휴식 — 마지막 10초 준비 신호', () => {
     enterRest(12);
     tick(4000);
     expect(timer(8).className).toBe('');
-    tick(5000);
+    // ★ 4초에서 부재를 잠근다 — 없으면 창이 3→5로 넓어져도 안 죽는다(변이 실측).
+    tick(4000);
+    expect(timer(4).className).toBe('');
+    tick(1000);
     expect(timer(3).className).toBe('cue-pulse');
     // ★ 클래스만 보면 `key`를 지워도 초록이다(돌연변이 실측) — 클래스는 3·2·1 내내 붙어 있고,
     //   CSS 애니메이션은 **리마운트될 때만** 다시 재생되기 때문이다. jsdom은 애니메이션을 안

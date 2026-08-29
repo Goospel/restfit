@@ -17,7 +17,8 @@ function audio(): AudioContext | null {
     if (!C) return null;
     ctx ??= new C();
     // 탭이 백그라운드에 다녀오면 suspended로 남는다 — 깨우지 않으면 소리가 조용히 사라진다.
-    if (ctx.state === 'suspended') void ctx.resume();
+    // ⚠️ `resume()`은 Promise라 거부가 이 try/catch에 안 잡힌다 — 안 삼키면 unhandled rejection이다.
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     return ctx;
   } catch {
     return null;
@@ -32,8 +33,8 @@ export function primeSound(): void {
   audio();
 }
 
-/** S1 음표: [주파수(Hz), 시작 지연(s), 길이(s), 게인]. */
-const NOTES: Record<Cue, [number, number, number, number][]> = {
+/** S1 음표: [주파수(Hz), 시작 지연(s), 길이(s), 게인]. 순수 데이터라 웹 오디오 없이 잠글 수 있다. */
+export const NOTES: Record<Cue, [number, number, number, number][]> = {
   // 미리 알림 「딩–동」. 두 음이라 기기 알림과 안 헷갈린다.
   warn: [
     [880, 0, 0.16, 0.16],

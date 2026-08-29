@@ -302,8 +302,7 @@ export function Workout({
      * 준비 신호의 색. **여기서 한 번 정해 재사용한다** — 화면에 if를 흩뿌리면
      * 「배경은 물들었는데 글자는 검정」 같은 반쪽 상태가 난다.
      */
-    const { bg, inverted } = warnColors(left);
-    const fg = inverted ? '#ffffff' : 'var(--text)';
+    const { bg, inverted, text: fg, phrase } = warnColors(left);
     const fgSub = inverted ? 'rgba(255, 255, 255, 0.82)' : 'var(--text-sub)';
     /** 마지막 3초 심장박동. 초당 1회다 — 그 이상은 광과민성 위험이다(결정 7). */
     const pulsing = left <= 3 && left > 0;
@@ -324,7 +323,7 @@ export function Workout({
             </div>
             {/* 소리가 안 나는 기기에서도 같은 정보가 닿아야 한다(결정 4) — 색·펄스와 함께 셋이 같은 말을 한다. */}
             {left <= 10 && left > 0 && (
-              <div style={{ marginTop: 10, fontSize: 15, fontWeight: 700, color: inverted ? '#ffffff' : 'rgb(183, 28, 48)' }}>
+              <div style={{ marginTop: 10, fontSize: 15, fontWeight: 700, color: phrase }}>
                 다음 세트 준비
               </div>
             )}
