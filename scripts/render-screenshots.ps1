@@ -52,7 +52,7 @@ $SHOTS = @(
     #    콘텐츠도 적어 캔버스 절반이 비었다 — 큰 타이머가 세로를 채우는 휴식 쪽이 낫다.
     @{ file = '02-rest.png';    title = '쉬는 시간까지|챙겨드려요';         hi = '챙겨드려요';        sub = '세트를 마치면 타이머가 저절로 시작돼요' }
     @{ file = '03-shop.png';    title = '덤벨 하나면|96개가 열립니다';      hi = '96개가 열립니다';   sub = '뭘 사야 할지 숫자로 알려드려요' }
-    @{ file = '04-history.png'; title = '지난번 무게가|미리 채워집니다';    hi = '미리 채워집니다';   sub = '기록은 저절로 쌓여요' }
+    @{ file = '04-history.png'; title = '운동한 날이|달력에 쌓입니다';      hi = '달력에 쌓입니다';   sub = '날짜를 누르면 그날의 기록이 열려요' }
 )
 
 $FONT = "'Malgun Gothic','맑은 고딕',system-ui,sans-serif"
