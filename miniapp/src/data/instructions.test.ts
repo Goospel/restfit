@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { EXERCISES } from './exercises';
 import { loadInstructions } from './instructions';
@@ -42,8 +42,9 @@ describe('instructions.json', () => {
 
   it('영문이 남아 있지 않다', () => {
     // 사용자는 영어를 못 읽는다. SMR·kg·cm는 한국에서도 그대로 쓰는 토큰이라 예외다.
+    // 한 글자도 안 봐준다 — 「1~2m」·「티(T)자」처럼 짧은 잔재가 세 글자 문턱을 그냥 통과했다.
     const bad = ENTRIES.flatMap(([id, v]) =>
-      v.filter((s) => /[A-Za-z]{3,}/.test(s.replace(/SMR|kg|cm/g, ''))).map((s) => `${id}: ${s}`),
+      v.filter((s) => /[A-Za-z]/.test(s.replace(/SMR|kg|cm/g, ''))).map((s) => `${id}: ${s}`),
     );
     expect(bad).toEqual([]);
   });
@@ -59,5 +60,18 @@ describe('loadInstructions', () => {
   it('설명이 없는 운동은 빈 배열이다 — 없는 키가 예외가 되면 안 된다', async () => {
     // 0단계 5개 중 하나. 화면은 이 경우 사진만 보여 준다.
     await expect(loadInstructions('Iron_Cross')).resolves.toEqual([]);
+  });
+
+  it('청크를 못 받으면 빈 배열이다 — 오프라인에서 시트가 통째로 죽지 않는다', async () => {
+    // 동적 import는 네트워크를 탄다. 던지게 두면 unhandled rejection이 남고 사진·닫기까지 못 쓴다.
+    // 화면에선 「설명이 없는 운동」과 같은 길이다(설계 §3.3).
+    vi.resetModules();
+    vi.doMock('./instructions.json', () => {
+      throw new Error('chunk load failed');
+    });
+    const mod = await import('./instructions');
+    await expect(mod.loadInstructions(ENTRIES[0][0])).resolves.toEqual([]);
+    vi.doUnmock('./instructions.json');
+    vi.resetModules();
   });
 });

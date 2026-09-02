@@ -559,8 +559,11 @@ describe('세트 진행 — 동작 보기', () => {
       open();
       expect(loadInstructions).toHaveBeenCalledWith('curl');
       const list = await within(dialog()!).findByRole('list');
-      const items = within(list).getAllByRole('listitem').map((li) => (li.textContent ?? '').replace(/^\d+/, ''));
-      expect(items).toEqual(['덤벨을 양손에 들고 바로 선다.', '위팔은 고정한 채 팔을 굽힌다.']);
+      // 번호를 지우고 비교하면 `<ol>`이 `<ul>`이 되거나 번호 `<span>`이 사라져도 통과한다 —
+      // 목록 요소와 번호 텍스트를 그대로 단언한다.
+      expect(dialog()!.querySelector('ol')).toBe(list);
+      const items = within(list).getAllByRole('listitem').map((li) => li.textContent ?? '');
+      expect(items).toEqual(['1덤벨을 양손에 들고 바로 선다.', '2위팔은 고정한 채 팔을 굽힌다.']);
     });
 
     it('단계가 없으면 목록 요소 자체가 없다 — 사진과 닫기는 그대로다', async () => {
@@ -588,6 +591,27 @@ describe('세트 진행 — 동작 보기', () => {
       await act(async () => late(['조트만 컬 단계']));
       expect(screen.getByRole('dialog', { name: '스쿼트' })).toBeTruthy();
       expect(screen.queryByText('조트만 컬 단계')).toBeNull();
+    });
+
+    // 한 테스트가 세 규칙을 한꺼번에 잠근다 — **열 때만 · 지금 운동의 id로 · 이전 결과를 비우고**.
+    // 셋 중 하나만 빠져도 「다음 운동 시트에 이전 운동 설명」이라는 같은 증상으로 새기 때문이다.
+    it('운동이 바뀐 뒤 다시 열면 이전 운동 단계가 남지 않는다', async () => {
+      vi.mocked(loadInstructions).mockImplementation((id: string) =>
+        id === 'curl' ? Promise.resolve(['컬 단계']) : new Promise<string[]>(() => {}), // 스쿼트 결과는 안 온다
+      );
+      const next = ex('squat', [], { name: '스쿼트', images: ['Squat/0.jpg'] });
+      const s = startSession([curl, next], 'health');
+      const { rerenderWith } = setup({ session: s });
+      expect(loadInstructions).not.toHaveBeenCalled(); // 열기 전엔 청크를 안 받는다 (§2#6 첫 로드 그대로)
+      open();
+      await act(async () => {});
+      expect(screen.getByText('컬 단계')).toBeTruthy();
+      rerenderWith({ ...s, index: 1 });
+      await act(async () => {});
+      open();
+      await act(async () => {});
+      expect(loadInstructions).toHaveBeenLastCalledWith('squat'); // 그 운동의 id로
+      expect(screen.queryByText('컬 단계')).toBeNull(); // 이전 운동 단계가 안 남는다
     });
   });
 });
