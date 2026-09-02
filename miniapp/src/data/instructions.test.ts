@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EXERCISES } from './exercises';
+import { loadInstructions } from './instructions';
 import INSTRUCTIONS from './instructions.json';
 
 /**
@@ -45,5 +46,18 @@ describe('instructions.json', () => {
       v.filter((s) => /[A-Za-z]{3,}/.test(s.replace(/SMR|kg|cm/g, ''))).map((s) => `${id}: ${s}`),
     );
     expect(bad).toEqual([]);
+  });
+});
+
+describe('loadInstructions', () => {
+  // 화면 테스트는 이 함수를 스파이로 갈아 끼운다 — 진짜 청크에서 값이 나오는지는 여기서만 확인된다.
+  it('id의 단계를 돌려준다', async () => {
+    const [id, steps] = ENTRIES[0];
+    await expect(loadInstructions(id)).resolves.toEqual(steps);
+  });
+
+  it('설명이 없는 운동은 빈 배열이다 — 없는 키가 예외가 되면 안 된다', async () => {
+    // 0단계 5개 중 하나. 화면은 이 경우 사진만 보여 준다.
+    await expect(loadInstructions('Iron_Cross')).resolves.toEqual([]);
   });
 });

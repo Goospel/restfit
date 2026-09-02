@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Exercise } from '../data/exercises';
+import { loadInstructions } from '../data/instructions';
 import type { Profile } from '../logic/profile';
 import { warnColors } from '../logic/restCue';
 import { startSession, type Session } from '../logic/session';
@@ -14,6 +15,9 @@ import { Workout } from './Workout';
 
 // 소리는 스파이로만 본다 — 웹 오디오는 jsdom에 없고, 판정은 전부 `restCue.ts`에 있다(설계 §3.4).
 vi.mock('../restSound', () => ({ playCue: vi.fn(), primeSound: vi.fn() }));
+// 단계 설명은 스파이로 갈아 끼운다 — 이 화면의 책임은 **언제 무엇을 부르고 그 결과를 어떻게 그리는지**이지
+// 260KB짜리 실제 번역이 아니다. 기본값은 빈 배열이라 다른 describe의 시트는 사진만 뜬다.
+vi.mock('../data/instructions', () => ({ loadInstructions: vi.fn(async () => []) }));
 
 afterEach(cleanup);
 
@@ -540,6 +544,51 @@ describe('세트 진행 — 동작 보기', () => {
     expect(within(dialog()!).getByText('푸시업')).toBeTruthy();
     click('닫기');
     expect(dialog()).toBeNull();
+  });
+
+  describe('단계 목록', () => {
+    beforeEach(() => {
+      vi.mocked(loadInstructions).mockReset();
+      vi.mocked(loadInstructions).mockResolvedValue([]);
+    });
+
+    it('열면 그 운동의 단계를 받아 번호 목록으로 그린다', async () => {
+      // 사진 두 장이 「무엇을」이라면 단계는 「어떻게」다 — 시트를 여는 이유의 절반이다.
+      vi.mocked(loadInstructions).mockResolvedValue(['덤벨을 양손에 들고 바로 선다.', '위팔은 고정한 채 팔을 굽힌다.']);
+      setup({ session: running() });
+      open();
+      expect(loadInstructions).toHaveBeenCalledWith('curl');
+      const list = await within(dialog()!).findByRole('list');
+      const items = within(list).getAllByRole('listitem').map((li) => (li.textContent ?? '').replace(/^\d+/, ''));
+      expect(items).toEqual(['덤벨을 양손에 들고 바로 선다.', '위팔은 고정한 채 팔을 굽힌다.']);
+    });
+
+    it('단계가 없으면 목록 요소 자체가 없다 — 사진과 닫기는 그대로다', async () => {
+      // ★ 로딩 중과 「설명이 없는 운동 5개」가 같은 화면이다(설계 §3.3). 스피너도 빈 상자도 그리지 않는다.
+      setup({ session: running() });
+      open();
+      await act(async () => {});
+      expect(within(dialog()!).queryByRole('list')).toBeNull();
+      expect(shots()).toHaveLength(2);
+      click('닫기');
+      expect(dialog()).toBeNull();
+    });
+
+    it('늦게 도착한 이전 운동의 단계가 다음 운동 시트에 뜨지 않는다', async () => {
+      // ★ 비동기라서 **닫힌 뒤·운동이 바뀐 뒤에** 결과가 온다. 그대로 넣으면 스쿼트 시트에
+      // 조트만 컬 설명이 뜬다 — 틀린 정보가 화면에 남는다.
+      let late!: (v: string[]) => void;
+      vi.mocked(loadInstructions).mockReturnValueOnce(new Promise((r) => (late = r)));
+      const next = ex('squat', [], { name: '스쿼트', images: ['Squat/0.jpg'] });
+      const s = startSession([curl, next], 'health');
+      const { rerenderWith } = setup({ session: s });
+      open(); // 조트만 컬 — 아직 안 끝났다
+      rerenderWith({ ...s, index: 1 });
+      open(); // 스쿼트 — 이쪽은 단계가 없다
+      await act(async () => late(['조트만 컬 단계']));
+      expect(screen.getByRole('dialog', { name: '스쿼트' })).toBeTruthy();
+      expect(screen.queryByText('조트만 컬 단계')).toBeNull();
+    });
   });
 });
 
