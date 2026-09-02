@@ -8,6 +8,7 @@
     "build:dev": "tsc -b && vite build --mode development",
     "test": "vitest run",
     "data": "node scripts/build-exercises.mjs",
+    "instructions": "node scripts/merge-instructions.mjs",
     "release": "npm run build && ait build",
     "release:dev": "npm run build:dev && ait build"
   },
