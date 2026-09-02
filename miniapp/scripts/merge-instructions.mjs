@@ -66,7 +66,7 @@ for (const file of files) {
       if (typeof s !== 'string' || !s.trim()) problems.push(`${where} #${i + 1}: 빈 단계`);
       else if (s.length > MAX_LEN) problems.push(`${where} #${i + 1}: ${s.length}자 (상한 ${MAX_LEN})`);
       const left = String(s).replace(ALLOW, '');
-      if (/[A-Za-z]{3,}/.test(left)) problems.push(`${where} #${i + 1}: 영문이 남았다 — ${s}`);
+      if (/[A-Za-z]/.test(left)) problems.push(`${where} #${i + 1}: 영문이 남았다 — ${s}`);
     }
     merged.set(id, steps);
   }
@@ -91,6 +91,6 @@ const steps = keys.reduce((n, id) => n + out[id].length, 0);
 const dropped = keys.filter((id) => out[id].length === (srcSteps.get(id) ?? []).length - 1).length;
 const bytes = Buffer.byteLength(json);
 console.log(`묶음 ${files.length}개 → 키 ${keys.length} / 단계 ${steps} (평균 ${(steps / keys.length).toFixed(1)})`);
-console.log(`「반복」 단계 삭제 ${dropped}개 · 최장 ${Math.max(...keys.flatMap((id) => out[id].map((s) => s.length)))}자`);
+console.log(`원문보다 1 적은 것 ${dropped}개(대부분 마지막 「반복」 삭제, 원문 빈 단계 제거 포함) · 최장 ${Math.max(...keys.flatMap((id) => out[id].map((s) => s.length)))}자`);
 console.log(`raw ${(bytes / 1024).toFixed(1)}KB · gzip ${(gzipSync(json).length / 1024).toFixed(1)}KB`);
 console.log(`설명이 없는 운동 ${EXERCISES.length - keys.length}개는 키가 없다 — 사진만 보여 준다`);
