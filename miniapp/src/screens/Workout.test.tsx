@@ -919,6 +919,57 @@ describe('광고 예고 — 오기 전에 미리 말한다', () => {
     expect(notice()).toBeNull();
   });
 
+  it('로드가 3초보다 오래 걸리면 추가 대기가 없다 — 유예는 휴식 시작 기준이다', async () => {
+    // ★ 「로드 완료 뒤 3초」로 재면 로드가 오래 걸린 날 사용자는 예고를 13초쯤 읽고 있게 된다.
+    //   유예는 **예고를 띄운 시각**부터다 — 그 사이 이미 3초가 지났으면 곧바로 띄운다.
+    const q = adQueue();
+    render(<Harness initial={restingAt(AD_REST)} />);
+    await flush();
+
+    await advance(10000); // 로드가 10초 걸렸다
+    q[0]({ ok: true, detail: 'loaded' });
+    await flush(); // 시계를 **더 밀지 않는다**
+
+    expect(awaitAdEvent).toHaveBeenCalledTimes(2);
+  });
+
+  it('휴식 중에 화면이 사라지면 광고를 띄우지 않는다', async () => {
+    // ★ 「휴식 중인가」는 렌더에서만 갱신된다 — 언마운트되면 마지막 값이 true로 얼어붙어,
+    //   화면이 없는데도 전면 광고가 뜬다.
+    const q = adQueue();
+    const { unmount } = render(<Harness initial={restingAt(AD_REST)} />);
+    await flush();
+    q[0]({ ok: true, detail: 'loaded' });
+    await flush();
+
+    unmount();
+    await advance(5000);
+
+    expect(awaitAdEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('이전 휴식의 늦은 광고가 다음 휴식에 뜨지 않는다', async () => {
+    // ★ 「휴식 중인가」만 보면 **어느 휴식인지**를 못 본다. 슬롯 N의 로드가 늦게 도착하면
+    //   N+1에 얹혀 뜨고, N+1 것까지 오면 **한 휴식에 전면 광고가 두 개** 겹친다.
+    const q = adQueue();
+    render(<Harness initial={restingAt(AD_REST)} />);
+    await flush(); // 슬롯 N 로드 대기 중
+
+    click('휴식 건너뛰기');
+    await advance(1000); // 슬롯이 같은 `restEndsAt`으로 겹치지 않게 시각을 벌린다
+    click('세트 완료'); // 슬롯 N+1 시작
+    await flush();
+    expect(awaitAdEvent).toHaveBeenCalledTimes(2); // 로드 둘(N · N+1)
+
+    q[0]({ ok: true, detail: 'loaded' }); // 이제야 도착한 N의 로드
+    await advance(3000);
+    expect(awaitAdEvent).toHaveBeenCalledTimes(2); // N은 자기 휴식이 끝났으니 포기한다
+
+    q[1]({ ok: true, detail: 'loaded' });
+    await advance(3000);
+    expect(awaitAdEvent).toHaveBeenCalledTimes(3); // 이 휴식의 광고 하나만 뜬다
+  });
+
   it('광고를 못 받으면 예고도 조용히 사라진다', async () => {
     // 실패는 사용자에게 안 보인다 — 광고는 수익이지 기능이 아니다. 남는 건 예고 문구뿐이라 그것만 걷는다.
     const q = adQueue();

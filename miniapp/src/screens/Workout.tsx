@@ -182,13 +182,22 @@ export function Workout({
   // 휴식 중일 때만 시계를 돌린다.
   const resting = s.restEndsAt !== null;
   /**
-   * 지금도 휴식 중인가 — **광고 effect가 3초를 기다린 뒤에 읽으려고** 렌더마다 갱신한다.
+   * 지금 화면이 쥔 **휴식 슬롯**(`restEndsAt`) — 휴식이 아니거나 화면이 사라졌으면 `null`이다.
    *
-   * effect의 클로저는 휴식이 시작되던 순간의 `s`를 쥐고 있어서, 그것으로 판단하면 이미
-   * 건너뛴 휴식을 「아직 쉬는 중」으로 읽어 **세트를 하는 도중에** 전면 광고가 덮는다.
+   * 광고 effect가 3초를 기다린 뒤 「띄워도 되는가」를 이 값 하나로 묻는다. 세 경우를 함께 가른다:
+   * **끝난 휴식**(건너뛰기·그만두기) · **사라진 화면**(언마운트) · **다른 휴식**(늦게 도착한
+   * 이전 슬롯의 광고). effect의 클로저가 쥔 `s`는 3초 전 것이라 셋 다 못 가르는데, 마지막을
+   * 놓치면 **한 휴식에 전면 광고가 두 개** 겹친다.
    */
-  const restingRef = useRef(resting);
-  restingRef.current = resting;
+  const restSlotRef = useRef<number | null>(s.restEndsAt);
+  restSlotRef.current = s.restEndsAt;
+  // 언마운트 뒤에는 렌더가 없어 위 대입이 안 돈다 — 마지막 값이 그대로 남으면 화면이
+  // 없는데도 전면 광고가 뜬다. 여기서 비운다.
+  useEffect(() => {
+    return () => {
+      restSlotRef.current = null;
+    };
+  }, []);
   useEffect(() => {
     if (!resting) return;
     // 먼저 한 번 맞춘다 — `now`는 마지막 휴식 때 멈춰 있어서, 안 맞추면 휴식이 시작된 순간
@@ -211,6 +220,8 @@ export function Workout({
    */
   useEffect(() => {
     if (!resting) return;
+    // 이 effect가 책임지는 휴식. 3초 뒤에 「그때 그 휴식이 맞는가」를 이 값으로 묻는다.
+    const slot = s.restEndsAt;
     const decision = adPlan(restRemaining(s, Date.now()), adState.current);
     // 예고와 노출이 **한 판단에서** 나온다. 따로 두면 예고만 뜨고 광고는 안 나오는 날이 온다.
     setAdNotice(decision.show);
@@ -239,9 +250,10 @@ export function Workout({
         }
         const wait = showAt - Date.now();
         if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-        // 예고를 읽는 사이 휴식이 끝났으면(건너뛰기·그만두기) 띄우지 않는다. 세트를 하는
-        // 도중에 전면 광고가 덮는 것이 바로 4차 반려가 말한 「예상하기 어려운 시점」이다.
-        if (!restingRef.current) {
+        // 기다리는 사이 휴식이 끝났거나(건너뛰기·그만두기) 화면이 사라졌거나 **다음 휴식으로
+        // 넘어갔으면** 띄우지 않는다. 세트 도중에 전면 광고가 덮는 것도, 한 휴식에 두 개가
+        // 겹치는 것도 4차 반려가 말한 「예상하기 어려운 시점」이다.
+        if (restSlotRef.current !== slot) {
           adState.current = nextAdState(adState.current, 'skipped');
           return;
         }
@@ -621,9 +633,12 @@ export function Workout({
 
         ⚠️ **마지막 세트에는 휴식 자체가 없다**(`isLastSet` — `completeSet`의 종료 분기와 같은 값).
         그 자리에서 예고하면 문구를 읽은 사용자가 휴식 대신 완료 화면을 본다.
+
+        ⚠️ 색은 `--text-weak`(3.04:1)가 아니라 **`--text-sub`(4.62:1)**다. 읽히라고 넣은 문구가
+        AA 미달이면 이 변경은 아무것도 안 한 것이다 — 휴식 화면 예고와 같은 급으로 둔다.
       */}
       {!isLastSet(s) && adPlan(restSecondsFor(current, s.goal), adState.current).show && (
-        <div style={{ fontSize: 12, color: 'var(--text-weak)', textAlign: 'center', marginBottom: 8, wordBreak: 'keep-all' }}>
+        <div style={{ fontSize: 13, color: 'var(--text-sub)', textAlign: 'center', marginBottom: 8, wordBreak: 'keep-all' }}>
           세트를 마치면 휴식 중에 광고가 나와요
         </div>
       )}
