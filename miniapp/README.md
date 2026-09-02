@@ -58,11 +58,14 @@ rg -c "온보딩 다시 보기" dist/assets/*.js    # production: 0건 / develop
 
 ```bash
 npm install
-npm test            # 197건
+npm test            # 609건 (2026-09-02 기준)
 npm run dev         # http://localhost:5310
 npm run build       # tsc -b && vite build → dist/
 npm run build:dev   # 개발용 입구가 남는 빌드 (--mode development)
 npm run release     # build + ait build → .ait 아티팩트 (심사·출시용)
 npm run release:dev # build:dev + ait build (실기기 확인용)
 npm run data        # 운동 데이터 재생성 (원본 정제 → src/data/exercises.json)
+npm run instructions # 운동 설명 번역 묶음 합치기 (PARTS_DIR·EX_SRC 필요 → src/data/instructions.json)
 ```
+
+> `instructions`는 번역 자체를 하지 않는다 — Claude 배치가 만든 묶음(`part-N.ko.json`)을 원본과 대조 검사해 합칠 뿐이다. 묶음이 없으면 커밋된 `src/data/instructions.json`이 단일 출처이고, 틀린 문장은 그 키만 손으로 고친다(설계 `docs/2026-09-02-exercise-guide-design.md` §4).
