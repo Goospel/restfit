@@ -4,6 +4,7 @@ import { awaitAdEvent } from '../adProbe';
 import { ExerciseImage } from '../components/ExerciseImage';
 import { Icon } from '../components/Icon';
 import type { Unit } from '../data/exercises';
+import { loadInstructions } from '../data/instructions';
 import { EQUIPMENT_KO, LEVEL_KO, MUSCLE_KO } from '../data/labels';
 import {
   completeSet,
@@ -59,6 +60,20 @@ const SHOT_LABEL: React.CSSProperties = {
   borderRadius: 999,
 };
 
+/** 단계 앞 번호. 원 안에 넣는 이유는 목록 표식이 사라져도 순서가 남아야 하기 때문이다. */
+const STEP_NO: React.CSSProperties = {
+  flexShrink: 0,
+  width: 22,
+  height: 22,
+  display: 'grid',
+  placeItems: 'center',
+  borderRadius: 999,
+  background: 'var(--bg-sub)',
+  fontSize: 12,
+  fontWeight: 700,
+  color: 'var(--text-sub)',
+};
+
 /**
  * 운동 진행. **제품의 심장이다.**
  *
@@ -107,6 +122,8 @@ export function Workout({
    * 세트 진행 분기에서만 읽는다(휴식·완료 화면에는 입구 자체가 없다).
    */
   const [guideOpen, setGuideOpen] = useState(false);
+  /** 시트 안 단계 설명. 빈 배열이 「로딩 중」이자 「설명이 없는 운동」이다 — 화면에서 둘은 같다(설계 §3.3). */
+  const [steps, setSteps] = useState<string[]>([]);
   const [now, setNow] = useState(() => Date.now());
   // 광고 상태는 **세션 안에서만** 산다. 앱을 껐다 켜면 새 세션이니 백오프도 처음부터가 맞다.
   // 화면에 그릴 값이 아니므로 ref다 — state로 두면 광고 판단이 리렌더를 부른다.
@@ -138,6 +155,22 @@ export function Workout({
    * `history`·`spec` 변화에도 도는데, 그때 열어 둔 시트가 닫히는 건 뜬금없기 때문이다.
    */
   useEffect(() => setGuideOpen(false), [current?.id]);
+
+  /**
+   * 시트를 열 때 단계 설명을 받아 온다. **열 때다** — 청크가 첫 로드 밖이라는 결정이 여기서 지켜진다.
+   *
+   * ⚠️ 결과는 **닫힌 뒤·다음 운동으로 넘어간 뒤에도** 도착한다. 그대로 넣으면 다음 운동 시트에
+   * 이전 운동 설명이 뜬다 — cleanup의 `alive`가 그 늦은 답을 버린다.
+   */
+  useEffect(() => {
+    setSteps([]);
+    if (!guideOpen || !current) return;
+    let alive = true;
+    loadInstructions(current.id).then((v) => alive && setSteps(v));
+    return () => {
+      alive = false;
+    };
+  }, [guideOpen, current?.id]);
 
   // 휴식 중일 때만 시계를 돌린다.
   const resting = s.restEndsAt !== null;
@@ -575,6 +608,17 @@ export function Workout({
                   </Fragment>
                 ))}
               </div>
+            )}
+            {/* 단계가 없으면 목록 자체가 없다 — 로딩 스피너도 빈 상자도 그리지 않는다(설계 §3.3). */}
+            {steps.length > 0 && (
+              <ol style={{ listStyle: 'none', margin: '0 0 16px', padding: 0, display: 'grid', gap: 9 }}>
+                {steps.map((step, i) => (
+                  <li key={i} style={{ display: 'flex', gap: 8, fontSize: 14, lineHeight: 1.5 }}>
+                    <span style={STEP_NO}>{i + 1}</span>
+                    <span style={{ minWidth: 0 }}>{step}</span>
+                  </li>
+                ))}
+              </ol>
             )}
             <button style={ui.secondary} onClick={() => setGuideOpen(false)}>
               닫기
