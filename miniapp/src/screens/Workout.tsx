@@ -11,11 +11,12 @@ import {
   endRest,
   progress,
   restRemaining,
+  restSecondsFor,
   SETS_PER_EXERCISE,
   skipExercise,
   type Session,
 } from '../logic/session';
-import { adPlan, AD_GROUP_ID, nextAdState, type AdState } from '../logic/adPlan';
+import { adPlan, AD_GROUP_ID, AD_NOTICE_MS, nextAdState, type AdState } from '../logic/adPlan';
 import { cueAt, warnColors } from '../logic/restCue';
 import { playCue, primeSound } from '../restSound';
 import { defaultWeightFor, type EquipSpec } from '../logic/equipSpec';
@@ -125,6 +126,11 @@ export function Workout({
   /** 시트 안 단계 설명. 빈 배열이 「로딩 중」이자 「설명이 없는 운동」이다 — 화면에서 둘은 같다(설계 §3.3). */
   const [steps, setSteps] = useState<string[]>([]);
   const [now, setNow] = useState(() => Date.now());
+  /**
+   * 「잠시 후 광고가 나와요」를 띄우는가. **광고 판단과 한 값에서 나온다** — 안 틀 광고를
+   * 예고하면 그건 거짓말이다. 휴식 화면에서만 읽는다.
+   */
+  const [adNotice, setAdNotice] = useState(false);
   // 광고 상태는 **세션 안에서만** 산다. 앱을 껐다 켜면 새 세션이니 백오프도 처음부터가 맞다.
   // 화면에 그릴 값이 아니므로 ref다 — state로 두면 광고 판단이 리렌더를 부른다.
   const adState = useRef<AdState>({ noFillStreak: 0, slotsSinceLastTry: 0 });
@@ -174,6 +180,14 @@ export function Workout({
 
   // 휴식 중일 때만 시계를 돌린다.
   const resting = s.restEndsAt !== null;
+  /**
+   * 지금도 휴식 중인가 — **광고 effect가 3초를 기다린 뒤에 읽으려고** 렌더마다 갱신한다.
+   *
+   * effect의 클로저는 휴식이 시작되던 순간의 `s`를 쥐고 있어서, 그것으로 판단하면 이미
+   * 건너뛴 휴식을 「아직 쉬는 중」으로 읽어 **세트를 하는 도중에** 전면 광고가 덮는다.
+   */
+  const restingRef = useRef(resting);
+  restingRef.current = resting;
   useEffect(() => {
     if (!resting) return;
     // 먼저 한 번 맞춘다 — `now`는 마지막 휴식 때 멈춰 있어서, 안 맞추면 휴식이 시작된 순간
@@ -186,7 +200,9 @@ export function Workout({
   /**
    * 휴식이 시작되면 광고를 튼다. **이 앱이 돈을 버는 유일한 지점이다.**
    *
-   * 규율 셋을 지킨다:
+   * 규율 넷을 지킨다:
+   * - **오기 전에 말한다.** 예고를 띄우고 `AD_NOTICE_MS`만큼 기다린 뒤에 노출한다(T-245).
+   *   **로드는 즉시 시작한다** — 유예는 노출을 늦추는 것이지 수익을 늦추는 게 아니다.
    * - **타이머를 건드리지 않는다.** `restEndsAt`이 절대 시각이라 광고를 보는 동안에도 휴식은
    *   그대로 흐른다. 광고가 시간을 늘리면 그건 사용자에게서 훔치는 것이다.
    * - **실패는 조용히 넘어간다.** 광고는 수익이지 기능이 아니다 — 에러를 사용자에게 보이지 않는다.
@@ -195,12 +211,18 @@ export function Workout({
   useEffect(() => {
     if (!resting) return;
     const decision = adPlan(restRemaining(s, Date.now()), adState.current);
+    // 예고와 노출이 **한 판단에서** 나온다. 따로 두면 예고만 뜨고 광고는 안 나오는 날이 온다.
+    setAdNotice(decision.show);
     if (!decision.show) {
       adState.current = nextAdState(adState.current, 'skipped');
       return;
     }
-    // ref만 갱신하므로 언마운트 뒤에 끝나도 안전하다. 취소 플래그를 두면 노출 성공이
-    // 상태에 안 남아 다음 슬롯의 백오프 판단이 틀어진다.
+    // 노출해도 되는 **시각**이다. 남은 시간을 그때그때 빼는 방식이면 백그라운드 스로틀에서
+    // 유예가 줄어들 수 있다 — 절대 시각이면 늘어날지언정 줄지 않는다(글로벌 CLAUDE.md 함정 ①).
+    const showAt = Date.now() + AD_NOTICE_MS;
+    // 광고 상태는 ref만 갱신하므로 언마운트 뒤에 끝나도 안전하다. 취소 플래그를 그쪽에 걸면
+    // 노출 성공이 상태에 안 남아 다음 슬롯의 백오프 판단이 틀어진다 — `alive`는 **화면 상태**에만 건다.
+    let alive = true;
     void (async () => {
       try {
         // SDK는 토스 앱 안에서만 있다. 브라우저 개발 중에는 여기서 실패하고 앱은 그대로 돈다.
@@ -214,6 +236,14 @@ export function Workout({
           adState.current = nextAdState(adState.current, 'noFill');
           return;
         }
+        const wait = showAt - Date.now();
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+        // 예고를 읽는 사이 휴식이 끝났으면(건너뛰기·그만두기) 띄우지 않는다. 세트를 하는
+        // 도중에 전면 광고가 덮는 것이 바로 4차 반려가 말한 「예상하기 어려운 시점」이다.
+        if (!restingRef.current) {
+          adState.current = nextAdState(adState.current, 'skipped');
+          return;
+        }
         const shown = await awaitAdEvent((h) => m.showFullScreenAd({ ...opts, ...h }), {
           resolveOn: ['impression', 'dismissed'],
           timeoutMs: 90000,
@@ -221,8 +251,14 @@ export function Workout({
         adState.current = nextAdState(adState.current, shown.ok ? 'shown' : 'noFill');
       } catch {
         adState.current = nextAdState(adState.current, 'noFill');
+      } finally {
+        // 어느 경로로 끝나든 예고는 걷는다 — 할 말이 끝났는데 문구가 남아 있으면 그것도 거짓말이다.
+        if (alive) setAdNotice(false);
       }
     })();
+    return () => {
+      alive = false;
+    };
   }, [resting]);
 
   const left = restRemaining(s, now);
@@ -378,6 +414,15 @@ export function Workout({
         <div style={{ ...ui.spacer, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
           <div>
             <div style={{ fontSize: 13, color: fgSub, marginBottom: 4 }}>휴식</div>
+            {/*
+              광고가 오기 전에 화면이 먼저 말한다(T-245). 색은 경고 램프의 반전을 그대로 따라간다 —
+              배경이 붉어진 뒤에 회색 글자만 남으면 이 줄만 안 읽힌다. 375px에서 두 줄로 꺾여도 된다.
+            */}
+            {adNotice && (
+              <div style={{ fontSize: 13, color: fgSub, marginBottom: 6, wordBreak: 'keep-all' }}>
+                잠시 후 광고가 나와요 · 휴식 시간은 그대로 흘러요
+              </div>
+            )}
             {/* `key`가 초마다 바뀌어야 리마운트로 펄스가 **매초** 다시 재생된다 — 없으면 첫 초만 뛴다. */}
             <div
               key={left}
@@ -568,6 +613,16 @@ export function Workout({
         )}
       </div>
 
+      {/*
+        「세트 완료」를 누르면 무슨 일이 생기는지 **누르기 전에** 말한다(T-245).
+        **다음 휴식에 실제로 광고가 나올 때만** 뜬다 — 판단은 휴식 화면과 같은 `adPlan` 하나가 한다.
+        여기 조건을 흉내 내서 새로 쓰면 예고와 노출이 갈라진다.
+      */}
+      {adPlan(restSecondsFor(current, s.goal), adState.current).show && (
+        <div style={{ fontSize: 12, color: 'var(--text-weak)', textAlign: 'center', marginBottom: 8, wordBreak: 'keep-all' }}>
+          세트를 마치면 휴식 중에 광고가 나와요
+        </div>
+      )}
       <button
         style={{ ...ui.primary, ...(valid ? null : ui.disabled) }}
         disabled={!valid}

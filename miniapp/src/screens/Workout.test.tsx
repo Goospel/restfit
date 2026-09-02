@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { awaitAdEvent } from '../adProbe';
 import type { Exercise } from '../data/exercises';
 import { loadInstructions } from '../data/instructions';
 import type { Profile } from '../logic/profile';
@@ -18,6 +19,10 @@ vi.mock('../restSound', () => ({ playCue: vi.fn(), primeSound: vi.fn() }));
 // 단계 설명은 스파이로 갈아 끼운다 — 이 화면의 책임은 **언제 무엇을 부르고 그 결과를 어떻게 그리는지**이지
 // 260KB짜리 실제 번역이 아니다. 기본값은 빈 배열이라 다른 describe의 시트는 사진만 뜬다.
 vi.mock('../data/instructions', () => ({ loadInstructions: vi.fn(async () => []) }));
+// 광고 SDK는 토스 앱 안에만 있다. 그리고 로드·노출이 **언제 끝나는지**를 테스트가 직접 쥐어야
+// 「3초 전에는 안 띄운다」를 잴 수 있으므로, `awaitAdEvent`도 스파이로 갈아 끼운다.
+vi.mock('@apps-in-toss/web-framework', () => ({ loadFullScreenAd: vi.fn(), showFullScreenAd: vi.fn() }));
+vi.mock('../adProbe', () => ({ awaitAdEvent: vi.fn() }));
 
 afterEach(cleanup);
 
@@ -71,6 +76,25 @@ function setup(o: { profile?: Profile | null; history?: WorkoutRecord[]; session
   const r = render(el(o.session ?? finished()));
   /** 세션만 갈아 끼운 리렌더 — 언마운트가 아니라 **살아 있는 화면**에 다음 운동이 들어와야 화면 상태가 잠긴다. */
   return { onFinish, onProfileChange, onBodyPhoto, rerenderWith: (s: Session) => r.rerender(el(s)) };
+}
+
+/** 세션을 실제로 들고 도는 하네스 — `onChange`가 죽어 있으면 「건너뛰기」가 화면을 못 바꾼다. */
+function Harness({ initial }: { initial: Session }) {
+  const [s, setS] = useState(initial);
+  return (
+    <Workout
+      session={s}
+      group="upper"
+      onChange={setS}
+      onFinish={() => {}}
+      onBodyPhoto={() => {}}
+      history={[]}
+      spec={{}}
+      date="2026-08-29"
+      profile={{ experience: 'beginner', avoid: [] }}
+      onProfileChange={() => {}}
+    />
+  );
 }
 
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
@@ -632,25 +656,6 @@ describe('휴식 — 마지막 10초 준비 신호', () => {
     return { ...s, done: [[{ weight: 0, reps: 10 }], []], restEndsAt: Date.now() + seconds * 1000 };
   }
 
-  /** 세션을 실제로 들고 도는 하네스 — `onChange`가 죽어 있으면 「건너뛰기」가 화면을 못 바꾼다. */
-  function Harness({ initial }: { initial: Session }) {
-    const [s, setS] = useState(initial);
-    return (
-      <Workout
-        session={s}
-        group="upper"
-        onChange={setS}
-        onFinish={() => {}}
-        onBodyPhoto={() => {}}
-        history={[]}
-        spec={{}}
-        date="2026-08-29"
-        profile={{ experience: 'beginner', avoid: [] }}
-        onProfileChange={() => {}}
-      />
-    );
-  }
-
   const enterRest = (seconds: number) => render(<Harness initial={resting(seconds)} />);
   /**
    * 시계를 250ms **한 틱씩** 민다.
@@ -782,5 +787,134 @@ describe('운동 완료 — 눈바디 제안', () => {
     click(/눈바디/);
 
     expect(onFinish.mock.calls[0][0].feel).toBe('hard');
+  });
+});
+
+describe('광고 예고 — 오기 전에 미리 말한다', () => {
+  // 4차 검수 반려 사유가 「예상하기 어려운 시점의 광고」였다(T-245). 광고는 그대로 자동으로
+  // 뜨되, **뜨기 전에 화면이 먼저 말한다** — 세트 화면에서 한 번, 휴식 화면에서 또 한 번.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(awaitAdEvent).mockReset();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** `health` + compound는 휴식 90초라 40초 컷을 넘긴다 — 광고가 실제로 나오는 슬롯이다. */
+  const AD_REST = 90;
+
+  function restingAt(seconds: number): Session {
+    const s = startSession([ex('push'), ex('pull')], 'health');
+    return { ...s, done: [[{ weight: 0, reps: 10 }], []], restEndsAt: Date.now() + seconds * 1000 };
+  }
+
+  /**
+   * `awaitAdEvent`의 **끝나는 시점을 테스트가 쥔다.** 돌려받은 배열의 [0]이 로드, [1]이 노출이다.
+   * 실제 SDK처럼 「언젠가 끝나는 약속」이라야 「3초 전에는 아직 안 띄운다」를 잴 수 있다.
+   */
+  function adQueue() {
+    const resolvers: ((r: { ok: boolean; detail: string }) => void)[] = [];
+    vi.mocked(awaitAdEvent).mockImplementation(
+      () =>
+        new Promise((res) => {
+          resolvers.push(res);
+        }),
+    );
+    return resolvers;
+  }
+
+  /** 마이크로태스크만 흘린다 — 동적 import와 promise 체인이 다음 단계까지 가도록. */
+  const flush = async () => {
+    for (let i = 0; i < 4; i++) await act(async () => {});
+  };
+  /** 가짜 시계를 밀고 그 뒤 promise까지 흘린다. */
+  const advance = async (ms: number) => {
+    await act(async () => void vi.advanceTimersByTime(ms));
+    await flush();
+  };
+
+  const NOTICE = '잠시 후 광고가 나와요 · 휴식 시간은 그대로 흘러요';
+  const SET_NOTICE = '세트를 마치면 휴식 중에 광고가 나와요';
+  const notice = () => screen.queryByText(NOTICE);
+
+  it('휴식 화면이 먼저 말하고, 3초가 지나야 광고가 뜬다', async () => {
+    // ★ 유예가 이 반려의 핵심이다. 로드는 즉시 시작하되(수익을 늦추지 않는다) **노출만** 늦춘다.
+    const q = adQueue();
+    render(<Harness initial={restingAt(AD_REST)} />);
+    await flush();
+
+    expect(notice()).toBeTruthy();
+    expect(awaitAdEvent).toHaveBeenCalledTimes(1); // 로드는 즉시
+
+    q[0]({ ok: true, detail: 'loaded' });
+    await flush();
+    expect(awaitAdEvent).toHaveBeenCalledTimes(1); // 받아 놓고도 3초 전에는 안 띄운다
+
+    await advance(3000);
+    expect(awaitAdEvent).toHaveBeenCalledTimes(2); // 노출
+
+    q[1]({ ok: true, detail: 'impression' });
+    await flush();
+    expect(notice()).toBeNull(); // 할 말이 끝났으면 문구도 사라진다
+  });
+
+  it('40초 미만 휴식에는 예고도 광고도 없다', async () => {
+    // 안 나올 광고를 예고하면 그건 거짓말이다 — 판단은 `adPlan` 하나가 한다.
+    adQueue();
+    render(<Harness initial={restingAt(30)} />);
+    await flush();
+
+    expect(notice()).toBeNull();
+    expect(awaitAdEvent).not.toHaveBeenCalled();
+  });
+
+  it('세트 화면은 다음 휴식에 광고가 나올 때만 미리 말한다', async () => {
+    // ★ 조건 없이 늘 띄우면 광고가 안 나오는 휴식에도 예고가 남아 같은 거짓말이 된다.
+    //   음성 케이스는 **백오프**로 만든다 — 미충전 1회 뒤에는 다음 슬롯을 쉬기 때문이다.
+    const q = adQueue();
+    render(<Harness initial={restingAt(AD_REST)} />);
+    await flush();
+
+    q[0]({ ok: false, detail: 'timeout' }); // 미충전 → noFillStreak 1
+    await flush();
+    click('휴식 건너뛰기');
+
+    expect(screen.getByRole('button', { name: '세트 완료' })).toBeTruthy();
+    expect(screen.queryByText(SET_NOTICE)).toBeNull(); // 백오프 슬롯이라 예고도 없다
+  });
+
+  it('광고가 나올 세션이면 세트 화면에서 미리 말한다', () => {
+    render(<Harness initial={startSession([ex('push'), ex('pull')], 'health')} />);
+    expect(screen.getByText(SET_NOTICE)).toBeTruthy();
+  });
+
+  it('예고를 읽는 사이 휴식을 건너뛰면 광고를 띄우지 않는다', async () => {
+    // ★ 휴식이 끝난 뒤에 전면 광고가 덮으면 **세트를 하는 도중에** 화면이 가려진다 —
+    //   반려 사유가 말하는 「예상하기 어려운 시점」 그 자체다.
+    const q = adQueue();
+    render(<Harness initial={restingAt(AD_REST)} />);
+    await flush();
+    q[0]({ ok: true, detail: 'loaded' });
+    await flush();
+
+    click('휴식 건너뛰기');
+    await advance(5000);
+
+    expect(awaitAdEvent).toHaveBeenCalledTimes(1); // 노출 호출이 없다
+    expect(notice()).toBeNull();
+  });
+
+  it('광고를 못 받으면 예고도 조용히 사라진다', async () => {
+    // 실패는 사용자에게 안 보인다 — 광고는 수익이지 기능이 아니다. 남는 건 예고 문구뿐이라 그것만 걷는다.
+    const q = adQueue();
+    render(<Harness initial={restingAt(AD_REST)} />);
+    await flush();
+    expect(notice()).toBeTruthy();
+
+    q[0]({ ok: false, detail: 'timeout' });
+    await flush();
+
+    expect(notice()).toBeNull();
+    await advance(5000);
+    expect(awaitAdEvent).toHaveBeenCalledTimes(1);
   });
 });
