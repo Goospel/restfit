@@ -47,17 +47,27 @@ export function startSession(exercises: Exercise[], goal: Goal = DEFAULT_GOAL): 
   };
 }
 
+/**
+ * 지금 하는 세트가 **세션의 마지막 세트인가** — 마치면 휴식 없이 완료 화면으로 간다.
+ *
+ * `completeSet`의 종료 분기가 이 함수를 쓴다. 화면도 같은 값을 읽어야 한다 —
+ * 조건을 화면 쪽에 따로 쓰면 「휴식 중에 광고가 나와요」를 읽은 사용자가 휴식 없이
+ * 완료 화면을 보게 된다. 안 나올 광고를 예고하는 것도 거짓말이다.
+ */
+export function isLastSet(s: Session): boolean {
+  const lastSet = (s.done[s.index]?.length ?? 0) + 1 >= SETS_PER_EXERCISE;
+  return lastSet && s.index >= s.exercises.length - 1;
+}
+
 /** 세트 하나를 기록한다. 마지막 세트가 아니면 휴식이 시작된다. */
 export function completeSet(s: Session, log: SetLog, now: number): Session {
   // 휴식 중 기록을 막는다 — 휴식 화면에서 버튼이 두 번 눌리는 사고가 실제로 난다.
   if (s.finished || s.restEndsAt !== null) return s;
 
   const done = s.done.map((sets, i) => (i === s.index ? [...sets, log] : sets));
-  const lastSet = done[s.index].length >= SETS_PER_EXERCISE;
-  const lastExercise = s.index >= s.exercises.length - 1;
 
   // 세션이 끝났는데 휴식을 세워 두면 사용자는 앱 앞에서 이유 없이 기다린다.
-  if (lastSet && lastExercise) return { ...s, done, restEndsAt: null, finished: true };
+  if (isLastSet(s)) return { ...s, done, restEndsAt: null, finished: true };
 
   return { ...s, done, restEndsAt: now + restSecondsFor(s.exercises[s.index], s.goal) * 1000 };
 }
