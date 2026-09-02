@@ -528,6 +528,8 @@ describe('세트 진행 — 동작 보기', () => {
     setup({ session: running(ex('push', [], { name: '푸시업', images: ['Pushup/0.jpg'] })) });
     open();
     expect(shots()).toHaveLength(1);
+    // `<img>` 개수만 세면 둘째 칸에 대체 표시(이름 첫 글자)를 그리는 회귀가 통과한다 — 「끝」 라벨이 그 빈 칸의 증거다.
+    expect(within(dialog()!).queryByText('끝')).toBeNull();
   });
 
   it('사진이 아예 없어도 시트는 열리고 닫힌다', () => {

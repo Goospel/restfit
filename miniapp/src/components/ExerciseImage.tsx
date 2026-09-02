@@ -28,9 +28,11 @@ export function ExerciseImage({
     objectFit: 'cover' as const,
   };
 
+  // ⚠️ `fluid`는 상자 폭을 모른다 — `size`는 기본값 72로 남아 있어 글자만 24px에 멈춘다(실제 상자는 ~150px).
+  const glyph = fluid ? '2.5rem' : size / 3;
   if (!path || failed) {
     return (
-      <div style={{ ...box, display: 'grid', placeItems: 'center', color: 'var(--text-weak)', fontSize: size / 3, fontWeight: 700 }}>
+      <div style={{ ...box, display: 'grid', placeItems: 'center', color: 'var(--text-weak)', fontSize: glyph, fontWeight: 700 }}>
         {name.slice(0, 1)}
       </div>
     );

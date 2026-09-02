@@ -31,5 +31,7 @@ describe('ExerciseImage — 상자 크기', () => {
     expect(box.tagName).toBe('DIV');
     expect(box.style.width).toBe('100%');
     expect(box.style.aspectRatio).toBe('1 / 1'); // jsdom이 비율을 정규화한다
+    // 글자는 size(기본 72)를 따라가면 안 된다 — fluid 상자는 그 두 배라 24px 글자가 점처럼 남는다.
+    expect(box.style.fontSize).toBe('2.5rem');
   });
 });
