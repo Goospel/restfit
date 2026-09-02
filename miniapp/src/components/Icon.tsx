@@ -108,6 +108,12 @@ export const ICONS = {
 
   /** 체크. 고른 기구 칸의 오른쪽 위에 붙는다 — **색만으로 상태를 알리지 않기 위해서다.** */
   check: ['M5.5 12.5 10 17 18.5 7'],
+
+  /**
+   * 재생(동작 보기). **면이다**(`FILLED_ICONS`) — 14px 칩 안에 들어가는데, 선으로 그리면
+   * 2px 스트로크가 삼각형 안쪽을 거의 메워 「속이 빈 삼각형」이 아니라 검은 덩어리가 된다.
+   */
+  play: ['M8 5.5v13l10-6.5z'],
 };
 
 export type IconName = keyof typeof ICONS;
@@ -118,7 +124,7 @@ export type IconName = keyof typeof ICONS;
  * 굵기가 변해야 하는 그림은 선으로 못 그린다(stroke 굵기는 path 하나에 하나뿐이다).
  * ⚠️ 늘릴 때는 의식하고 늘린다 — 면 아이콘은 선 아이콘 사이에서 더 진해 보인다.
  */
-export const FILLED_ICONS: ReadonlySet<IconName> = new Set<IconName>(['band']);
+export const FILLED_ICONS: ReadonlySet<IconName> = new Set<IconName>(['band', 'play']);
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const filled = FILLED_ICONS.has(name);
