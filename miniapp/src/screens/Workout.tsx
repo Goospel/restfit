@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 import { awaitAdEvent } from '../adProbe';
 import { ExerciseImage } from '../components/ExerciseImage';
 import { Icon } from '../components/Icon';
 import type { Unit } from '../data/exercises';
-import { MUSCLE_KO } from '../data/labels';
+import { EQUIPMENT_KO, LEVEL_KO, MUSCLE_KO } from '../data/labels';
 import {
   completeSet,
   endRest,
@@ -39,6 +39,25 @@ const NOTE_DOWN = '다음부터 조금 가볍게 드릴게요.';
  * 색만 각자 얹는다. `keep-all`은 375px에서 어절 중간이 꺾이는 것을 막는다.
  */
 const GUIDE: React.CSSProperties = { fontSize: 13, lineHeight: 1.5, marginTop: 8, textAlign: 'center', wordBreak: 'keep-all' };
+
+/**
+ * 시트 안 사진 위의 「시작」·「끝」 라벨.
+ *
+ * 두 장을 나란히 놓는 것만으로는 **어느 쪽이 시작인지** 알 수 없다 — 좌우 순서는 관례일 뿐
+ * 화면이 하는 말이 아니다. 사진 위에 얹는 이유는 아래에 적으면 사진 사이 간격이 벌어져
+ * 두 장이 한 동작으로 안 읽히기 때문이다.
+ */
+const SHOT_LABEL: React.CSSProperties = {
+  position: 'absolute',
+  left: 6,
+  bottom: 6,
+  padding: '2px 7px',
+  fontSize: 11,
+  fontWeight: 600,
+  color: '#fff',
+  background: 'rgba(0, 0, 0, 0.55)',
+  borderRadius: 999,
+};
 
 /**
  * 운동 진행. **제품의 심장이다.**
@@ -82,6 +101,12 @@ export function Workout({
   const [feel, setFeel] = useState<Feel | undefined>(undefined);
   const [weight, setWeight] = useState('0');
   const [reps, setReps] = useState('10');
+  /**
+   * 「동작 보기」 시트가 열려 있는가. **세션이 아니라 화면 상태다** — 기록이 아니라서 저장하지 않는다.
+   *
+   * 세트 진행 분기에서만 읽는다(휴식·완료 화면에는 입구 자체가 없다).
+   */
+  const [guideOpen, setGuideOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   // 광고 상태는 **세션 안에서만** 산다. 앱을 껐다 켜면 새 세션이니 백오프도 처음부터가 맞다.
   // 화면에 그릴 값이 아니므로 ref다 — state로 두면 광고 판단이 리렌더를 부른다.
@@ -106,6 +131,13 @@ export function Workout({
     setWeight(String(next.weight));
     setReps(String(next.reps));
   }, [current?.id, history, s.goal, spec]);
+
+  /**
+   * 운동이 바뀌면 시트를 닫는다. **안 닫으면 다음 운동 화면에 이전 운동 설명이 떠 있다** —
+   * 화면에 틀린 정보가 남는 유일한 경로다. 프리필 effect에 얹지 않은 이유는 그쪽이
+   * `history`·`spec` 변화에도 도는데, 그때 열어 둔 시트가 닫히는 건 뜬금없기 때문이다.
+   */
+  useEffect(() => setGuideOpen(false), [current?.id]);
 
   // 휴식 중일 때만 시계를 돌린다.
   const resting = s.restEndsAt !== null;
@@ -388,6 +420,15 @@ export function Workout({
    */
   const ladder = bodyweight && valid && repsNum >= BODYWEIGHT_LADDER_REPS;
 
+  /** 헤더와 시트가 같은 문자열을 쓴다 — 두 번 만들면 언젠가 갈라진다. */
+  const muscles = current.primaryMuscles.map((m) => MUSCLE_KO[m] ?? m).join(' · ');
+  /** 시트 부제. **맨몸도 「맨몸」이라고 적는다** — 빈칸이면 라벨이 빠진 것처럼 보인다. */
+  const guideSub = [
+    muscles,
+    bodyweight ? '맨몸' : current.requires.map((k) => EQUIPMENT_KO[k] ?? k).join(' · '),
+    LEVEL_KO[current.level],
+  ].join(' · ');
+
   return (
     <main style={ui.pageFull}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
@@ -404,9 +445,20 @@ export function Workout({
         <ExerciseImage path={current.images[0]} name={current.name} size={88} />
         <div style={{ minWidth: 0 }}>
           <h1 style={{ ...ui.h1, fontSize: 20, margin: '0 0 4px' }}>{current.name}</h1>
-          <div style={{ fontSize: 13, color: 'var(--text-sub)' }}>
-            {current.primaryMuscles.map((m) => MUSCLE_KO[m] ?? m).join(' · ')}
-          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-sub)' }}>{muscles}</div>
+          {/*
+            모르는 운동에 답하는 자리. **칩이지 사진이 아니다** — 사진을 버튼으로 만들면
+            눌린다는 표시가 배지 하나뿐이라 발견성이 가장 낮다(설계 §2#1).
+            아이콘은 `aria-hidden`이라 접근 이름은 「동작 보기」 그대로다.
+          */}
+          <button
+            style={{ ...specChipStyle(true), display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 7 }}
+            aria-expanded={guideOpen}
+            onClick={() => setGuideOpen(!guideOpen)}
+          >
+            <Icon name="play" size={14} />
+            동작 보기
+          </button>
         </div>
       </div>
 
@@ -498,6 +550,38 @@ export function Workout({
       <button style={{ ...ui.ghost, width: '100%', marginTop: 4 }} onClick={() => onChange(skipExercise(s))}>
         이 운동 건너뛰기
       </button>
+
+      {/*
+        동작 보기 시트. **세트 화면 위에 겹쳐 뜬다** — 화면을 갈아 끼우면 입력하던 무게·횟수가 날아간다.
+        「세트 완료」를 가리는 것은 의도다(설계 §7): 읽고 닫아야 기록한다. 그래서 닫는 길이 둘이다.
+      */}
+      {guideOpen && (
+        <>
+          <div data-dim style={ui.dim} onClick={() => setGuideOpen(false)} />
+          <div role="dialog" aria-modal="true" aria-label={current.name} style={ui.sheet}>
+            <h2 style={ui.h2}>{current.name}</h2>
+            <p style={ui.sub}>{guideSub}</p>
+            {/* 사진이 없는 운동이 오면 이 블록이 통째로 없다 — 빈 상자를 그리지 않는다. */}
+            {current.images.length > 0 && (
+              <div style={{ ...ui.row, alignItems: 'center', marginBottom: 16 }}>
+                {current.images.slice(0, 2).map((path, i) => (
+                  <Fragment key={path}>
+                    {/* 두 장 사이의 화살표가 「같은 동작의 두 순간」이라고 말한다. */}
+                    {i > 0 && <span style={{ color: 'var(--text-weak)', fontSize: 16 }}>→</span>}
+                    <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+                      <ExerciseImage path={path} name={current.name} fluid />
+                      <span style={SHOT_LABEL}>{i === 0 ? '시작' : '끝'}</span>
+                    </div>
+                  </Fragment>
+                ))}
+              </div>
+            )}
+            <button style={ui.secondary} onClick={() => setGuideOpen(false)}>
+              닫기
+            </button>
+          </div>
+        </>
+      )}
     </main>
   );
 }

@@ -96,6 +96,32 @@ export const ui: S = {
   empty: { padding: '48px 20px', textAlign: 'center', color: 'var(--text-weak)', fontSize: 14 },
 
   /**
+   * 바텀시트와 그 뒤를 덮는 막. **둘은 한 벌이다** — `zIndex`가 40·41로 맞물려 있어
+   * 한쪽만 가져다 쓰면 막이 시트를 덮거나 시트가 막 없이 뜬다.
+   *
+   * 밑 화면은 살아 있는 채로 가려진다 — 세트 화면에서 열어도 입력하던 무게·횟수가 안 날아간다.
+   */
+  dim: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0, 0, 0, 0.45)',
+    zIndex: 40,
+  },
+  sheet: {
+    position: 'fixed',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 41,
+    maxHeight: '72vh',
+    overflowY: 'auto',
+    padding: '16px 20px calc(var(--safe-b) + 20px)',
+    background: 'var(--bg)',
+    borderRadius: '16px 16px 0 0',
+    boxShadow: '0 -6px 24px rgba(0, 0, 0, 0.16)',
+  },
+
+  /**
    * 화면 밑에 붙어 따라오는 버튼 자리.
    *
    * 기구가 10칸이라 세로로 900px쯤 되는데, 「다음」이 그 아래 있으면 **두 화면을 넘겨야

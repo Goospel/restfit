@@ -207,8 +207,8 @@ function DayCard({
 
   return (
     <>
-      <div data-dim style={dim} onClick={onClose} />
-      <div data-sheet style={sheet}>
+      <div data-dim style={ui.dim} onClick={onClose} />
+      <div data-sheet style={ui.sheet}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <b style={{ fontSize: 16 }}>{`${month}월 ${day}일 ${weekday}요일`}</b>
           {records.map((r, i) => (
@@ -329,24 +329,3 @@ const dot = (color: string): React.CSSProperties => ({
   borderRadius: 999,
   backgroundColor: color,
 });
-
-const dim: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0, 0, 0, 0.45)',
-  zIndex: 40,
-};
-
-const sheet: React.CSSProperties = {
-  position: 'fixed',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  zIndex: 41,
-  maxHeight: '72vh',
-  overflowY: 'auto',
-  padding: '16px 20px calc(var(--safe-b) + 20px)',
-  background: 'var(--bg)',
-  borderRadius: '16px 16px 0 0',
-  boxShadow: '0 -6px 24px rgba(0, 0, 0, 0.16)',
-};

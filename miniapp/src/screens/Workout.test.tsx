@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // ⚠️ 전역으로 켜면 shareLinks 테스트가 죽는다 — 이유는 `Onboarding.test.tsx` 머리말 참조.
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,7 +17,8 @@ vi.mock('../restSound', () => ({ playCue: vi.fn(), primeSound: vi.fn() }));
 
 afterEach(cleanup);
 
-const ex = (id: string, requires: Exercise['requires'] = []): Exercise => ({
+/** 세 번째 인자는 그 테스트가 실제로 보는 필드만 덮어쓴다 — 시트는 이름·근육·기구·난이도·사진을 다 읽는다. */
+const ex = (id: string, requires: Exercise['requires'] = [], more: Partial<Exercise> = {}): Exercise => ({
   id,
   name: id,
   nameEn: id,
@@ -29,6 +30,7 @@ const ex = (id: string, requires: Exercise['requires'] = []): Exercise => ({
   primaryMuscles: ['chest'],
   secondaryMuscles: [],
   images: [],
+  ...more,
 });
 
 /** 세트 하나를 마친 채로 끝난 세션 — 기록이 남을 최소 조건이다. */
@@ -48,9 +50,9 @@ function setup(o: { profile?: Profile | null; history?: WorkoutRecord[]; session
   const onFinish = vi.fn();
   const onProfileChange = vi.fn();
   const onBodyPhoto = vi.fn();
-  render(
+  const el = (session: Session) => (
     <Workout
-      session={o.session ?? finished()}
+      session={session}
       group="upper"
       onChange={() => {}}
       onFinish={onFinish}
@@ -60,9 +62,11 @@ function setup(o: { profile?: Profile | null; history?: WorkoutRecord[]; session
       date="2026-08-27"
       profile={o.profile === undefined ? { experience: 'beginner', avoid: [] } : o.profile}
       onProfileChange={onProfileChange}
-    />,
+    />
   );
-  return { onFinish, onProfileChange, onBodyPhoto };
+  const r = render(el(o.session ?? finished()));
+  /** 세션만 갈아 끼운 리렌더 — 언마운트가 아니라 **살아 있는 화면**에 다음 운동이 들어와야 화면 상태가 잠긴다. */
+  return { onFinish, onProfileChange, onBodyPhoto, rerenderWith: (s: Session) => r.rerender(el(s)) };
 }
 
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
@@ -429,6 +433,111 @@ describe('세트 진행 — 맨몸 미달 안내', () => {
     setup({ session: bw('fatLoss') }); // 12~20
     typeReps('5');
     expect(screen.getByText('목표(12~20회)보다 적어요')).toBeTruthy();
+  });
+});
+
+describe('세트 진행 — 동작 보기', () => {
+  // 추천 풀이 640개라 **이름만으로 모르는 운동**이 자주 나온다(사용자 제보 2026-09-02).
+  // 설명을 늘 펼쳐 두면 세트 카드가 화면 밖으로 밀리므로, 필요한 사람만 여는 시트다(설계 §2).
+  const curl = ex('curl', ['dumbbell'], {
+    name: '조트만 컬',
+    primaryMuscles: ['biceps'],
+    level: 'intermediate',
+    images: ['Zottman_Curl/0.jpg', 'Zottman_Curl/1.jpg'],
+  });
+  const running = (e: Exercise = curl) => startSession([e], 'health');
+  const open = () => click('동작 보기');
+  const dialog = () => screen.queryByRole('dialog');
+  const shots = () => Array.from(dialog()!.querySelectorAll('img')).map((i) => i.getAttribute('src') ?? '');
+
+  it('세트 화면에만 있다 — 휴식 화면·완료 화면에는 없다', () => {
+    // 휴식은 광고 자리이고 완료는 기록 자리다. 입구가 세 곳이면 어느 화면의 물건인지 흐려진다(설계 §2#8).
+    setup({ session: running() });
+    expect(screen.getByRole('button', { name: '동작 보기' })).toBeTruthy();
+
+    cleanup();
+    const s = running();
+    setup({ session: { ...s, done: [[{ weight: 0, reps: 10 }]], restEndsAt: Date.now() + 20000 } });
+    expect(screen.queryByRole('button', { name: '동작 보기' })).toBeNull();
+
+    cleanup();
+    setup(); // 완료 화면
+    expect(screen.queryByRole('button', { name: '동작 보기' })).toBeNull();
+  });
+
+  it('누르기 전에는 시트가 없다 — 열림 상태를 버튼이 말한다', () => {
+    setup({ session: running() });
+    expect(dialog()).toBeNull();
+    expect(screen.getByRole('button', { name: '동작 보기' }).getAttribute('aria-expanded')).toBe('false');
+    open();
+    expect(screen.getByRole('button', { name: '동작 보기' }).getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('누르면 그 운동 이름의 시트가 뜨고 시작·끝 사진 두 장이 들어 있다', () => {
+    // `images[1]`(끝 자세)은 이 기능이 처음 쓴다 — 한 장만 그리면 「동작」이 아니라 「자세」다.
+    setup({ session: running() });
+    open();
+    const d = screen.getByRole('dialog', { name: '조트만 컬' });
+    expect(d.getAttribute('aria-modal')).toBe('true');
+    expect(shots()).toHaveLength(2);
+    expect(shots()[0].endsWith('Zottman_Curl/0.jpg')).toBe(true);
+    expect(shots()[1].endsWith('Zottman_Curl/1.jpg')).toBe(true);
+    expect(within(d).getByText('시작')).toBeTruthy();
+    expect(within(d).getByText('끝')).toBeTruthy();
+  });
+
+  it('「닫기」로 닫힌다', () => {
+    setup({ session: running() });
+    open();
+    click('닫기');
+    expect(dialog()).toBeNull();
+  });
+
+  it('배경(dim)을 눌러도 닫힌다 — 닫는 길이 하나뿐이면 막힌 것처럼 느껴진다', () => {
+    // ★ 시트가 「세트 완료」를 가리는 것은 의도다(설계 §7). 그래서 닫는 길이 둘이어야 한다.
+    setup({ session: running() });
+    open();
+    fireEvent.click(document.querySelector('[data-dim]')!);
+    expect(dialog()).toBeNull();
+  });
+
+  it('열어 둔 채로 운동이 바뀌면 저절로 닫힌다', () => {
+    // ★ 안 닫으면 다음 운동 화면에 **이전 운동 설명**이 떠 있다 — 틀린 정보가 화면에 남는 유일한 경로다.
+    const next = ex('squat', [], { name: '스쿼트', images: ['Squat/0.jpg', 'Squat/1.jpg'] });
+    const s = startSession([curl, next], 'health');
+    const { rerenderWith } = setup({ session: s });
+    open();
+    expect(dialog()).toBeTruthy();
+    rerenderWith({ ...s, index: 1 });
+    expect(dialog()).toBeNull();
+  });
+
+  it('부제는 주동근 · 기구 · 난이도다', () => {
+    setup({ session: running() });
+    open();
+    expect(within(dialog()!).getByText('이두 · 덤벨 · 중급')).toBeTruthy();
+  });
+
+  it('기구가 없으면 「맨몸」이라고 적는다 — 빈칸이 아니다', () => {
+    setup({ session: running(ex('push', [], { name: '푸시업', images: ['Pushup/0.jpg'] })) });
+    open();
+    expect(within(dialog()!).getByText('가슴 · 맨몸 · 초급')).toBeTruthy();
+  });
+
+  it('사진이 한 장뿐인 운동은 한 장만 그린다 — 데이터 방어다', () => {
+    setup({ session: running(ex('push', [], { name: '푸시업', images: ['Pushup/0.jpg'] })) });
+    open();
+    expect(shots()).toHaveLength(1);
+  });
+
+  it('사진이 아예 없어도 시트는 열리고 닫힌다', () => {
+    // 사진 블록이 통째로 없어도 이름·부제·닫기는 남는다. 빈 상자를 그리지 않는다.
+    setup({ session: running(ex('push', [], { name: '푸시업' })) });
+    open();
+    expect(shots()).toHaveLength(0);
+    expect(within(dialog()!).getByText('푸시업')).toBeTruthy();
+    click('닫기');
+    expect(dialog()).toBeNull();
   });
 });
 
