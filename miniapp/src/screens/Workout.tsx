@@ -9,6 +9,7 @@ import { EQUIPMENT_KO, LEVEL_KO, MUSCLE_KO } from '../data/labels';
 import {
   completeSet,
   endRest,
+  isLastSet,
   progress,
   restRemaining,
   restSecondsFor,
@@ -617,8 +618,11 @@ export function Workout({
         「세트 완료」를 누르면 무슨 일이 생기는지 **누르기 전에** 말한다(T-245).
         **다음 휴식에 실제로 광고가 나올 때만** 뜬다 — 판단은 휴식 화면과 같은 `adPlan` 하나가 한다.
         여기 조건을 흉내 내서 새로 쓰면 예고와 노출이 갈라진다.
+
+        ⚠️ **마지막 세트에는 휴식 자체가 없다**(`isLastSet` — `completeSet`의 종료 분기와 같은 값).
+        그 자리에서 예고하면 문구를 읽은 사용자가 휴식 대신 완료 화면을 본다.
       */}
-      {adPlan(restSecondsFor(current, s.goal), adState.current).show && (
+      {!isLastSet(s) && adPlan(restSecondsFor(current, s.goal), adState.current).show && (
         <div style={{ fontSize: 12, color: 'var(--text-weak)', textAlign: 'center', marginBottom: 8, wordBreak: 'keep-all' }}>
           세트를 마치면 휴식 중에 광고가 나와요
         </div>

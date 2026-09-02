@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   completeSet,
   endRest,
+  isLastSet,
   progress,
   restRemaining,
   restSecondsFor,
@@ -116,6 +117,27 @@ describe('completeSet', () => {
     const s = startSession([ex('a')]);
     completeSet(s, set, T);
     expect(s.done[0]).toEqual([]);
+  });
+});
+
+describe('isLastSet', () => {
+  // `completeSet`의 종료 분기와 **같은 값**이어야 한다 — 두 곳이 갈라지면 화면이
+  // 「휴식 중에 광고가 나와요」라고 말한 뒤 휴식 없이 완료 화면이 뜬다.
+  it('마지막 운동의 마지막 세트면 참이다 — 마치면 휴식 없이 끝난다', () => {
+    const s = run(startSession([ex('a')]), SETS_PER_EXERCISE - 1);
+    expect(isLastSet(s)).toBe(true);
+    expect(completeSet(s, set, T).restEndsAt).toBeNull(); // 판정과 실제가 같은 값에서 나온다
+  });
+
+  it('마지막 운동이라도 마지막 세트가 아니면 거짓이다', () => {
+    const s = run(startSession([ex('a')]), SETS_PER_EXERCISE - 2);
+    expect(isLastSet(s)).toBe(false);
+    expect(completeSet(s, set, T).restEndsAt).not.toBeNull();
+  });
+
+  it('마지막 세트라도 다음 운동이 남았으면 거짓이다 — 그 뒤엔 휴식이 있다', () => {
+    const s = run(startSession([ex('a'), ex('b')]), SETS_PER_EXERCISE - 1);
+    expect(isLastSet(s)).toBe(false);
   });
 });
 

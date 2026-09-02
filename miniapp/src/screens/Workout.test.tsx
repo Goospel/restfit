@@ -9,7 +9,7 @@ import type { Exercise } from '../data/exercises';
 import { loadInstructions } from '../data/instructions';
 import type { Profile } from '../logic/profile';
 import { warnColors } from '../logic/restCue';
-import { startSession, type Session } from '../logic/session';
+import { SETS_PER_EXERCISE, startSession, type Session } from '../logic/session';
 import { playCue, primeSound } from '../restSound';
 import type { WorkoutRecord } from '../storage';
 import { Workout } from './Workout';
@@ -884,6 +884,22 @@ describe('광고 예고 — 오기 전에 미리 말한다', () => {
 
   it('광고가 나올 세션이면 세트 화면에서 미리 말한다', () => {
     render(<Harness initial={startSession([ex('push'), ex('pull')], 'health')} />);
+    expect(screen.getByText(SET_NOTICE)).toBeTruthy();
+  });
+
+  it('마지막 운동의 마지막 세트에는 예고가 없다 — 그 뒤엔 휴식이 없다', () => {
+    // ★ 마치는 순간 `completeSet`이 휴식 없이 `finished`로 보낸다. 여기서 예고하면
+    //   「휴식 중에 광고가 나와요」를 읽고 완료 화면을 보게 된다 — 안 나올 광고의 예고다.
+    const s = startSession([ex('push')], 'health');
+    const lastSet = { ...s, done: [Array(SETS_PER_EXERCISE - 1).fill({ weight: 0, reps: 10 })] };
+    render(<Harness initial={lastSet} />);
+    expect(screen.queryByText(SET_NOTICE)).toBeNull();
+  });
+
+  it('마지막 운동이라도 마지막 세트가 아니면 예고가 있다', () => {
+    // 위 조건이 「마지막 운동」까지만 보면 남은 두 세트의 휴식 광고를 통째로 안 알리게 된다.
+    const s = startSession([ex('push')], 'health');
+    render(<Harness initial={{ ...s, done: [[{ weight: 0, reps: 10 }]] }} />);
     expect(screen.getByText(SET_NOTICE)).toBeTruthy();
   });
 
