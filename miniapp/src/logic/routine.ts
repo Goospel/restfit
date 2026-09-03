@@ -8,6 +8,31 @@ import { isAvoided, type Experience, type Profile } from './profile';
  * seed는 날짜다. 같은 날 재접속해도 루틴이 그대로여야 하기 때문에 난수를 쓰되 seed로 고정한다.
  */
 
+/**
+ * 직접 고른 운동으로 만든 **고정 루틴**. `pickRoutine`을 통째로 대신한다.
+ *
+ * 거르지 않는 것이 이 함수의 전부다 — 기구도 난이도도 불편 부위도 안 본다. 「풀업바를
+ * 안 골랐으니 풀업은 뺀다」가 정확히 사용자가 막혔던 자리라(제보 2026-09-03), 여기서 한 번 더
+ * 거르면 고르기 화면을 만든 이유가 사라진다. **고른 것이 곧 답이다.**
+ *
+ * 날짜도 안 본다 — 같은 종목을 꾸준히 해서 몸의 변화를 보겠다는 것이 이 모드의 요구다.
+ * 로테이션이 회복 게이트 노릇을 하던 자리는 사용자 본인이 가져간다.
+ *
+ * @param ids 고른 순서. **그 순서가 곧 루틴 순서다.**
+ */
+export function customRoutine(exercises: Exercise[], ids: string[]): Routine {
+  const byId = new Map(exercises.map((e) => [e.id, e]));
+  const picked = ids.map((id) => byId.get(id)).filter((e): e is Exercise => e !== undefined);
+  if (picked.length === 0) return { unit: null, exercises: [] };
+
+  // 유닛은 **다수결**이다. 기록의 `group`은 그날 한 것을 말해야 하는데, 첫 운동으로 정하면
+  // 「푸시업 하나 + 스쿼트 셋」이 상체로 적힌다. 동수면 상체 — 어느 쪽이든 절반은 거짓이라
+  // 규칙을 하나로 고정해 두는 편이 낫다.
+  const units = picked.map(groupOf).filter((g): g is MuscleGroup => g !== null).map(unitOf);
+  const lower = units.filter((u) => u === 'lower').length;
+  return { unit: lower > units.length / 2 ? 'lower' : 'upper', exercises: picked };
+}
+
 /** FNV-1a — 날짜 문자열을 난수 시드로. */
 function hash(s: string): number {
   let h = 2166136261;

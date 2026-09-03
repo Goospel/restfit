@@ -22,9 +22,11 @@ export function Home({
   goal,
   profile,
   doneToday,
+  customCount,
   onStart,
   onOpenEquipment,
   onOpenGoal,
+  onOpenCustom,
 }: {
   routine: Routine;
   history: WorkoutRecord[];
@@ -33,9 +35,12 @@ export function Home({
   /** `null`이면 이 화면이 생기기 전부터 쓰던 사람이다 — 개인화가 꺼진 채로 돈다. */
   profile: Profile | null;
   doneToday: boolean;
+  /** 직접 고른 운동 수. **0이면 추천을 쓰는 중**이라 입구 문구가 통째로 바뀐다. */
+  customCount: number;
   onStart: () => void;
   onOpenEquipment: () => void;
   onOpenGoal: () => void;
+  onOpenCustom: () => void;
 }) {
   // 이 이른 반환이 아래 안내 칩보다 앞이라 **빈 루틴 화면에는 목적 칩이 안 뜬다 — 의도다.**
   // 이 화면은 아래 버튼으로 갈 곳을 이미 가리키므로, 칩까지 붙이면 목적지가 겹친다.
@@ -58,6 +63,11 @@ export function Home({
           <button style={ui.secondary} onClick={onOpenGoal}>
             불편한 부위 확인
           </button>
+          {/* 설정을 고쳐 보라는 말만 하고 끝내면, 하고 싶은 운동이 이미 정해진 사람은
+              여기서 앱을 닫는다. 직접 고르는 길이 이 화면의 마지막 출구다. */}
+          <button style={ui.secondary} onClick={onOpenCustom}>
+            운동 직접 고르기
+          </button>
         </div>
       </main>
     );
@@ -75,8 +85,11 @@ export function Home({
        * 제일 어려운 부분(뭘 할지 정하기)을 대신 해놨다고 말한다. 이 앱이 실제로 하는 일이 그거다.
        *
        * 기록이 없을 때만 뜬다. 매일 보이면 농담이 아니라 잔소리가 된다.
+       *
+       * ⚠️ **직접 고른 사람에게는 안 뜬다.** 자기가 정한 목록을 보면서 「그건 정해뒀습니다」를
+       * 읽으면 화면이 대놓고 딴소리를 한다.
        */}
-      {history.length === 0 && (
+      {history.length === 0 && customCount === 0 && (
         <div style={{ ...ui.card, marginBottom: 20, lineHeight: 1.6 }}>
           <div style={{ fontSize: 17, fontWeight: 700 }}>네, 어렵습니다.</div>
           <div style={{ fontSize: 14, color: 'var(--text-sub)', marginTop: 4 }}>
@@ -111,6 +124,20 @@ export function Home({
         {routine.exercises.length}개 운동 · 각 {SETS_PER_EXERCISE}세트 · 약 {Math.round(totalSec / 60)}분
         {doneToday && ' · 오늘 완료함'}
       </p>
+
+      {/*
+       * 직접 고르기 입구. **항상 떠 있다** — 「추천이 주지 않는 운동을 하고 싶다」는 생각은
+       * 오늘의 목록을 본 직후에 들지, 설정을 뒤지러 갈 때 드는 게 아니다. 그 생각이 드는
+       * 자리에 문이 없어서 「이 2개로 설정할 수가 없다」가 됐다(제보 2026-09-03).
+       *
+       * 문구가 상태를 그대로 말한다 — 고른 게 있으면 몇 개인지, 없으면 무엇을 할 수 있는지.
+       */}
+      <button
+        style={{ ...ui.chip, width: '100%', textAlign: 'left', padding: '10px 12px', fontSize: 13, marginBottom: 16 }}
+        onClick={onOpenCustom}
+      >
+        {customCount > 0 ? `내 운동 ${customCount}개 · 바꾸기` : '하고 싶은 운동 직접 고르기'}
+      </button>
 
       {/*
        * 이 화면이 생기기 전부터 쓰던 사람에게만 뜬다 — 신규 사용자는 온보딩에서 이미 답했고,

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
 import { listPhotos, type BodyPhoto as Photo, type PhotoDb } from './photoStore';
-import { saveGoal } from './storage';
+import { saveCustom, saveGoal } from './storage';
 
 /**
  * 화면 **배선**만 잰다. 각 화면이 무엇을 그리는지는 그 화면의 테스트가 이미 잰다 —
@@ -128,6 +128,27 @@ describe('App — 설정 진입 배선', () => {
     // 날짜로 유닛이 갈리므로(상체/하체) 접두어만 잡는다.
     expect(screen.queryByRole('heading', { name: /^오늘은/ })).toBeTruthy();
     expect(heading('운동 목적')).toBeNull();
+  });
+
+  it('홈의 내 운동 칩은 고르기 페이지를 연다', () => {
+    render(<App />);
+    click('하고 싶은 운동 직접 고르기');
+
+    expect(heading('내 운동')).toBeTruthy();
+    expect(heading('운동 목적')).toBeNull();
+  });
+
+  /**
+   * 배선의 알맹이. **고른 운동이 추천을 이긴다** — 여기가 끊기면 화면은 멀쩡히 열리고
+   * 저장도 되는데 홈은 계속 추천을 보여 준다(제보 그대로의 상태로 되돌아간다).
+   */
+  it('직접 고른 운동이 있으면 오늘의 루틴이 그것으로 고정된다', () => {
+    saveCustom(['Pullups', 'Pushups']);
+    render(<App />);
+
+    expect(screen.getByText('풀업')).toBeTruthy();
+    expect(screen.getByText('푸시업')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '내 운동 2개 · 바꾸기' })).toBeTruthy();
   });
 
   it('기구 탭에서 열고 닫으면 기구 탭으로 돌아온다 — 홈이 아니다', () => {

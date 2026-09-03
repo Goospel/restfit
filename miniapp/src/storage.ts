@@ -18,6 +18,7 @@ const HISTORY_KEY = 'restfit.history';
 const GOAL_KEY = 'restfit.goal';
 const SPEC_KEY = 'restfit.equipSpec';
 const PROFILE_KEY = 'restfit.profile';
+const CUSTOM_KEY = 'restfit.custom';
 
 /** 기록 상한. 무한히 자라면 저장이 실패해 **그날 운동이 통째로 사라진다.** */
 export const HISTORY_MAX = 400;
@@ -125,6 +126,22 @@ export function saveProfile(profile: Profile, storage: Storage = localStorage): 
 }
 
 /**
+ * 직접 고른 운동 id. **빈 배열이 「추천을 쓴다」는 뜻이다** — 따로 켬/끔 스위치를 두지 않는다.
+ *
+ * 어휘 검사를 여기서 안 하는 이유: 운동 목록은 데이터라 버전마다 바뀐다. 여기서 걸러 봐야
+ * `customRoutine`이 어차피 한 번 더 조회하므로(없는 id는 그때 빠진다), 두 곳에서 같은 판단을
+ * 하면 데이터가 늘어날 때 한쪽만 낡는다. 여기서는 **모양만** 본다.
+ */
+export function loadCustom(storage: Storage = localStorage): string[] {
+  const v = read(CUSTOM_KEY, storage);
+  return Array.isArray(v) ? v.filter((id): id is string => typeof id === 'string') : [];
+}
+
+export function saveCustom(ids: string[], storage: Storage = localStorage): void {
+  write(CUSTOM_KEY, ids, storage);
+}
+
+/**
  * 온보딩을 안 한 상태로 되돌린다 — **목적과 기구를 함께 지운다.**
  *
  * 목적만 지우면 온보딩 1단계에 이미 고른 기구가 남아 첫 진입 경험이 재현되지 않는다.
@@ -139,6 +156,9 @@ export function clearOnboarding(storage: Storage = localStorage): void {
   // 온보딩 2단계(경험·불편 부위)도 같은 이유로 지운다 — 남으면 그 단계가 이미
   // 답해진 채로 떠서 재현이 반쪽이 된다.
   remove(PROFILE_KEY, storage);
+  // 직접 고른 운동이 남으면 온보딩을 마친 홈이 고정 루틴으로 떠서, 재현하려던
+  // **첫 진입 화면(= 추천)** 이 아예 안 나온다.
+  remove(CUSTOM_KEY, storage);
 }
 
 /**
