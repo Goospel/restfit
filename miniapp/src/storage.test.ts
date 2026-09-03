@@ -6,11 +6,13 @@ import {
   HISTORY_MAX,
   lastSetOf,
   lastSetsOf,
+  loadCustom,
   loadEquipSpec,
   loadGoal,
   loadHistory,
   loadOwned,
   loadProfile,
+  saveCustom,
   saveEquipSpec,
   saveGoal,
   saveProfile,
@@ -378,8 +380,46 @@ describe('clearOnboarding', () => {
     expect(loadHistory(s)).toHaveLength(1);
   });
 
+  it('직접 고른 운동도 함께 지운다', () => {
+    // 남겨 두면 온보딩을 다시 해도 홈이 고정 루틴으로 떠서 **첫 진입이 재현되지 않는다.**
+    const s = fakeStorage();
+    saveCustom(['Pullups', 'Pushups'], s);
+    clearOnboarding(s);
+    expect(loadCustom(s)).toEqual([]);
+  });
+
   it('저장소가 막혀도 죽지 않는다', () => {
     expect(() => clearOnboarding(fakeStorage({ throwOnRemove: true }))).not.toThrow();
+  });
+});
+
+describe('직접 고른 운동', () => {
+  it('고른 적 없으면 빈 배열 — 그게 「추천을 쓴다」는 뜻이다', () => {
+    expect(loadCustom(fakeStorage())).toEqual([]);
+  });
+
+  it('저장한 순서가 그대로 돌아온다 — 순서가 곧 루틴 순서다', () => {
+    const s = fakeStorage();
+    saveCustom(['Pullups', 'Pushups'], s);
+    expect(loadCustom(s)).toEqual(['Pullups', 'Pushups']);
+  });
+
+  it('문자열이 아닌 항목은 버린다', () => {
+    // id는 `customRoutine`이 Map 조회에 그대로 넣는다. 이상한 값이 섞여도 조용히 빠질 뿐이다.
+    const s = fakeStorage();
+    s.setItem('restfit.custom', JSON.stringify(['Pullups', 3, null]));
+    expect(loadCustom(s)).toEqual(['Pullups']);
+  });
+
+  it('배열이 아니면 빈 배열이다', () => {
+    const s = fakeStorage();
+    s.setItem('restfit.custom', JSON.stringify({ ids: ['Pullups'] }));
+    expect(loadCustom(s)).toEqual([]);
+  });
+
+  it('저장소가 막혀도 죽지 않는다', () => {
+    expect(() => saveCustom(['Pullups'], fakeStorage({ throwOnSet: true }))).not.toThrow();
+    expect(loadCustom(fakeStorage({ throwOnGet: true }))).toEqual([]);
   });
 });
 

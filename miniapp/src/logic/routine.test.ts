@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { suggestNext } from './goal';
 import type { Profile } from './profile';
-import { pickRoutine } from './routine';
+import { customRoutine, pickRoutine } from './routine';
 import { startSession } from './session';
 import { EXERCISES, type EquipKey, type Exercise, type MuscleGroup, type Unit } from '../data/exercises';
 import { lastSetsOf, recentUnits, type WorkoutRecord } from '../storage';
@@ -563,5 +563,44 @@ describe('졸업 프리필은 루틴 결정성에 영향이 없다 (§3.7)', () 
   it('시작한 세션도 같다 — 세트·휴식 상태 기계는 프리필을 모른다', () => {
     const s = (h: WorkoutRecord[]) => startSession(pickRoutine(FULL, [], recentUnits(h), '2026-08-27', 4, null).exercises, 'muscle');
     expect(s(graduating)).toEqual(s(stalling));
+  });
+});
+
+describe('customRoutine — 직접 고른 운동', () => {
+  const list = [ex('가슴', 'chest'), ex('등', 'lats'), ex('다리', 'quadriceps'), ex('코어', 'abdominals')];
+
+  it('고른 순서 그대로 나온다 — 날짜도 로테이션도 안 탄다', () => {
+    // 「매일 이 두 개」가 이 기능의 전부다. 여기서 순서를 섞거나 날짜를 섞으면
+    // 고정이 아니라 또 하나의 추천이 된다.
+    expect(idsOf(customRoutine(list, ['다리', '가슴']))).toEqual(['다리', '가슴']);
+    expect(idsOf(customRoutine(list, ['다리', '가슴']))).toEqual(idsOf(customRoutine(list, ['다리', '가슴'])));
+  });
+
+  it('기구·난이도로 거르지 않는다 — 고른 것이 곧 답이다', () => {
+    // 풀업바를 안 가졌다고 풀업을 빼면 이 화면을 만든 이유가 사라진다.
+    const bar = ex('풀업', 'lats', { requires: ['pullupBar'], level: 'expert' });
+    expect(idsOf(customRoutine([...list, bar], ['풀업']))).toEqual(['풀업']);
+  });
+
+  it('데이터에 없는 id는 버린다 — 운동이 빠져도 나머지는 그대로 돈다', () => {
+    expect(idsOf(customRoutine(list, ['가슴', '없는것']))).toEqual(['가슴']);
+  });
+
+  it('남는 것이 없으면 빈 루틴이다 — 화면이 추천으로 되돌아갈 근거', () => {
+    expect(customRoutine(list, ['없는것'])).toEqual({ unit: null, exercises: [] });
+    expect(customRoutine(list, [])).toEqual({ unit: null, exercises: [] });
+  });
+
+  /**
+   * 유닛은 **다수결**이다. 기록의 `group`이 그날 한 것을 말해야 하는데, 첫 운동으로
+   * 정하면 「푸시업 하나 + 스쿼트 셋」이 상체로 적힌다 — 하지도 않은 날이 기록에 남는다.
+   */
+  it('유닛은 다수결로 정한다', () => {
+    expect(customRoutine(list, ['가슴', '등']).unit).toBe('upper');
+    expect(customRoutine(list, ['다리', '코어', '가슴']).unit).toBe('lower');
+  });
+
+  it('동수면 상체다 — 어느 쪽이든 절반은 거짓이라 규칙을 하나로 고정한다', () => {
+    expect(customRoutine(list, ['가슴', '다리']).unit).toBe('upper');
   });
 });

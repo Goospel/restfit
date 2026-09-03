@@ -5,10 +5,11 @@ import { EXERCISES } from './data/exercises';
 import { effectiveOwned, type EquipSpec } from './logic/equipSpec';
 import { DEFAULT_GOAL, GOALS, type Goal } from './logic/goal';
 import type { Profile } from './logic/profile';
-import { pickRoutine } from './logic/routine';
+import { customRoutine, pickRoutine } from './logic/routine';
 import { startSession, type Session } from './logic/session';
 import { BodyPhoto } from './screens/BodyPhoto';
 import { EquipmentSettings } from './screens/EquipmentSettings';
+import { ExercisePicker } from './screens/ExercisePicker';
 import { GoalSettings } from './screens/GoalSettings';
 import { History } from './screens/History';
 import { Home } from './screens/Home';
@@ -19,12 +20,14 @@ import { Workout } from './screens/Workout';
 import {
   appendRecord,
   clearOnboarding,
+  loadCustom,
   loadEquipSpec,
   loadGoal,
   loadHistory,
   loadOwned,
   loadProfile,
   recentUnits,
+  saveCustom,
   saveEquipSpec,
   saveGoal,
   saveOwned,
@@ -55,7 +58,12 @@ export function App() {
    * 닫으면 `null`로 돌아갈 뿐이라 **보던 탭이 그대로 복원된다**(`tab`을 안 건드린다) —
    * 기구 탭에서 열면 기구 탭으로, 홈에서 열면 홈으로.
    */
-  const [config, setConfig] = useState<'equipment' | 'goal' | null>(null);
+  const [config, setConfig] = useState<'equipment' | 'goal' | 'custom' | null>(null);
+  /**
+   * 직접 고른 운동 id. **비어 있으면 추천을 쓴다** — 켬/끔 스위치를 따로 두지 않는다.
+   * 상태가 하나뿐이라 「고르긴 했는데 꺼져 있는」 조합이 아예 안 생긴다.
+   */
+  const [custom, setCustom] = useState(loadCustom);
   /**
    * 눈바디 화면. `config`와 같은 전체화면이고, 값 하나가 「촬영이냐 비교냐 아니냐」를 다 말한다 —
    * boolean 둘로 두면 **둘 다 켜진 상태**가 생기고 그때 무엇을 그릴지 화면이 정해야 한다.
@@ -81,7 +89,19 @@ export function App() {
    * 오늘 기록까지 넣으면 운동을 마치는 순간 유닛 로테이션이 돌아 화면의 루틴이 바뀐다 —
    * "오늘 완료함"이라 써 있는데 목록은 딴것이 되는 꼴이다. "한 번 더 하기"도 같은 루틴이어야 한다.
    */
+  /**
+   * 직접 고른 운동으로 만든 고정 루틴. **비어 있는 것이 정상 경로다** — 그때 추천이 이 자리를 쓴다.
+   *
+   * 홈의 입구 문구도 이 값을 읽는다. 「고른 수」가 아니라 **실제로 오늘 나가는 수**여야
+   * 데이터에서 빠진 id만 남았을 때 화면이 거짓말을 안 한다.
+   */
+  const mine = useMemo(() => customRoutine(EXERCISES, custom), [custom]);
+
   const routine = useMemo(() => {
+    // 직접 고른 것이 **추천을 이긴다.** 남는 게 없을 때만 추천으로 되돌아간다 —
+    // 그래야 「할 수 있는 운동을 찾지 못했습니다」가 안 뜬다.
+    if (mine.exercises.length > 0) return mine;
+
     const prior = history.filter((r) => r.date !== date);
     // 종목 수는 목적이 정한다 — 지금은 셋 다 4다(상체 4부위를 매 세션 커버하려면 4여야 한다).
     // 목적별로 갈릴 자리를 남겨 둔 것이지, 값이 같다고 goal을 안 읽으면 안 된다.
@@ -94,7 +114,7 @@ export function App() {
       GOALS[goal ?? DEFAULT_GOAL].exerciseCount,
       profile,
     );
-  }, [owned, spec, history, date, goal, profile]);
+  }, [owned, spec, history, date, goal, profile, mine]);
 
   function saveOwnedAnd(next: typeof owned) {
     setOwned(next);
@@ -116,6 +136,11 @@ export function App() {
     saveProfile(next);
   }
 
+  function saveCustomAnd(next: string[]) {
+    setCustom(next);
+    saveCustom(next);
+  }
+
   /**
    * 온보딩을 다시 띄운다. **폰에서는 localStorage를 손댈 방법이 없어**
    * 온보딩 화면을 고쳐도 실기기에서 확인할 길이 없다 — 그 유일한 입구다.
@@ -126,6 +151,7 @@ export function App() {
     setSpec({});
     setGoal(null);
     setProfile(null);
+    setCustom([]);
     // 온보딩을 마치면 마지막으로 보던 기록 탭이 아니라 오늘 루틴으로 돌아오게 둔다.
     setTab('home');
   }
@@ -164,6 +190,18 @@ export function App() {
         spec={spec}
         onChange={saveOwnedAnd}
         onSpecChange={saveSpecAnd}
+        onBack={() => setConfig(null)}
+      />
+    );
+  }
+
+  if (config === 'custom') {
+    return (
+      <ExercisePicker
+        picked={custom}
+        // 거르는 데 안 쓴다 — 「무엇이 더 필요한지」를 딱지로 말해 주는 데만 쓴다.
+        owned={effectiveOwned(owned, spec)}
+        onChange={saveCustomAnd}
         onBack={() => setConfig(null)}
       />
     );
@@ -211,9 +249,11 @@ export function App() {
           goal={goal}
           profile={profile}
           doneToday={history.some((r) => r.date === date)}
+          customCount={mine.exercises.length}
           onStart={() => setSession(startSession(routine.exercises, goal))}
           onOpenEquipment={() => setConfig('equipment')}
           onOpenGoal={() => setConfig('goal')}
+          onOpenCustom={() => setConfig('custom')}
         />
       )}
       {tab === 'shop' && <Shop owned={owned} spec={spec} onEditEquipment={() => setConfig('equipment')} />}

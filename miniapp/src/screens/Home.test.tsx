@@ -33,10 +33,15 @@ const DONE: WorkoutRecord[] = [
 
 function setup(
   routine: Routine,
-  { history = [], profile = null }: { history?: WorkoutRecord[]; profile?: Profile | null } = {},
+  {
+    history = [],
+    profile = null,
+    customCount = 0,
+  }: { history?: WorkoutRecord[]; profile?: Profile | null; customCount?: number } = {},
 ) {
   const onOpenEquipment = vi.fn();
   const onOpenGoal = vi.fn();
+  const onOpenCustom = vi.fn();
   render(
     <Home
       routine={routine}
@@ -44,12 +49,14 @@ function setup(
       goal="muscle"
       profile={profile}
       doneToday={false}
+      customCount={customCount}
       onStart={() => {}}
       onOpenEquipment={onOpenEquipment}
       onOpenGoal={onOpenGoal}
+      onOpenCustom={onOpenCustom}
     />,
   );
-  return { onOpenEquipment, onOpenGoal };
+  return { onOpenEquipment, onOpenGoal, onOpenCustom };
 }
 
 describe('홈 — 오늘의 유닛', () => {
@@ -153,5 +160,37 @@ describe('홈 — 프로필 안내 칩', () => {
     // 신규 사용자는 **온보딩에서 이미 물어봤다.** 방금 답한 걸 또 조르면 안내가 아니라 잔소리다.
     setup(routine, { history: [] });
     expect(screen.queryByText(CHIP)).toBeNull();
+  });
+});
+
+describe('홈 — 내 운동 입구', () => {
+  const routine: Routine = { unit: 'upper', exercises: [ex('a'), ex('b')] };
+
+  it('안 골랐으면 고르러 가자고 말한다 — 추천을 쓰는 중이라는 뜻이다', () => {
+    const { onOpenCustom } = setup(routine);
+    fireEvent.click(screen.getByRole('button', { name: '하고 싶은 운동 직접 고르기' }));
+    expect(onOpenCustom).toHaveBeenCalled();
+  });
+
+  it('골랐으면 몇 개인지 말한다 — 오늘 목록이 왜 이건지가 그 한 줄로 설명된다', () => {
+    setup(routine, { customCount: 2 });
+    expect(screen.getByRole('button', { name: '내 운동 2개 · 바꾸기' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '하고 싶은 운동 직접 고르기' })).toBeNull();
+  });
+
+  it('직접 고른 사람에게는 「그건 정해뒀습니다」가 안 뜬다 — 자기가 정한 목록 위의 딴소리다', () => {
+    const line = '제일 어려운 건 뭘 할지 정하는 거고, 그건 정해뒀습니다. 아래대로만 하시면 됩니다.';
+    setup(routine, { history: [], customCount: 2 });
+    expect(screen.queryByText(line)).toBeNull();
+
+    cleanup();
+    setup(routine, { history: [] });
+    expect(screen.getByText(line)).toBeTruthy();
+  });
+
+  it('빈 루틴 화면에도 출구가 있다 — 설정만 짚어 주면 하고 싶은 게 정해진 사람은 앱을 닫는다', () => {
+    const { onOpenCustom } = setup({ unit: null, exercises: [] });
+    fireEvent.click(screen.getByRole('button', { name: '운동 직접 고르기' }));
+    expect(onOpenCustom).toHaveBeenCalled();
   });
 });
