@@ -5,7 +5,7 @@ import { EXERCISES } from './data/exercises';
 import { effectiveOwned, type EquipSpec } from './logic/equipSpec';
 import { DEFAULT_GOAL, GOALS, type Goal } from './logic/goal';
 import type { Profile } from './logic/profile';
-import { customRoutine, pickRoutine } from './logic/routine';
+import { customRoutine, pickRoutine, recentForces } from './logic/routine';
 import { startSession, type Session } from './logic/session';
 import { BodyPhoto } from './screens/BodyPhoto';
 import { EquipmentSettings } from './screens/EquipmentSettings';
@@ -95,14 +95,23 @@ export function App() {
    * 홈의 입구 문구도 이 값을 읽는다. 「고른 수」가 아니라 **실제로 오늘 나가는 수**여야
    * 데이터에서 빠진 id만 남았을 때 화면이 거짓말을 안 한다.
    */
-  const mine = useMemo(() => customRoutine(EXERCISES, custom), [custom]);
+  /**
+   * 오늘 이전의 기록. **추천이든 직접 고른 것이든 오늘의 루틴은 전부 이걸로만 정한다** —
+   * 위 주석의 이유가 두 경로에 똑같이 걸린다.
+   */
+  const prior = useMemo(() => history.filter((r) => r.date !== date), [history, date]);
+
+  const mine = useMemo(
+    // 밀기/당기기 교대가 이 인자로 굴러간다 — 없으면 고른 것이 매일 통째로 나온다.
+    () => customRoutine(EXERCISES, custom, recentForces(EXERCISES, prior)),
+    [custom, prior],
+  );
 
   const routine = useMemo(() => {
     // 직접 고른 것이 **추천을 이긴다.** 남는 게 없을 때만 추천으로 되돌아간다 —
     // 그래야 「할 수 있는 운동을 찾지 못했습니다」가 안 뜬다.
     if (mine.exercises.length > 0) return mine;
 
-    const prior = history.filter((r) => r.date !== date);
     // 종목 수는 목적이 정한다 — 지금은 셋 다 4다(상체 4부위를 매 세션 커버하려면 4여야 한다).
     // 목적별로 갈릴 자리를 남겨 둔 것이지, 값이 같다고 goal을 안 읽으면 안 된다.
     // effectiveOwned: 조절식 벤치를 가졌으면 인클라인까지 열고, 평벤치·모름이면 걸러낸다.
@@ -114,7 +123,7 @@ export function App() {
       GOALS[goal ?? DEFAULT_GOAL].exerciseCount,
       profile,
     );
-  }, [owned, spec, history, date, goal, profile, mine]);
+  }, [owned, spec, prior, date, goal, profile, mine]);
 
   function saveOwnedAnd(next: typeof owned) {
     setOwned(next);

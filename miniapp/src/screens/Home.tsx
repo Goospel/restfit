@@ -1,5 +1,5 @@
 import { ExerciseImage } from '../components/ExerciseImage';
-import { GROUP_KO, MUSCLE_KO } from '../data/labels';
+import { FORCE_KO, GROUP_KO, MUSCLE_KO } from '../data/labels';
 import { GOALS, type Goal } from '../logic/goal';
 import { restSecondsFor, SETS_PER_EXERCISE } from '../logic/session';
 import type { Profile } from '../logic/profile';
@@ -99,8 +99,11 @@ export function Home({
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 20px' }}>
+        {/* 밀기/당기기로 나뉜 날은 **그쪽을 헤드라인으로 쓴다.** 풀업과 푸시업은 둘 다 상체라
+            「오늘은 상체」로는 왜 오늘 하나만 나오는지가 설명이 안 된다. */}
         <h1 style={{ ...ui.h1, margin: 0 }}>
-          오늘은 <span style={{ color: 'var(--blue)' }}>{GROUP_KO[routine.unit]}</span>
+          오늘은{' '}
+          <span style={{ color: 'var(--blue)' }}>{routine.force ? FORCE_KO[routine.force] : GROUP_KO[routine.unit]}</span>
         </h1>
         <span style={ui.spacer} />
         {/* 목적을 계속 띄운다 — 왜 15회·45초인지가 이 칩으로 설명된다.
@@ -120,8 +123,11 @@ export function Home({
           목적 · {GOALS[goal].label} ›
         </button>
       </div>
+      {/* 「다음은 미는 날」이 **없으면 안 된다.** 2개를 골랐는데 1개만 뜨는 화면이라,
+          나머지가 어디 갔는지 여기서 답하지 않으면 사용자는 고장으로 읽는다. */}
       <p style={ui.sub}>
         {routine.exercises.length}개 운동 · 각 {SETS_PER_EXERCISE}세트 · 약 {Math.round(totalSec / 60)}분
+        {routine.force && ` · 다음은 ${FORCE_KO[routine.force === 'push' ? 'pull' : 'push']}`}
         {doneToday && ' · 오늘 완료함'}
       </p>
 

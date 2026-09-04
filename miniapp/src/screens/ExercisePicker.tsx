@@ -124,6 +124,8 @@ export function ExercisePicker({
       : // 모듈 상수를 제자리 정렬하면 다음 렌더의 기준 순서가 통째로 바뀐다. 복사해서 정렬한다.
         [...BY_GROUP.get(group)!].sort((a, b) => ready(a) - ready(b));
   const chosen = picked.map((id) => BY_ID.get(id)).filter((e): e is Exercise => e !== undefined);
+  /** 양쪽을 다 골랐는가 — `splitForce`가 나눌 조건과 **같은 판단**이다. */
+  const splits = chosen.some((e) => e.force === 'push') && chosen.some((e) => e.force === 'pull');
 
   const toggle = (id: string) => onChange(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
 
@@ -136,12 +138,19 @@ export function ExercisePicker({
           닫기
         </button>
       </div>
-      <p style={ui.sub}>고른 운동만 매일 그대로 나옵니다. 하나도 안 고르면 지금처럼 추천해 드려요.</p>
+      <p style={ui.sub}>
+        고른 운동만 나옵니다. 미는 운동과 당기는 운동을 함께 고르면 하루씩 번갈아 드려요. 하나도 안 고르면 지금처럼
+        추천해 드려요.
+      </p>
 
       {chosen.length > 0 && (
         <div style={{ ...ui.card, marginBottom: 16, padding: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>고른 운동 {chosen.length}개</div>
+            {/* 규칙은 위 안내가 말한다. 여기는 **지금 고른 이 조합이 실제로 나뉘는지**를 말한다 —
+                둘의 차이가 「읽었다」와 「됐다」의 차이다. */}
+            <div style={{ fontSize: 13, fontWeight: 700 }}>
+              고른 운동 {chosen.length}개{splits && ' · 하루씩 번갈아'}
+            </div>
             <span style={ui.spacer} />
             {/* 하나씩 빼는 길만 두면 「추천으로 되돌리기」가 N번 누르기가 된다. */}
             <button style={{ ...ui.ghost, padding: '4px 6px', fontSize: 13 }} onClick={() => onChange([])}>

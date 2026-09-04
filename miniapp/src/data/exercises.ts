@@ -7,6 +7,15 @@ export type EquipKey = (typeof EQUIPMENT)[number];
 export type Category = 'strength' | 'stretching' | 'plyometrics' | 'cardio' | 'powerlifting' | 'olympic weightlifting' | 'strongman';
 export type Level = 'beginner' | 'intermediate' | 'expert';
 
+/**
+ * 힘의 방향 — **상체를 둘로 나누는 축**이다. 밀기(가슴·삼두·어깨)와 당기기(등·이두)는
+ * 쓰는 근육이 겹치지 않아, 번갈아 하면 하루도 쉬지 않고 매일 할 수 있다.
+ *
+ * ⚠️ 이 어휘는 `Exercise.force`의 **전부가 아니다** — 원본에는 `'static'`(플랭크류)과 `null`도
+ * 있다(근력 408종 중 10종). 그것들은 어느 쪽도 아니므로 나눌 때 어느 쪽에도 안 넣는다.
+ */
+export type Force = 'push' | 'pull';
+
 export type Exercise = {
   id: string;
   /** 한글 이름. 화면에 그대로 뜬다. */
@@ -17,7 +26,7 @@ export type Exercise = {
   requires: EquipKey[];
   category: Category;
   level: Level;
-  force: 'push' | 'pull' | 'static' | null;
+  force: Force | 'static' | null;
   mechanic: 'compound' | 'isolation' | null;
   primaryMuscles: string[];
   secondaryMuscles: string[];
