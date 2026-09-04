@@ -1,6 +1,7 @@
-import { groupOf, unitOf, type EquipKey, type Exercise, type Level, type MuscleGroup, type Unit } from '../data/exercises';
+import { groupOf, unitOf, type EquipKey, type Exercise, type Force, type Level, type MuscleGroup, type Unit } from '../data/exercises';
 import { filterByEquipment } from './equipment';
 import { isAvoided, type Experience, type Profile } from './profile';
+import type { WorkoutRecord } from '../storage';
 
 /**
  * 오늘의 루틴. **규칙 기반이다 — LLM은 쓰지 않는다.**
@@ -16,21 +17,79 @@ import { isAvoided, type Experience, type Profile } from './profile';
  * 거르면 고르기 화면을 만든 이유가 사라진다. **고른 것이 곧 답이다.**
  *
  * 날짜도 안 본다 — 같은 종목을 꾸준히 해서 몸의 변화를 보겠다는 것이 이 모드의 요구다.
- * 로테이션이 회복 게이트 노릇을 하던 자리는 사용자 본인이 가져간다.
+ * 대신 **밀기/당기기는 나눈다**(아래 `splitForce`) — 그게 이 모드의 회복 게이트다.
  *
  * @param ids 고른 순서. **그 순서가 곧 루틴 순서다.**
+ * @param recent 최근에 한 밀기/당기기. **최근 것이 앞**(`recentForces`가 만든다).
  */
-export function customRoutine(exercises: Exercise[], ids: string[]): Routine {
+export function customRoutine(exercises: Exercise[], ids: string[], recent: Force[] = []): Routine {
   const byId = new Map(exercises.map((e) => [e.id, e]));
   const picked = ids.map((id) => byId.get(id)).filter((e): e is Exercise => e !== undefined);
-  if (picked.length === 0) return { unit: null, exercises: [] };
+  if (picked.length === 0) return { unit: null, force: null, exercises: [] };
+
+  const force = splitForce(picked, recent);
+  // 밀기도 당기기도 아닌 것(플랭크류)은 **어느 날이든 함께 나간다.** 한쪽에 억지로 붙이면
+  // 고른 사람이 이틀에 한 번만 받는데, 코어·정적 운동은 매일 해도 되는 쪽이다.
+  const today = force === null ? picked : picked.filter((e) => e.force === force || !isForce(e.force));
 
   // 유닛은 **다수결**이다. 기록의 `group`은 그날 한 것을 말해야 하는데, 첫 운동으로 정하면
   // 「푸시업 하나 + 스쿼트 셋」이 상체로 적힌다. 동수면 상체 — 어느 쪽이든 절반은 거짓이라
   // 규칙을 하나로 고정해 두는 편이 낫다.
-  const units = picked.map(groupOf).filter((g): g is MuscleGroup => g !== null).map(unitOf);
+  //
+  // ⚠️ **`picked`가 아니라 `today`로 센다.** 나눈 뒤엔 오늘 안 하는 운동이 절반이라,
+  // 고른 전체로 세면 하지도 않은 운동이 그날 기록의 부위를 정한다.
+  const units = today.map(groupOf).filter((g): g is MuscleGroup => g !== null).map(unitOf);
   const lower = units.filter((u) => u === 'lower').length;
-  return { unit: lower > units.length / 2 ? 'lower' : 'upper', exercises: picked };
+  return { unit: lower > units.length / 2 ? 'lower' : 'upper', force, exercises: today };
+}
+
+const isForce = (v: unknown): v is Force => v === 'push' || v === 'pull';
+
+/**
+ * 오늘 할 쪽 — **양쪽을 다 골랐을 때만 나눈다.**
+ *
+ * 밀기(가슴·삼두·어깨)와 당기기(등·이두)는 쓰는 근육이 겹치지 않아, 번갈아 하면 같은 근육이
+ * 이틀 연속 맞는 일이 없다. 풀업·푸시업을 함께 고른 사용자가 정확히 이걸 요구했다
+ * (제보 2026-09-04) — 둘 다 상체라 추천 모드의 상/하체 로테이션은 이 자리를 못 봐 준다.
+ *
+ * ⚠️ **한쪽만 골랐으면 `null`이다.** 나눌 것이 없는데 나누면 이틀에 하루는 운동이 아예 없다.
+ *
+ * 고르는 규칙은 `pickRoutine`의 유닛 로테이션과 **같다** — 가장 오래 전에 한 쪽. 날짜 홀짝이
+ * 아닌 이유가 여기 있다: 화·목만 운동하는 사람은 홀짝이 같아 한쪽만 두 번 하고 다른 쪽은
+ * 영영 안 나온다. **건너뛴 날이 교대를 밀어내면 안 된다.**
+ */
+function splitForce(picked: Exercise[], recent: Force[]): Force | null {
+  const forces = picked.map((e) => e.force).filter(isForce);
+  if (!forces.includes('push') || !forces.includes('pull')) return null;
+
+  // 둘 다 처음이면(=기록에 없으면) **먼저 고른 쪽**이 첫날이다. 무작위나 고정값으로 정하면
+  // 「내가 고른 순서」라는 유일한 단서가 사라진다. 그래서 `>=`가 아니라 `>`다 — 동점은 first.
+  const first = forces[0];
+  const other: Force = first === 'push' ? 'pull' : 'push';
+  const staleness = (f: Force) => {
+    const i = recent.indexOf(f);
+    return i < 0 ? Infinity : i;
+  };
+  return staleness(other) > staleness(first) ? other : first;
+}
+
+/**
+ * 기록에서 최근에 한 밀기/당기기 — **최근 것이 앞**, 중복 제거. `recentUnits`의 밀기/당기기판이고,
+ * 호출부도 그것과 나란히 쓴다(`customRoutine(EXERCISES, custom, recentForces(EXERCISES, prior))`).
+ *
+ * ⚠️ 기록에는 **id만** 남아 있어서 운동 목록을 되짚어야 한다. 데이터에서 빠진 운동은 조용히
+ * 건너뛴다 — 그 하나 때문에 지난 기록을 통째로 버리면 교대가 처음부터 다시 시작한다.
+ */
+export function recentForces(exercises: Exercise[], history: WorkoutRecord[]): Force[] {
+  const forceOf = new Map(exercises.map((e) => [e.id, e.force]));
+  const out: Force[] = [];
+  for (let i = history.length - 1; i >= 0; i--) {
+    for (const entry of history[i].entries) {
+      const f = forceOf.get(entry.id);
+      if (isForce(f) && !out.includes(f)) out.push(f);
+    }
+  }
+  return out;
 }
 
 /** FNV-1a — 날짜 문자열을 난수 시드로. */
@@ -84,7 +143,12 @@ const MIN_PER_GROUP = 2;
  */
 const MAX_PER_MUSCLE = 3;
 
-export type Routine = { unit: Unit | null; exercises: Exercise[] };
+/**
+ * @property force 오늘이 **밀기/당기기 중 어느 날인가.** 추천 루틴은 언제나 `null`이다 —
+ *   상체 세션은 밀기와 당기기를 함께 주므로 어느 쪽 날도 아니고, 그렇게 말하는 것이 사실이다.
+ *   화면 헤드라인이 이 값으로 「상체」와 「당기는 날」을 가른다.
+ */
+export type Routine = { unit: Unit | null; force: Force | null; exercises: Exercise[] };
 
 /**
  * 경험별 티어 순위 — **작을수록 먼저 뽑힌다.** 같은 순위끼리는 섞이고, 순위 간 순서는 고정이다.
@@ -164,7 +228,7 @@ export function pickRoutine(
     if (bucket) bucket.push(e);
     else byGroup.set(g, [e]);
   }
-  if (byGroup.size === 0) return { unit: null, exercises: [] };
+  if (byGroup.size === 0) return { unit: null, force: null, exercises: [] };
 
   // 유닛 → 그 유닛에서 쓸 수 있는 부위들.
   const byUnit = new Map<Unit, MuscleGroup[]>();
@@ -243,5 +307,5 @@ export function pickRoutine(
       LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level],
   );
 
-  return { unit, exercises: picked };
+  return { unit, force: null, exercises: picked };
 }

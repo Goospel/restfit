@@ -1,5 +1,5 @@
 import type { IconName } from '../components/Icon';
-import { EQUIPMENT, GROUP_KEYS, UNIT_KEYS, type EquipKey, type MuscleGroup, type Unit } from './exercises';
+import { EQUIPMENT, GROUP_KEYS, UNIT_KEYS, type EquipKey, type Force, type MuscleGroup, type Unit } from './exercises';
 
 /** 화면에 그대로 뜨는 한글 라벨. 운동명은 데이터에 이미 한글로 들어 있다. */
 
@@ -44,6 +44,13 @@ export const GROUP_KO: Record<MuscleGroup | Unit, string> = {
 };
 
 export const LEVEL_KO = { beginner: '초급', intermediate: '중급', expert: '고급' } as const;
+
+/**
+ * 밀기/당기기 — **「~는 날」까지가 라벨이다.** 홈 헤드라인(「오늘은 당기는 날」)과 다음 차례
+ * 안내(「다음은 미는 날」)가 같은 문자열을 쓰기 때문에, 「밀기」만 담아 두면 두 자리에서
+ * 어미를 따로 붙이게 되고 한쪽만 고치는 날이 온다.
+ */
+export const FORCE_KO: Record<Force, string> = { push: '미는 날', pull: '당기는 날' };
 
 /** 어휘가 늘었는데 라벨을 빠뜨리면 화면에 영어 키가 그대로 뜬다. 그걸 여기서 막는다. */
 export const MISSING_LABELS = [

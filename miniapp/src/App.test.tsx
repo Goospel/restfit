@@ -143,12 +143,28 @@ describe('App — 설정 진입 배선', () => {
    * 저장도 되는데 홈은 계속 추천을 보여 준다(제보 그대로의 상태로 되돌아간다).
    */
   it('직접 고른 운동이 있으면 오늘의 루틴이 그것으로 고정된다', () => {
+    // 둘 다 밀기라 교대로 나뉘지 않는다 — 여기서 재는 것은 「추천을 이긴다」 하나다.
+    // 나뉘는 조합을 쓰면 절반만 뜨는 것이 배선 실패인지 교대인지 구별되지 않는다.
+    saveCustom(['Pushups', 'Bench_Dips']);
+    render(<App />);
+
+    expect(screen.getByText('푸시업')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '내 운동 2개 · 바꾸기' })).toBeTruthy();
+  });
+
+  /**
+   * 제보 그대로의 조합(턱걸이 + 푸시업)이 **하루씩 나뉘는지**. 로직은 `routine.test`가 재고,
+   * 여기서는 App이 기록을 실제로 흘려보내는지를 본다 — `recentForces`를 안 넘기면 교대가
+   * 통째로 죽는데 화면 테스트는 전부 초록이다.
+   */
+  it('밀기와 당기기를 함께 고르면 하루에 한쪽만 나온다', () => {
     saveCustom(['Pullups', 'Pushups']);
     render(<App />);
 
+    // 기록이 없으니 먼저 고른 쪽(풀업 = 당기기)이 첫날이다.
+    expect(screen.getByRole('heading', { name: '오늘은 당기는 날' })).toBeTruthy();
     expect(screen.getByText('풀업')).toBeTruthy();
-    expect(screen.getByText('푸시업')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '내 운동 2개 · 바꾸기' })).toBeTruthy();
+    expect(screen.queryByText('푸시업')).toBeNull();
   });
 
   it('기구 탭에서 열고 닫으면 기구 탭으로 돌아온다 — 홈이 아니다', () => {

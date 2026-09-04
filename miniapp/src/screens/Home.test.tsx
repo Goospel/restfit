@@ -32,7 +32,9 @@ const DONE: WorkoutRecord[] = [
 ];
 
 function setup(
-  routine: Routine,
+  // `force`는 안 준 테스트가 대부분이라 기본값을 여기서 채운다 — 밀기/당기기와 무관한
+  // 테스트까지 매번 `force: null`을 적게 만들면 정작 중요한 자리에서 눈에 안 띈다.
+  routine: Partial<Routine> & Pick<Routine, 'unit' | 'exercises'>,
   {
     history = [],
     profile = null,
@@ -44,7 +46,7 @@ function setup(
   const onOpenCustom = vi.fn();
   render(
     <Home
-      routine={routine}
+      routine={{ force: null, ...routine }}
       history={history}
       goal="muscle"
       profile={profile}
@@ -69,6 +71,24 @@ describe('홈 — 오늘의 유닛', () => {
   it('하체 루틴이면 「오늘은 하체」다', () => {
     setup({ unit: 'lower', exercises: [ex('a')] });
     expect(screen.getByRole('heading').textContent).toBe('오늘은 하체');
+  });
+
+  it('밀기/당기기로 나뉜 날은 헤드라인이 그쪽을 말한다', () => {
+    // 풀업도 푸시업도 상체라, 「오늘은 상체」로는 왜 오늘 하나만 나오는지가 설명이 안 된다.
+    setup({ unit: 'upper', force: 'pull', exercises: [ex('a')] });
+    expect(screen.getByRole('heading').textContent).toBe('오늘은 당기는 날');
+  });
+
+  it('나뉜 날은 다음 차례를 함께 말한다 — 나머지가 어디 갔는지', () => {
+    // ★ 이 문장이 없으면 2개를 골랐는데 1개만 뜨는 화면이 **고장으로 읽힌다.**
+    setup({ unit: 'upper', force: 'pull', exercises: [ex('a')] });
+    expect(screen.getByText(/다음은 미는 날/)).toBeTruthy();
+  });
+
+  it('나뉘지 않은 날은 다음 차례를 말하지 않는다', () => {
+    // 추천 루틴은 밀기와 당기기를 함께 주므로 「다음은」이라 할 다음이 없다.
+    setup({ unit: 'upper', exercises: [ex('a')] });
+    expect(screen.queryByText(/다음은/)).toBeNull();
   });
 
   it('유닛이 없으면 빈 루틴 화면이다', () => {
@@ -114,7 +134,7 @@ describe('홈 — 오늘의 유닛', () => {
 });
 
 describe('홈 — 목적 칩', () => {
-  const routine: Routine = { unit: 'upper', exercises: [ex('a')] };
+  const routine: Routine = { unit: 'upper', force: null, exercises: [ex('a')] };
 
   it('무엇을 여는 버튼인지 접두어가 말한다', () => {
     // 목적 이름만 있으면 라벨이 내용의 4분의 1만 말한다 — 「목적 ·」이 정체를, ›가 눌림을 말한다.
@@ -132,7 +152,7 @@ describe('홈 — 목적 칩', () => {
 
 describe('홈 — 프로필 안내 칩', () => {
   const CHIP = '경험을 알려주시면 난이도를 맞춰드려요';
-  const routine: Routine = { unit: 'upper', exercises: [ex('a'), ex('b')] };
+  const routine: Routine = { unit: 'upper', force: null, exercises: [ex('a'), ex('b')] };
 
   it('프로필이 없고 기록이 있으면 칩이 뜬다', () => {
     // 이 화면이 생기기 전부터 쓰던 사람 — 물어본 적이 없으니 개인화가 꺼져 있다.
@@ -164,7 +184,7 @@ describe('홈 — 프로필 안내 칩', () => {
 });
 
 describe('홈 — 내 운동 입구', () => {
-  const routine: Routine = { unit: 'upper', exercises: [ex('a'), ex('b')] };
+  const routine: Routine = { unit: 'upper', force: null, exercises: [ex('a'), ex('b')] };
 
   it('안 골랐으면 고르러 가자고 말한다 — 추천을 쓰는 중이라는 뜻이다', () => {
     const { onOpenCustom } = setup(routine);

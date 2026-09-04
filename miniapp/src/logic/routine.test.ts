@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { suggestNext } from './goal';
 import type { Profile } from './profile';
-import { customRoutine, pickRoutine } from './routine';
+import { customRoutine, pickRoutine, recentForces } from './routine';
 import { startSession } from './session';
-import { EXERCISES, type EquipKey, type Exercise, type MuscleGroup, type Unit } from '../data/exercises';
+import { EXERCISES, type EquipKey, type Exercise, type Force, type MuscleGroup, type Unit } from '../data/exercises';
 import { lastSetsOf, recentUnits, type WorkoutRecord } from '../storage';
 
 const ex = (id: string, muscle: string, o: Partial<Exercise> = {}): Exercise => ({
@@ -292,9 +292,10 @@ describe('pickRoutine', () => {
   });
 
   it('할 수 있는 운동이 하나도 없으면 빈 루틴이다', () => {
-    expect(pickRoutine([], [], [], '2026-08-25')).toEqual({ unit: null, exercises: [] });
+    expect(pickRoutine([], [], [], '2026-08-25')).toEqual({ unit: null, force: null, exercises: [] });
     expect(pickRoutine([ex('덤벨', 'chest', { requires: ['dumbbell'] })], [], [], '2026-08-25')).toEqual({
       unit: null,
+      force: null,
       exercises: [],
     });
   });
@@ -403,7 +404,7 @@ describe('pickRoutine — 개인화(profile)', () => {
       //   빈 화면은 §6의 「불편 부위 설정 확인」 문구가 받는다.
       const list = [1, 2, 3, 4].map((i) => ex(`무릎${i}`, 'quadriceps'));
       const profile: Profile = { experience: 'beginner', avoid: ['knee'] };
-      expect(pickRoutine(list, [], [], '2026-08-25', 4, profile)).toEqual({ unit: null, exercises: [] });
+      expect(pickRoutine(list, [], [], '2026-08-25', 4, profile)).toEqual({ unit: null, force: null, exercises: [] });
     });
   });
 
@@ -587,8 +588,8 @@ describe('customRoutine — 직접 고른 운동', () => {
   });
 
   it('남는 것이 없으면 빈 루틴이다 — 화면이 추천으로 되돌아갈 근거', () => {
-    expect(customRoutine(list, ['없는것'])).toEqual({ unit: null, exercises: [] });
-    expect(customRoutine(list, [])).toEqual({ unit: null, exercises: [] });
+    expect(customRoutine(list, ['없는것'])).toEqual({ unit: null, force: null, exercises: [] });
+    expect(customRoutine(list, [])).toEqual({ unit: null, force: null, exercises: [] });
   });
 
   /**
@@ -602,5 +603,126 @@ describe('customRoutine — 직접 고른 운동', () => {
 
   it('동수면 상체다 — 어느 쪽이든 절반은 거짓이라 규칙을 하나로 고정한다', () => {
     expect(customRoutine(list, ['가슴', '다리']).unit).toBe('upper');
+  });
+
+  /**
+   * 밀기/당기기 교대 — **이 모드의 회복 게이트**다.
+   *
+   * 추천 모드의 상/하체 로테이션이 하던 일(같은 근육을 이틀 연속 안 때린다)을 고정 루틴에서는
+   * 아무도 안 했다. 풀업과 푸시업을 함께 고른 사용자가 정확히 그 자리에 있었다 — 둘 다 상체라
+   * 매일 그대로 나가면 광배도 가슴도 회복 창을 못 받는다(제보 2026-09-04).
+   */
+  describe('밀기/당기기를 하루씩 번갈아 (§force)', () => {
+    const forced = [
+      ex('푸시업', 'chest', { force: 'push' }),
+      ex('딥스', 'triceps', { force: 'push' }),
+      ex('풀업', 'lats', { force: 'pull' }),
+      ex('플랭크', 'abdominals', { force: 'static' }),
+    ];
+    const both = ['풀업', '푸시업'];
+    const rec = (id: string, date = '2026-09-01'): WorkoutRecord => ({
+      date,
+      group: 'upper',
+      entries: [{ id, name: id, sets: [] }],
+    });
+
+    it('둘을 함께 고르면 하루에 한쪽만 나온다', () => {
+      // 여기가 이 기능의 전부다. 둘 다 나오면 나눈 적이 없는 것이다.
+      expect(idsOf(customRoutine(forced, both, []))).toEqual(['풀업']);
+    });
+
+    it('기록이 없으면 먼저 고른 쪽이 첫날이다', () => {
+      // 첫날을 무작위나 고정값으로 정하면 「내가 고른 순서」라는 유일한 단서가 사라진다.
+      expect(customRoutine(forced, ['풀업', '푸시업'], []).force).toBe('pull');
+      expect(customRoutine(forced, ['푸시업', '풀업'], []).force).toBe('push');
+    });
+
+    it('어제 한 쪽은 오늘 안 나온다', () => {
+      // ★ 추천 모드의 「어제 한 유닛은 절대 다시 고르지 않는다」와 같은 불변식이다.
+      expect(customRoutine(forced, both, ['pull']).force).toBe('push');
+      expect(customRoutine(forced, both, ['push']).force).toBe('pull');
+    });
+
+    it('이어서 하면 두 쪽이 완전 교대한다', () => {
+      const seen: Force[] = [];
+      const done: Force[] = [];
+      for (let d = 0; d < 20; d++) {
+        const f = customRoutine(forced, both, done).force!;
+        seen.push(f);
+        done.unshift(f);
+      }
+      expect(seen.filter((f, i) => i > 0 && f === seen[i - 1])).toEqual([]);
+      expect(new Set(seen).size).toBe(2);
+    });
+
+    it('하루 걸러 해도 교대가 이어진다 — 날짜가 아니라 기록이 굴린다', () => {
+      /**
+       * ⚠️ **날짜 홀짝으로 굴리면 여기서 죽는다.** 화·목만 운동하는 사람은 홀짝이 같아
+       * 밀기만 두 번 하고 당기기는 영영 안 나온다. 「마지막으로 한 것」을 봐야 건너뛴 날이
+       * 교대를 밀어내지 않는다.
+       */
+      const tue = recentForces(forced, [rec('풀업', '2026-09-01')]);
+      expect(customRoutine(forced, both, tue).force).toBe('push');
+    });
+
+    it('한쪽만 고르면 나누지 않는다 — 매일 그대로다', () => {
+      // 나눌 것이 없는데 나누면 이틀에 하루는 운동이 아예 없는 날이 된다.
+      const only = customRoutine(forced, ['푸시업', '딥스'], ['push']);
+      expect(idsOf(only)).toEqual(['푸시업', '딥스']);
+      expect(only.force).toBeNull();
+    });
+
+    it('밀기도 당기기도 아닌 운동은 매일 나온다', () => {
+      // 플랭크를 한쪽에 억지로 붙이면 고른 사람은 이틀에 한 번만 받는다.
+      expect(idsOf(customRoutine(forced, ['풀업', '푸시업', '플랭크'], []))).toEqual(['풀업', '플랭크']);
+      expect(idsOf(customRoutine(forced, ['풀업', '푸시업', '플랭크'], ['pull']))).toEqual(['푸시업', '플랭크']);
+    });
+
+    it('고른 순서는 나눈 뒤에도 그대로다', () => {
+      expect(idsOf(customRoutine(forced, ['플랭크', '푸시업', '딥스', '풀업'], ['pull']))).toEqual([
+        '플랭크',
+        '푸시업',
+        '딥스',
+      ]);
+    });
+
+    it('유닛은 그날 나가는 운동으로 정한다 — 안 하는 운동이 기록에 남으면 안 된다', () => {
+      // 풀업(상체) + 스쿼트(하체)를 골랐는데 스쿼트 날에 「상체」로 적히면 기록이 거짓말이다.
+      const mixed = [ex('풀업', 'lats', { force: 'pull' }), ex('스쿼트', 'quadriceps', { force: 'push' })];
+      expect(customRoutine(mixed, ['풀업', '스쿼트'], []).unit).toBe('upper');
+      expect(customRoutine(mixed, ['풀업', '스쿼트'], ['pull']).unit).toBe('lower');
+    });
+  });
+});
+
+describe('recentForces — 최근에 한 밀기/당기기', () => {
+  const forced = [
+    ex('푸시업', 'chest', { force: 'push' }),
+    ex('풀업', 'lats', { force: 'pull' }),
+    ex('플랭크', 'abdominals', { force: 'static' }),
+  ];
+  const rec = (date: string, ...ids: string[]): WorkoutRecord => ({
+    date,
+    group: 'upper',
+    entries: ids.map((id) => ({ id, name: id, sets: [] })),
+  });
+
+  it('최근 것이 앞이고 중복은 지운다', () => {
+    // `recentUnits`와 같은 모양이라야 호출부가 둘을 같은 방식으로 쓴다.
+    const h = [rec('2026-09-01', '풀업'), rec('2026-09-02', '푸시업'), rec('2026-09-03', '풀업')];
+    expect(recentForces(forced, h)).toEqual(['pull', 'push']);
+  });
+
+  it('밀기도 당기기도 아닌 것은 안 센다', () => {
+    // 플랭크만 한 날이 「최근에 한 것」이 되면 다음 차례가 밀려난다.
+    expect(recentForces(forced, [rec('2026-09-01', '풀업'), rec('2026-09-02', '플랭크')])).toEqual(['pull']);
+  });
+
+  it('데이터에서 빠진 운동은 무시한다 — 지난 기록이 통째로 죽지 않는다', () => {
+    expect(recentForces(forced, [rec('2026-09-01', '없어진운동', '풀업')])).toEqual(['pull']);
+  });
+
+  it('기록이 없으면 빈 배열이다', () => {
+    expect(recentForces(forced, [])).toEqual([]);
   });
 });
