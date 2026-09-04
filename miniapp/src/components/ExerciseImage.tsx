@@ -22,7 +22,8 @@ export function ExerciseImage({
   const box = {
     ...(fluid ? { width: '100%', height: 'auto', aspectRatio: '1' } : { width: size, height: size }),
     flexShrink: 0,
-    borderRadius: 10,
+    // 테마 「잉크」는 각을 살린다 — 여기만 둥글면 목록에서 사진만 다른 시대의 것처럼 보인다.
+    borderRadius: 3,
     background: 'var(--bg-sub)',
     border: '1px solid var(--line)',
     objectFit: 'cover' as const,

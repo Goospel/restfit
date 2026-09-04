@@ -3,8 +3,9 @@ import type { CSSProperties } from 'react';
 /**
  * 화면 네 개가 나눠 쓰는 스타일.
  *
- * 색·간격은 `index.css`의 CSS 변수를 참조한다 — 값을 여기에 직접 박으면
- * 화면마다 미묘하게 달라진다.
+ * 색·간격은 `index.css`의 CSS 변수를 참조한다 — 값을 여기에 직접 박으면 화면마다 미묘하게 달라진다.
+ * ⚠️ 이 규칙은 말이 아니라 **검사로 잠겨 있다**(`ui.test.ts`가 이 파일을 직독해 색 리터럴 0을 확인).
+ * 새어 나간 리터럴은 테마를 갈아끼울 때만 드러나고, 그때는 화면 절반이 옛 색인 채로 전부 통과한다.
  */
 
 /**
@@ -23,23 +24,32 @@ export const ui: S = {
   // 콘텐츠 끝이 탭바에 조용히 가린다. 그래서 `--tab-lift`를 양쪽이 같은 출처로 본다.
   page: { padding: '16px 20px calc(var(--tab-h) + var(--tab-lift) + 24px)', minHeight: '100vh' },
   pageFull: { padding: '16px 20px calc(var(--safe-b) + 24px)', minHeight: '100vh', display: 'flex', flexDirection: 'column' },
-  h1: { fontSize: 22, fontWeight: 700, margin: '4px 0 20px' },
-  h2: { fontSize: 17, fontWeight: 700, margin: '0 0 4px' },
+  /**
+   * 화면 제목. **본문과 획의 종류가 다르다**(명조) — 크기만 키운 제목은 「큰 본문」으로 읽힌다.
+   * 자간을 좁히는 건 명조가 본문 크기보다 커질수록 글자 사이가 벌어져 보이기 때문이다.
+   */
+  h1: { fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.28, margin: '4px 0 20px' },
+  h2: { fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, letterSpacing: '-0.015em', margin: '0 0 4px' },
   sub: { fontSize: 13, color: 'var(--text-sub)', margin: '0 0 16px' },
-  card: { background: 'var(--bg-sub)', border: '1px solid var(--line)', borderRadius: 14, padding: 16 },
+  card: { background: 'var(--bg-sub)', border: '1px solid var(--line)', borderRadius: 3, padding: 16 },
   row: { display: 'flex', gap: 8 },
   spacer: { flex: 1 },
 
   // ── 버튼
   primary: {
     width: '100%',
-    padding: '15px 12px',
+    padding: '16px 12px',
     fontSize: 16,
     fontWeight: 700,
-    color: '#fff',
-    background: 'var(--blue)',
+    letterSpacing: '0.02em',
+    /**
+     * **먹색 바다. 강조(주홍)를 여기 쓰지 않는다** — 주홍은 「지금 고른 것 / 오늘 하는 것」을
+     * 가리키는 색이라, 화면에서 제일 큰 면을 그 색이 먹으면 가리킬 색이 남지 않는다.
+     */
+    color: 'var(--bg)',
+    background: 'var(--text)',
     border: 0,
-    borderRadius: 12,
+    borderRadius: 3,
   },
   secondary: {
     width: '100%',
@@ -48,8 +58,8 @@ export const ui: S = {
     fontWeight: 600,
     color: 'var(--text-sub)',
     background: 'var(--bg-sub)',
-    border: '1px solid var(--line)',
-    borderRadius: 12,
+    border: '1px solid var(--line-strong)',
+    borderRadius: 3,
   },
   ghost: {
     padding: '10px 12px',
@@ -57,9 +67,9 @@ export const ui: S = {
     color: 'var(--text-weak)',
     background: 'none',
     border: 0,
-    borderRadius: 8,
+    borderRadius: 3,
   },
-  disabled: { background: 'var(--line-strong)', color: '#fff' },
+  disabled: { background: 'var(--line-strong)', color: 'var(--bg)' },
 
   // ── 입력
   input: {
@@ -69,9 +79,9 @@ export const ui: S = {
     fontWeight: 600,
     textAlign: 'center',
     color: 'var(--text)',
-    background: '#fff',
+    background: 'var(--bg)',
     border: '1px solid var(--line-strong)',
-    borderRadius: 12,
+    borderRadius: 3,
   },
   label: { fontSize: 12, color: 'var(--text-sub)', display: 'block', marginBottom: 6 },
 
@@ -91,7 +101,33 @@ export const ui: S = {
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: 'var(--line)',
-    borderRadius: 999,
+    borderRadius: 3,
+  },
+  /**
+   * 줄로만 나뉘는 전폭 링크. 「내 운동 N개 · 바꾸기」처럼 **목록 바로 위에 서는 입구**에 쓴다.
+   *
+   * 딱지(`chip`)가 아니라 괘선인 이유: 바로 아래가 괘선으로 나뉜 운동 목록이라, 딱지를 얹으면
+   * 목록의 머리가 아니라 「목록 위에 따로 떠 있는 것」으로 읽힌다.
+   *
+   * ⚠️ **윗선만 긋는다.** 위아래를 다 그으면 이 줄이 연달아 설 때(입구 둘 + 운동 여러 개)
+   * 사이가 1px이 아니라 2px가 된다 — 실측으로 잡혔다(붙어 있어서 간격 0, 선만 두꺼워진다).
+   * 묶음의 **아랫선은 감싸는 쪽이 긋는다**(`Home`의 목록 컨테이너).
+   */
+  rowLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    padding: '12px 0',
+    fontSize: 13,
+    fontWeight: 600,
+    textAlign: 'left',
+    color: 'var(--text)',
+    background: 'none',
+    borderWidth: '1px 0 0',
+    borderStyle: 'solid',
+    borderColor: 'var(--line)',
+    borderRadius: 0,
   },
   empty: { padding: '48px 20px', textAlign: 'center', color: 'var(--text-weak)', fontSize: 14 },
 
@@ -104,7 +140,8 @@ export const ui: S = {
   dim: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0, 0, 0, 0.45)',
+    // 순검정이 아니라 먹색을 흐린 것이다 — 종이 위에 검정 막을 씌우면 그 순간만 화면이 차가워진다.
+    background: 'rgba(20, 17, 13, 0.45)',
     zIndex: 40,
   },
   sheet: {
@@ -117,8 +154,8 @@ export const ui: S = {
     overflowY: 'auto',
     padding: '16px 20px calc(var(--safe-b) + 20px)',
     background: 'var(--bg)',
-    borderRadius: '16px 16px 0 0',
-    boxShadow: '0 -6px 24px rgba(0, 0, 0, 0.16)',
+    borderRadius: '10px 10px 0 0',
+    boxShadow: '0 -6px 24px rgba(30, 22, 10, 0.16)',
   },
 
   /**
@@ -156,10 +193,10 @@ export const equipStyle = (on: boolean): CSSProperties => ({
   justifyContent: 'center',
   gap: 7,
   padding: 0,
-  color: on ? 'var(--blue-dark)' : 'var(--text)',
-  background: on ? '#eff6ff' : 'var(--bg-sub)',
-  border: `${on ? 2 : 1}px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
-  borderRadius: 16,
+  color: on ? 'var(--accent-strong)' : 'var(--text)',
+  background: on ? 'var(--accent-tint)' : 'var(--bg-sub)',
+  border: `${on ? 2 : 1}px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+  borderRadius: 4,
 });
 
 /** 선택 상태의 목적 카드. 기구 카드보다 크고 테두리가 두껍다 — 하나만 고르는 자리다. */
@@ -170,9 +207,9 @@ export const goalStyle = (on: boolean): CSSProperties => ({
   width: '100%',
   padding: 16,
   textAlign: 'left',
-  background: on ? '#eff6ff' : 'var(--bg-sub)',
-  border: `${on ? 2 : 1}px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
-  borderRadius: 14,
+  background: on ? 'var(--accent-tint)' : 'var(--bg-sub)',
+  border: `${on ? 2 : 1}px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+  borderRadius: 4,
 });
 
 /**
@@ -191,10 +228,10 @@ export const specChipStyle = (on: boolean, off = false): CSSProperties => ({
   padding: '7px 11px',
   fontSize: 13,
   fontWeight: 600,
-  color: on ? 'var(--blue-dark)' : 'var(--text-sub)',
-  background: on ? '#eff6ff' : '#fff',
-  border: `1px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
-  borderRadius: 999,
+  color: on ? 'var(--accent-strong)' : 'var(--text-sub)',
+  background: on ? 'var(--accent-tint)' : 'var(--bg)',
+  border: `1px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+  borderRadius: 3,
   opacity: off ? 0.45 : 1,
 });
 
