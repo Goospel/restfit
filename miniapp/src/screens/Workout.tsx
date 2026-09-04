@@ -346,7 +346,7 @@ export function Workout({
       <main style={ui.pageFull}>
         <div style={{ ...ui.spacer, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
           <div>
-            <div style={{ color: 'var(--blue)', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ color: 'var(--accent)', display: 'flex', justifyContent: 'center' }}>
               <Icon name="plate" size={48} />
             </div>
             <h1 style={{ ...ui.h1, marginBottom: 4 }}>운동 완료</h1>
@@ -373,7 +373,7 @@ export function Workout({
             ))}
           </div>
           {moved && (
-            <p style={{ ...ui.sub, margin: '10px 0 0', color: 'var(--blue-dark)' }}>
+            <p style={{ ...ui.sub, margin: '10px 0 0', color: 'var(--accent-strong)' }}>
               {/* ⚠️ 사다리 위·아래는 **인덱스로** 가른다. 문자열 비교는 'advanced' < 'beginner'라
                   알파벳 순서가 난이도 순서를 뒤집어, 승급에 강등 문구가 뜬다. */}
               {EXPERIENCE_KEYS.indexOf(moved) > EXPERIENCE_KEYS.indexOf(profile!.experience) ? NOTE_UP : NOTE_DOWN}
@@ -584,7 +584,7 @@ export function Workout({
             <input
               // ⚠️ `border`가 shorthand라 `borderColor`만 덮으면 React가 리렌더에서 그 값을
               //    지운다(ui.ts 주석) — shorthand를 통째로 갈아 끼운다.
-              style={repOff === 'over' ? { ...ui.input, border: '1px solid var(--blue)', color: 'var(--blue-dark)' } : ui.input}
+              style={repOff === 'over' ? { ...ui.input, border: '1px solid var(--accent)', color: 'var(--accent-strong)' } : ui.input}
               type="number"
               inputMode="numeric"
               min={1}
@@ -599,7 +599,7 @@ export function Workout({
           「목표(6~12회)보다 많아 / 요」가 된다. `keep-all`은 그 위에 어절 중간 꺾임까지 막는다.
         */}
         {repOff && (
-          <div style={{ ...GUIDE, color: repOff === 'over' ? 'var(--blue-dark)' : 'var(--text-sub)' }}>
+          <div style={{ ...GUIDE, color: repOff === 'over' ? 'var(--accent-strong)' : 'var(--text-sub)' }}>
             <div>{`목표(${repLo}~${repHi}회)보다 ${repOff === 'over' ? '많아요' : '적어요'}`}</div>
             {/* 미달 줄2가 기구·맨몸으로 갈리는 이유: 맨몸엔 낮출 무게가 없어서 할 수 있는 행동이
                 「쉬었다 나눠 채우기」뿐이다 — 공용 문구로 묶으면 한쪽엔 못 할 조언이 뜬다. */}
@@ -619,7 +619,7 @@ export function Workout({
           모호했기 때문이다(실기기 제보) — 줄1이 이유, 줄2가 행동이다.
         */}
         {ladder && (
-          <div style={{ ...GUIDE, color: 'var(--blue-dark)' }}>
+          <div style={{ ...GUIDE, color: 'var(--accent-strong)' }}>
             <div>여기서 횟수를 더 늘려도 효과가 잘 안 늘어요</div>
             <div>다음엔 더 어려운 동작으로 바꿔보세요</div>
           </div>

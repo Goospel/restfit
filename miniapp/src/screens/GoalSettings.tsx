@@ -58,7 +58,7 @@ export function GoalSettings({
               onClick={() => onProfileChange({ experience: k, avoid: profile?.avoid ?? [] })}
             >
               <span style={{ display: 'grid', gap: 2, textAlign: 'left', minWidth: 0 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: on ? 'var(--blue-dark)' : 'var(--text)' }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: on ? 'var(--accent-strong)' : 'var(--text)' }}>
                   {label}
                 </span>
                 <span style={{ fontSize: 13, color: 'var(--text-sub)' }}>{desc}</span>

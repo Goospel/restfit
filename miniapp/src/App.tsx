@@ -279,7 +279,7 @@ export function App() {
         {TABS.map((t) => (
           <button
             key={t.key}
-            style={{ ...tabStyle, color: tab === t.key ? 'var(--blue)' : 'var(--text-weak)' }}
+            style={{ ...tabStyle, color: tab === t.key ? 'var(--accent)' : 'var(--text-weak)' }}
             onClick={() => setTab(t.key)}
             aria-current={tab === t.key ? 'page' : undefined}
           >

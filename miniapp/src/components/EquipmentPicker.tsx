@@ -104,17 +104,17 @@ export function EquipmentPicker({
             return (
               <button key={k} style={equipStyle(on)} onClick={() => toggle(k)} aria-pressed={on}>
                 {on && (
-                  <span style={{ position: 'absolute', top: 10, right: 10, color: 'var(--blue)', display: 'flex' }}>
+                  <span style={{ position: 'absolute', top: 10, right: 10, color: 'var(--accent)', display: 'flex' }}>
                     <Icon name="check" size={16} />
                   </span>
                 )}
-                <span style={{ color: on ? 'var(--blue)' : 'var(--text-sub)', display: 'flex' }}>
+                <span style={{ color: on ? 'var(--accent)' : 'var(--text-sub)', display: 'flex' }}>
                   <Icon name={EQUIPMENT_ICON[k]} size={44} />
                 </span>
                 <span style={{ fontSize: 16, fontWeight: 700 }}>{EQUIPMENT_KO[k]}</span>
                 {/* 이미 가진 기구에 "+0개"를 띄우면 잔소리로 읽힌다. 안 가진 것만 보여준다.
                     빈 값이어도 자리는 지킨다 — 안 그러면 칸마다 아이콘 높이가 달라진다. */}
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue)', minHeight: 19 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', minHeight: 19 }}>
                   {!on && gains[k] > 0 ? `+${gains[k]}개` : ''}
                 </span>
               </button>

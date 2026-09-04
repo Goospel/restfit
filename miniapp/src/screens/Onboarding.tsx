@@ -48,7 +48,7 @@ export function Onboarding({
           <div
             key={i}
             data-progress-step={i}
-            style={{ flex: 1, height: 4, borderRadius: 999, background: i <= step ? 'var(--blue)' : 'var(--line)' }}
+            style={{ flex: 1, height: 4, borderRadius: 999, background: i <= step ? 'var(--accent)' : 'var(--line)' }}
           />
         ))}
       </div>
@@ -100,7 +100,7 @@ export function Onboarding({
                   aria-pressed={on}
                   onClick={() => setExperience(value)}
                 >
-                  <span style={{ fontSize: 16, fontWeight: 700, color: on ? 'var(--blue-dark)' : 'var(--text)' }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: on ? 'var(--accent-strong)' : 'var(--text)' }}>
                     {label}
                   </span>
                 </button>

@@ -124,14 +124,14 @@ export function Shop({
                    * 「겨우 1.1배」로 읽혀 +18개라는 사실까지 같이 깎아먹는다.
                    */}
                   {p.ratio !== null && p.ratio >= MIN_RATIO_TO_SHOW && (
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--blue-dark)' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-strong)' }}>
                       {p.ratio.toFixed(1)}배
                     </span>
                   )}
                 </div>
 
                 <div style={{ margin: '6px 0 2px' }}>
-                  <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--blue)', letterSpacing: -1 }}>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)', letterSpacing: -1 }}>
                     +{p.gain}
                   </span>
                   <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-sub)' }}>개</span>
@@ -243,8 +243,9 @@ function ProductList({
  * 선택은 색만으로 알리지 않는다(`aria-pressed` + 배경 + 테두리) — 색을 구분하기 어려운 사람에게
  * 색 하나는 정보가 아니다. 기구 선택 화면에서 같은 이유로 체크 표시를 붙였다.
  *
- * ⚠️ 선택 배경은 `--blue`가 아니라 **`--blue-dark`** 다. 12px 글씨는 WCAG AA가 4.5:1을 요구하는데
- * `--blue`(#3182f6) 위의 흰 글씨는 **3.71:1로 미달**이고 `--blue-dark`(#1b64da)는 5.41:1이다(실측).
+ * ⚠️ 선택 배경은 `--accent`가 아니라 **`--accent-strong`** 다. 12px 글씨는 WCAG AA가 4.5:1을 요구한다 —
+ * 잉크 테마에서는 `--accent` 위도 4.76:1로 통과하지만(옛 파랑 #3182f6은 3.71:1로 미달이었다), 통과선에
+ * 붙여 두면 색을 조금만 손봐도 다시 미달이 되므로 6.80:1인 `--accent-strong`를 그대로 둔다(실측).
  */
 function Chip({
   label,
@@ -264,7 +265,7 @@ function Chip({
         // `ui.chip`은 원래 **누르지 않는 라벨**이라 세로 여백이 얇다. 버튼으로 쓰는 여기서는 손가락 몫을 더한다.
         padding: '9px 12px',
         ...(active
-          ? { background: 'var(--blue-dark)', borderColor: 'var(--blue-dark)', color: '#fff' }
+          ? { background: 'var(--accent-strong)', borderColor: 'var(--accent-strong)', color: 'var(--on-accent)' }
           : null),
       }}
       onClick={onClick}

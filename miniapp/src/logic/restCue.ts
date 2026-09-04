@@ -22,7 +22,7 @@ const INVERT_AT = 4;
 /**
  * 「다음 세트 준비」 문구가 흰색으로 뒤집는 문턱. **타이머보다 늦다** — 15px bold는
  * large-text(18.66px bold) 미만이라 본문 기준 4.5:1을 받아야 하고, 흰색은 3초에서
- * 3.89:1로 못 넘긴다. 3초에서 흰색 대신 아래 진홍이 4.66:1로 받는다.
+ * 3.89:1로 못 넘긴다. 3초에서 흰색 대신 아래 진홍이 4.73:1로 받는다.
  */
 const PHRASE_INVERT_AT = 2;
 
@@ -30,13 +30,13 @@ const PHRASE_INVERT_AT = 2;
  * 문구의 비반전 색. ⚠️ **램프 종점(`BG_WARN`)과 같은 색을 쓰면 배경이 짙어질수록 녹는다** —
  * 그게 실제로 났다(최저 2.50:1). 대비는 눈이 아니라 `restCue.test.ts`가 전 구간을 돌며 잰다.
  */
-const PHRASE_DARK = '#2e0810';
+const PHRASE_DARK = '#22050a';
 
-/** `--text`(#191f28)의 실값. 배경이 리터럴 rgb라 글자도 같은 축으로 둬야 대비를 계산할 수 있다. */
-const TEXT_DARK = '#191f28';
+/** `--text`(#14110d)의 실값. 배경이 리터럴 rgb라 글자도 같은 축으로 둬야 대비를 계산할 수 있다. */
+const TEXT_DARK = '#14110d';
 
-/** `--bg-sub`(#f9fafb)의 실값. ⚠️ index.css의 `--bg-sub`를 바꾸면 **여기도** 바꾼다 — CSS 변수는 보간할 수 없다. */
-const BG_BASE = [249, 250, 251] as const;
+/** `--bg-sub`(#f2eee7)의 실값. ⚠️ index.css의 `--bg-sub`를 바꾸면 **여기도** 바꾼다 — CSS 변수는 보간할 수 없다. */
+const BG_BASE = [242, 238, 231] as const;
 
 /** 다 물든 진홍. */
 const BG_WARN = [183, 28, 48] as const;

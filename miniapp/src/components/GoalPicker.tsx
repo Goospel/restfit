@@ -16,15 +16,15 @@ export function GoalPicker({ value, onChange }: { value: Goal | null; onChange: 
         const on = value === k;
         return (
           <button key={k} style={goalStyle(on)} onClick={() => onChange(k)} aria-pressed={on}>
-            <span style={{ color: on ? 'var(--blue)' : 'var(--text-sub)', display: 'flex' }}>
+            <span style={{ color: on ? 'var(--accent)' : 'var(--text-sub)', display: 'flex' }}>
               <Icon name={g.icon} size={28} />
             </span>
             <span style={{ display: 'grid', gap: 2, textAlign: 'left', minWidth: 0 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: on ? 'var(--blue-dark)' : 'var(--text)' }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: on ? 'var(--accent-strong)' : 'var(--text)' }}>
                 {g.label}
               </span>
               <span style={{ fontSize: 13, color: 'var(--text-sub)' }}>{g.desc}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: on ? 'var(--blue)' : 'var(--text-weak)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: on ? 'var(--accent)' : 'var(--text-weak)' }}>
                 {g.reps[0]}~{g.reps[1]}회 · 휴식 {g.restIsolation}~{g.restCompound}초 · 최대 {g.exerciseCount}종목
               </span>
             </span>

@@ -110,11 +110,11 @@ describe('기록 탭 — 달력', () => {
     const { container } = setup();
     // ⚠️ 테두리는 shorthand를 통째로 갈아 끼운다(`ui.ts` 머리말) — `borderColor`만 덮으면
     // 리렌더에서 색이 풀린다. 그래서 잠그는 것도 shorthand 문자열이다.
-    // ⚠️ jsdom은 `border: … var(--blue)`를 longhand로 못 펼친다 — `style.borderColor`는
+    // ⚠️ jsdom은 `border: … var(--accent)`를 longhand로 못 펼친다 — `style.borderColor`는
     // **빈 문자열**이다(실측). shorthand로 쓴 값은 shorthand로만 읽힌다.
-    expect(cellOf(container, todayKey()).style.border).toBe('2px solid var(--blue)');
+    expect(cellOf(container, todayKey()).style.border).toBe('2px solid var(--accent)');
     const other = todayKey() === day(1) ? day(2) : day(1);
-    expect(cellOf(container, other).style.border).not.toBe('2px solid var(--blue)');
+    expect(cellOf(container, other).style.border).not.toBe('2px solid var(--accent)');
   });
 
   it('오늘 운동했으면 — 버튼이 된 오늘 칸에도 테두리가 남는다', () => {
@@ -122,7 +122,7 @@ describe('기록 탭 — 달력', () => {
     // 어떤 테스트도 안 지나는데, 정작 **오늘 운동한 사람**에게는 그쪽이 항상 지나는 길이다.
     const { container } = setup([rec(todayKey())]);
     expect(cellOf(container, todayKey()).tagName).toBe('BUTTON');
-    expect(cellOf(container, todayKey()).style.border).toBe('2px solid var(--blue)');
+    expect(cellOf(container, todayKey()).style.border).toBe('2px solid var(--accent)');
   });
 });
 
@@ -131,7 +131,7 @@ describe('기록 탭 — 마커', () => {
     const { container } = setup([rec(day(3))]);
     const marks = cellOf(container, day(3)).querySelectorAll('[data-mark]');
     expect([...marks].map((m) => m.getAttribute('data-mark'))).toEqual(['workout']);
-    expect((marks[0] as HTMLElement).style.backgroundColor).toBe('var(--blue)');
+    expect((marks[0] as HTMLElement).style.backgroundColor).toBe('var(--accent)');
   });
 
   it('눈바디를 찍은 날에는 초록 눈바디 마커가 뜬다', async () => {

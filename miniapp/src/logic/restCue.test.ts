@@ -69,7 +69,7 @@ describe('warnProgress — 붉어짐 진행도', () => {
 describe('warnColors — V1 색 결정은 한 곳에서만', () => {
   it('10초 밖이면 기본 배경 그대로', () => {
     // `--bg-sub`(#f9fafb)의 실값. index.css를 바꾸면 restCue.ts도 함께 바꾼다.
-    expect(warnColors(11).bg).toBe('rgb(249, 250, 251)');
+    expect(warnColors(11).bg).toBe('rgb(242, 238, 231)');
   });
 
   it('0초면 진홍', () => {
@@ -77,7 +77,7 @@ describe('warnColors — V1 색 결정은 한 곳에서만', () => {
   });
 
   it('중간은 선형 보간 — 계단이 아니라 램프다', () => {
-    expect(warnColors(5).bg).toBe('rgb(216, 139, 150)');
+    expect(warnColors(5).bg).toBe('rgb(213, 133, 140)');
   });
 
   it('글자 반전 문턱은 4초다 — 5초에는 아직 검정', () => {

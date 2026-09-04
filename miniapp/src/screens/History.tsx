@@ -95,7 +95,7 @@ export function History({
             const marks = (
               <span style={{ display: 'flex', gap: 3, height: 5, marginTop: 3 }}>
                 {/* 순서는 「운동 왼쪽 · 눈바디 오른쪽」 고정 — 자리가 바뀌면 색만으로 다시 읽어야 한다. */}
-                {recs && <span data-mark="workout" style={dot('var(--blue)')} />}
+                {recs && <span data-mark="workout" style={dot('var(--accent)')} />}
                 {pic && <span data-mark="photo" style={dot('var(--green)')} />}
               </span>
             );
@@ -133,7 +133,7 @@ export function History({
         {/* 색 둘에만 기대면 색각 이상인 사람에게는 아무 표시도 없는 것과 같다. */}
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 12, fontSize: 12, color: 'var(--text-sub)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={dot('var(--blue)')} />
+            <span style={dot('var(--accent)')} />
             <span>운동</span>
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -319,7 +319,7 @@ const cell = (isToday: boolean): React.CSSProperties => ({
   padding: 0,
   fontSize: 13,
   color: 'var(--text)',
-  border: isToday ? '2px solid var(--blue)' : '1px solid transparent',
+  border: isToday ? '2px solid var(--accent)' : '1px solid transparent',
   borderRadius: 10,
 });
 

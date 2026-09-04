@@ -301,7 +301,7 @@ describe('세트 진행 — 맨몸 사다리 안내', () => {
     //   두 줄이 되면서 스타일은 줄을 감싼 부모가 쥔다 — 기구 안내와 같은 자리.
     setup({ session: startSession([ex('push')], 'health') });
     typeReps('30');
-    expect(why()!.parentElement!.style.color).toBe('var(--blue-dark)');
+    expect(why()!.parentElement!.style.color).toBe('var(--accent-strong)');
     expect(why()!.parentElement!.style.wordBreak).toBe('keep-all');
   });
 
@@ -343,7 +343,7 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     expect(screen.getByText('무게를 올려야 효과가 계속 늘어요').parentElement!.style.wordBreak).toBe('keep-all');
     // ★ 색은 문구와 **따로** 잠근다 — 색상 삼항을 정반대로 뒤집어도 문구 단언은 전부 초록이다(리뷰 실측).
     //   초과가 파랑인 것은 「무게를 올릴 때가 왔다」는 긍정 신호라서다. 회색이면 지적으로 읽힌다.
-    expect(screen.getByText('무게를 올려야 효과가 계속 늘어요').parentElement!.style.color).toBe('var(--blue-dark)');
+    expect(screen.getByText('무게를 올려야 효과가 계속 늘어요').parentElement!.style.color).toBe('var(--accent-strong)');
   });
 
   it('상단 초과면 횟수 입력칸 테두리가 파랑으로 바뀐다', () => {
@@ -351,7 +351,7 @@ describe('세트 진행 — 목표 반복 범위 이탈 안내', () => {
     //   shorthand 전체를 갈아 끼웠는지를 여기서 잠근다.
     setup({ session: gym() });
     typeReps('15');
-    expect(repsInput().style.border).toBe('1px solid var(--blue)');
+    expect(repsInput().style.border).toBe('1px solid var(--accent)');
   });
 
   it('하단에 못 미치면 미달 문구 두 줄이 뜬다', () => {
@@ -729,7 +729,7 @@ describe('휴식 — 마지막 10초 준비 신호', () => {
     enterRest(12);
     tick(7000);
     // 색 값은 `warnColors`가 혼자 쥔다 — 대비를 계산하려면 CSS 변수가 아니라 실값이어야 한다.
-    expect(timer(5).style.color).toBe('rgb(25, 31, 40)');
+    expect(timer(5).style.color).toBe('rgb(20, 17, 13)');
     tick(1000);
     expect(timer(4).style.color).toBe('rgb(255, 255, 255)'); // jsdom이 hex를 rgb로 정규화한다
     // 건너뛰기 버튼도 함께 뒤집힌다 — 붉은 배경 위에 회색 버튼만 남으면 그것만 안 읽힌다.

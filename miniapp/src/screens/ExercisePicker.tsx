@@ -86,8 +86,8 @@ const rowStyle = (on: boolean): CSSProperties => ({
   width: '100%',
   padding: 10,
   textAlign: 'left',
-  background: on ? '#eff6ff' : 'var(--bg-sub)',
-  border: `${on ? 2 : 1}px solid ${on ? 'var(--blue)' : 'var(--line)'}`,
+  background: on ? 'var(--accent-tint)' : 'var(--bg-sub)',
+  border: `${on ? 2 : 1}px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
   borderRadius: 12,
 });
 
@@ -161,7 +161,7 @@ export function ExercisePicker({
             {chosen.map((e) => (
               <button
                 key={e.id}
-                style={{ ...ui.chip, color: 'var(--blue-dark)', background: '#eff6ff', borderColor: 'var(--blue)' }}
+                style={{ ...ui.chip, color: 'var(--accent-strong)', background: 'var(--accent-tint)', borderColor: 'var(--accent)' }}
                 onClick={() => toggle(e.id)}
               >
                 {e.name} ✕
@@ -219,7 +219,7 @@ export function ExercisePicker({
                   )}
                 </div>
                 <span style={ui.spacer} />
-                {on && <span style={{ fontSize: 16, color: 'var(--blue)' }}>✓</span>}
+                {on && <span style={{ fontSize: 16, color: 'var(--accent)' }}>✓</span>}
               </button>
             );
           })}
