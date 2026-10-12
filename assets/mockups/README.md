@@ -27,6 +27,6 @@
 
 Figma MCP가 붙은 Claude 세션에서 노드별로 `get_screenshot` → 반환된 URL을 `curl -L -o`로 내려받는다.
 
-⚠️ `get_screenshot`은 **읽기 호출**이라 한도를 쓴다(Starter 플랜 월 20회). 6장이면 6회다. 반대로 Figma에 **쓰는** 호출은 한도가 없다.
+⚠️ `get_screenshot`은 **읽기 호출**이라 한도를 쓴다(Starter 플랜 월 20회). 6장이면 6회다. Figma에 **쓰는** `use_figma`도 같은 한도에 걸린다(2026-10-02 BookTimer 실측 — 「You've reached the Figma MCP tool call limit on the Starter plan」으로 막혔다). 면제는 `create_new_file` · `add_code_connect_map` · `whoami`뿐이라고 보고, 많이 그려야 하면 개발 플러그인 브리지로 한다.
 
 ⚠️ 한글은 `Noto Sans KR`로 만들었다. 폰트를 바꿀 땐 [T-219](../../claude-docs/troubleshooting/T-219.md)를 먼저 읽는다 — 목록에 있고 로드가 성공해도 실재하지 않는 폰트가 있다.

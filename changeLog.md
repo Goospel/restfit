@@ -7,6 +7,13 @@
 
 ---
 
+## 2026-10-12 · 시안 문서의 피그마 한도 안내 바로잡기 — 쓰기 호출도 센다
+
+**왜**: `assets/mockups/README.md`가 「Figma에 쓰는 호출은 한도가 없다」고 적고 있었다. 2026-10-02 BookTimer에서 쓰기 도구 `use_figma`가 「You've reached the Figma MCP tool call limit on the Starter plan」으로 막혀 틀린 안내로 확인됐다.
+**무엇을**: 그 문장을 「`use_figma`도 같은 월 20회 한도에 걸린다, 면제는 `create_new_file` · `add_code_connect_map` · `whoami`뿐이라고 보고, 많이 그려야 하면 개발 플러그인 브리지로」로 바꿨다.
+
+---
+
 ## 2026-09-25 · 트러블슈팅 승격 표시 소급 — T-231
 
 **왜**: 전역 훅 `hooks/check-worktree-node-modules.ps1`이 T-231을 근거로 인용(「6개 프로젝트 재발 … restfit T-231 등」)하는데 T-231에 `promoted:`가 없어 목차에서 승격 여부가 안 보였다(전역 재발 스캐너의 「승격 표시 드리프트」).
